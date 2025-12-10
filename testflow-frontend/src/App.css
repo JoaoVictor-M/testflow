@@ -1,0 +1,141 @@
+/* Estilo global básico */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f7f6;
+  margin: 0;
+  padding: 20px;
+  color: #333;
+}
+
+.App {
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: #ffffff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2, h3 {
+  color: #2c3e50;
+}
+
+/* Estilos do Formulário */
+.scenario-form {
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #eee;
+}
+
+.scenario-form h2 {
+  margin-top: 0;
+}
+
+.scenario-form input,
+.scenario-form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box; /* Garante que o padding não quebre o layout */
+}
+
+.scenario-form textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.scenario-form button {
+  background-color: #3498db;
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.scenario-form button:hover {
+  background-color: #2980b9;
+}
+
+/* Estilo do Botão Cancelar no Formulário */
+.cancel-button {
+  background-color: #95a5a6; /* Cinza */
+  color: white;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px; /* Espaço entre Salvar e Cancelar */
+}
+
+.cancel-button:hover {
+  background-color: #7f8c8d;
+}
+
+
+/* Estilos da Lista de Cenários */
+.scenario-list h2 {
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.scenario-item {
+  position: relative;
+  background-color: #fdfdfd;
+  border: 1px solid #eaeaea;
+  border-radius: 5px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.scenario-item h3 {
+  margin-top: 0;
+  padding-right: 150px; /* Espaço para os dois botões */
+}
+
+.scenario-item ul {
+  padding-left: 20px;
+}
+
+/* Estilos dos Botões de Ação no Item */
+.button-group {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: flex;  /* Isso alinha os botões lado a lado */
+  gap: 5px;       /* Isso dá o espaço entre eles */
+}
+
+.delete-button {
+  /* Sem position: absolute */
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.delete-button:hover {
+  background-color: #c0392b;
+}
+
+.edit-button {
+  /* Sem position: absolute */
+  background-color: #3498db; /* Azul */
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.edit-button:hover {
+  background-color: #2980b9;
+}

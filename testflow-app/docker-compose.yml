@@ -1,0 +1,26 @@
+# A versão do formato do arquivo docker-compose.
+version: '3.8'
+
+# A lista de serviços (contêineres) que queremos criar.
+services:
+  # O nome do nosso serviço de banco de dados.
+  mongo:
+    # A imagem que o Docker deve usar. 'mongo:latest' significa:
+    # "baixe a versão oficial mais recente do MongoDB".
+    image: mongo:latest
+    # O nome que queremos dar ao nosso contêiner depois de criado.
+    container_name: mongodb_testflow
+    # Mapeamento de portas. Diz ao Docker: "A porta 27017 de dentro
+    # do contêiner deve ser acessível pela porta 27017 do meu computador".
+    # 27017 é a porta padrão do MongoDB.
+    ports:
+      - "27017:27017"
+    # Volumes garantem que os dados não sejam perdidos se o contêiner
+    # for reiniciado. Ele mapeia uma pasta de dentro do contêiner
+    # para uma pasta no seu computador.
+    volumes:
+      - mongo-data:/data/db
+
+# Declaração do volume que usamos acima.
+volumes:
+  mongo-data:
