@@ -1,39 +1,35 @@
 version: '3.8'
 
 services:
-  # 1. O BANCO DE DADOS
-  # Ponto Crítico: O nome 'mongodb-service'
   mongodb-service:
     image: mongo:latest
     container_name: mongodb_testflow
     restart: always
     ports:
-      - "27017:27017" # Bom para debugar
+      - "27017:27017"
     volumes:
       - mongo-data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
-  # 2. O BACKEND
-  # Ponto Crítico: O nome 'backend-service'
   backend-service:
     build: ./testflow-app
     container_name: backend_testflow
     restart: always
     ports:
-      - "3000:3000" # Bom para debugar
+      - "3000:3000"
     depends_on:
       - mongodb-service
 
-  # 3. O FRONTEND
   frontend-service:
     build: ./testflow-frontend
     container_name: frontend_testflow
     restart: always
     ports:
-      # Expõe a porta 80 do Nginx para a 8080 da sua máquina
       - "8080:80"
     depends_on:
       - backend-service
 
-# O volume de dados do MongoDB
 volumes:
   mongo-data:
+
+

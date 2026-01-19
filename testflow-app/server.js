@@ -6,16 +6,14 @@ const Project = require('./models/Project');
 const Tag = require('./models/Tag');
 const Responsavel = require('./models/Responsavel');
 const Demanda = require('./models/Demanda');
-const User = require('./models/User'); // [NEW] Import User model
-const jwt = require('jsonwebtoken'); // [NEW] Import jwt
-const authMiddleware = require('./middleware/authMiddleware'); // [NEW]
-const roleMiddleware = require('./middleware/roleMiddleware'); // [NEW]
+const User = require('./models/User');
+const jwt = require('jsonwebtoken');
+const authMiddleware = require('./middleware/authMiddleware');
+const roleMiddleware = require('./middleware/roleMiddleware');
 
-// CONSTANTS
-require('dotenv').config(); // [NEW] Config .env
+require('dotenv').config();
 
-// CONSTANTS
-const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345'; // [NEW] fallback
+const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
 
 const app = express();
@@ -29,7 +27,7 @@ mongoose.connect(MONGO_URI)
   .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error));
 
 
-// --- FUNÇÕES HELPER ---
+
 const findOrCreateTags = async (tagNames) => {
   if (!tagNames || tagNames.length === 0) return [];
   const uniqueTagNames = [...new Set(tagNames.map(name => name.trim().toLowerCase()))];
@@ -58,9 +56,8 @@ const findOrCreateResponsaveis = async (responsavelNames) => {
 
 
 
-// --- ROTAS DE AUTENTICAÇÃO (PÚBLICAS) ---
 
-// Login
+
 app.post('/auth/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -73,7 +70,6 @@ app.post('/auth/login', async (req, res) => {
       return res.status(401).json({ message: 'Credenciais inválidas' });
     }
 
-    // Gerar Token
     const payload = {
       userId: user._id,
       username: user.username,
@@ -87,16 +83,11 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
-// Middleware Global de Proteção (Opcional: aplicar rotas específicas ou globalmente abaixo)
-// Vamos aplicar globalmente para /api/*, exceto se definirmos rotas publicas antes.
-// Mas para facilitar, vamos injetar o middleware nas definições de rota abaixo.
 
-// --- ROTAS DE GESTÃO DE USUÁRIOS (APENAS ADMIN) ---
 app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const { username, password, role } = req.body;
 
-    // Validação simples
     if (!username || !password) {
       return res.status(400).json({ message: 'Username e Password são obrigatórios' });
     }
@@ -115,10 +106,10 @@ app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req
   }
 });
 
-// --- ROTAS DE USUÁRIOS ---
+
 app.get('/api/users', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
-    const users = await User.find({}, '-password').sort({ username: 1 });
+    const users = await User.find({ username: { $ne: 'admin' } }, '-password').sort({ username: 1 });
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -138,7 +129,7 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
     if (username) user.username = username;
     if (role) user.role = role;
     if (password && password.trim() !== '') {
-      user.password = password; // O pre-save hook do Mongoose vai fazer o hash
+      user.password = password;
     }
 
     await user.save();
@@ -151,7 +142,6 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
 app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const userId = req.params.id;
-    // Prevenir auto-deleção
     if (req.user.userId === userId) {
       return res.status(400).json({ message: 'Você não pode deletar a si mesmo.' });
     }
@@ -167,7 +157,7 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (r
 });
 
 
-// --- ROTAS DE PROJETOS (CRUD) ---
+
 app.get('/api/projects', authMiddleware, async (req, res) => {
   try {
     const projects = await Project.find({}).populate('tags').populate('responsaveis');
@@ -232,7 +222,7 @@ app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin']), async
   }
 });
 
-// --- ROTAS DE TAGS ---
+
 app.get('/api/tags', async (req, res) => {
   try {
     const tags = await Tag.find({}).sort({ name: 1 });
@@ -255,7 +245,7 @@ app.delete('/api/tags/:id', async (req, res) => {
   }
 });
 
-// --- ROTAS DE RESPONSÁVEIS ---
+
 app.get('/api/responsaveis', authMiddleware, async (req, res) => {
   try {
     const responsaveis = await Responsavel.find({}).sort({ name: 1 });
@@ -265,7 +255,7 @@ app.get('/api/responsaveis', authMiddleware, async (req, res) => {
   }
 });
 
-// --- ROTAS DE DEMANDAS ---
+
 app.post('/api/demandas', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
@@ -331,7 +321,7 @@ app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin']), async
   }
 });
 
-// --- ROTAS DE CENÁRIOS ---
+
 app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
     const newScenario = new Scenario({
@@ -414,10 +404,8 @@ app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin'])
 });
 
 
-// --- ROTA DE DASHBOARD (COM CORREÇÕES NAS AGREGAÇÕES) ---
 app.get('/api/stats', authMiddleware, async (req, res) => {
   try {
-    // --- 1. PREPARAÇÃO DOS FILTROS ---
     const { projectId, responsavelId } = req.query;
 
     let projectMatch = {};
@@ -438,14 +426,11 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
       demandaMatch = { responsaveis: rId };
     }
 
-    // Este `if` é crucial e deve ficar *depois* da definição de 'demandaMatch'
     if (pId || rId) {
-      // Encontra os IDs das demandas que correspondem aos filtros
       const demandaIds = (await Demanda.find(demandaMatch, '_id')).map(d => d._id);
       scenarioMatch = { demanda: { $in: demandaIds } };
     }
 
-    // --- 2. EXECUÇÃO DAS ESTATÍSTICAS ---
     const totalProjects = await Project.countDocuments(projectMatch);
     const totalDemandas = await Demanda.countDocuments(demandaMatch);
     const totalScenarios = await Scenario.countDocuments(scenarioMatch);
@@ -489,7 +474,6 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
       { $match: { ...scenarioMatch, status: 'Com Erro' } },
       { $lookup: { from: 'demandas', localField: 'demanda', foreignField: '_id', as: 'demandaData' } },
       { $unwind: '$demandaData' },
-      // Aplica o filtro de demanda (que já contém o filtro de resp., se houver)
       { $match: { "demandaData._id": { $in: (await Demanda.find(demandaMatch, '_id')).map(d => d._id) } } },
       { $unwind: '$demandaData.responsaveis' },
       { $lookup: { from: 'responsaveis', localField: 'demandaData.responsaveis', foreignField: '_id', as: 'respData' } },
@@ -513,11 +497,8 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
     ]);
     const totalDemandasCobertas = totalDemandasCobertasAgreg[0]?.count || 0;
 
-    // --- 3. CORREÇÃO NAS AGREGAÇÕES DE RESPONSÁVEL ---
-
-    // Esta consulta agora começa em 'Responsaveis' para garantir que 0s sejam contados
     const demandasByTester = await Responsavel.aggregate([
-      { $match: (rId ? { _id: rId } : {}) }, // Filtra por responsável
+      { $match: (rId ? { _id: rId } : {}) },
       {
         $lookup: {
           from: "demandas",
@@ -525,7 +506,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
           pipeline: [
             {
               $match: {
-                ...demandaMatch, // Aplica o filtro de projeto (pId)
+                ...demandaMatch,
                 $expr: { $in: ["$$respId", "$responsaveis"] }
               }
             },
@@ -597,9 +578,6 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
       },
       { $sort: { count: -1 } }
     ]);
-    // --- FIM DAS CORREÇÕES ---
-
-    // Formata os dados
     const formatReduce = (acc, item) => {
       if (item._id) acc[item._id] = item.count;
       return acc;
