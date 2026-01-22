@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
                 } else {
                     setUser({
                         username: decoded.username,
+                        name: decoded.name, // [NEW]
                         role: decoded.role,
                         userId: decoded.userId
                     });
@@ -56,8 +57,9 @@ export const AuthProvider = ({ children }) => {
             const decoded = jwtDecode(token);
 
             setUser({
-                username: user.username,
-                role: user.role,
+                username: decoded.username,
+                name: decoded.name, // [NEW]
+                role: decoded.role,
                 userId: decoded.userId
             });
 

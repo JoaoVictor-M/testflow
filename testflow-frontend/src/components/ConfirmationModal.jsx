@@ -13,7 +13,9 @@ function ConfirmationModal({
   onClose,
   onConfirm,
   title,
-  message
+  message,
+  confirmText,
+  cancelText
 }) {
   return (
     <Transition appear show={isOpen} as={Fragment}>
@@ -61,7 +63,7 @@ function ConfirmationModal({
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Botões */}
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
                   <button
@@ -72,14 +74,14 @@ function ConfirmationModal({
                       onClose();
                     }}
                   >
-                    Deletar
+                    {confirmText || 'Deletar'}
                   </button>
                   <button
                     type="button"
                     className="mt-3 inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 sm:mt-0 sm:w-auto sm:text-sm"
                     onClick={onClose}
                   >
-                    Cancelar
+                    {cancelText || 'Cancelar'}
                   </button>
                 </div>
               </Dialog.Panel>

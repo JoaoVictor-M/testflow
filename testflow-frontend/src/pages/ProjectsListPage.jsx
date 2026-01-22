@@ -289,7 +289,11 @@ function ProjectsListPage() {
 
       {isLoading && <p>Carregando...</p>}
       {!isLoading && projects.length === 0 && (
-        <p className="text-gray-600 col-span-3">Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.</p>
+        <p className="text-gray-600 col-span-3">
+          {user?.role === 'admin'
+            ? 'Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.'
+            : 'Nenhum Projeto Encontrado.'}
+        </p>
       )}
       {!isLoading && projects.length > 0 && filteredProjects.length === 0 && (
         <p className="text-gray-600 col-span-3">Nenhum projeto encontrado para os filtros aplicados.</p>

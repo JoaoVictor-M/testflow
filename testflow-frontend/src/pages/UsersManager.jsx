@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import UserForm from '../components/UserForm';
 import ConfirmationModal from '../components/ConfirmationModal';
+import ImportUsersModal from '../components/ImportUsersModal';
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -31,9 +32,9 @@ const ArrowLeftIcon = () => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
     </svg>
 );
-const ArrowRightIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+const ResetIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
     </svg>
 );
 
@@ -41,8 +42,9 @@ const UsersManager = () => {
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [roleFilter, setRoleFilter] = useState('Todos');
-    const [sortOrder, setSortOrder] = useState('alpha'); // alpha (A-Z) | creation (recents) - though backend doesn't send creation date likely, assume ID based or keep alpha default
+    const [sortOrder, setSortOrder] = useState('alpha');
     const [currentPage, setCurrentPage] = useState(1);
 
     // Modals
@@ -50,6 +52,10 @@ const UsersManager = () => {
     const [userToEdit, setUserToEdit] = useState(null);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
+
+    // Reset Modal State
+    const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+    const [userToReset, setUserToReset] = useState(null);
 
     const ITEMS_PER_PAGE = 10;
 
@@ -95,6 +101,17 @@ const UsersManager = () => {
         setIsDeleteModalOpen(false);
         setUserToDelete(null);
     };
+
+    // Reset Handlers
+    const openResetModal = (user) => {
+        setUserToReset(user);
+        setIsResetModalOpen(true);
+    };
+    const closeResetModal = () => {
+        setIsResetModalOpen(false);
+        setUserToReset(null);
+    };
+
     const handleConfirmDelete = async () => {
         if (!userToDelete) return;
         try {
@@ -107,6 +124,20 @@ const UsersManager = () => {
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || 'Erro ao deletar usuário');
+        }
+    };
+
+    const handleConfirmReset = async () => {
+        if (!userToReset) return;
+        try {
+            // Since we removed the direct backend call in handleTriggerReset, we do it here.
+            // We use public forgot-password endpoint for now as discussed.
+            await axios.post('http://localhost:3000/auth/forgot-password', { username: userToReset.username, email: userToReset.email });
+            toast.success(`Email de redefinição enviado para ${userToReset.username}`);
+            closeResetModal();
+        } catch (error) {
+            console.error(error);
+            toast.error('Erro ao enviar email de redefinição.');
         }
     };
 
@@ -127,12 +158,10 @@ const UsersManager = () => {
     });
 
     // Sort Logic
-    // Backend sends sorted by username alpha. IF we want reverse or creation (assuming ID proxy for creation)
     const sortedUsers = [...filteredUsers].sort((a, b) => {
         if (sortOrder === 'alpha') {
             return a.username.localeCompare(b.username);
         } else {
-            // creation (reverse ID)
             return b._id.localeCompare(a._id);
         }
     });
@@ -179,7 +208,6 @@ const UsersManager = () => {
                                         className="w-full input-style"
                                     >
                                         <option value="Todos">Todos</option>
-                                        <option value="admin">Administrador</option>
                                         <option value="viewer">Visualizador</option>
                                     </select>
                                 </Popover.Panel>
@@ -196,97 +224,123 @@ const UsersManager = () => {
                     <SortIcon />
                 </button>
 
-                <button
-                    onClick={openCreateModal}
-                    className="w-full md:w-auto md:ml-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
-                >
-                    + Novo Usuário
-                </button>
+                <div className="flex gap-2 w-full md:w-auto md:ml-auto">
+                    <button
+                        onClick={() => setIsImportModalOpen(true)}
+                        className="w-full md:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 flex items-center justify-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                        Importar CSV
+                    </button>
+                    <button
+                        onClick={openCreateModal}
+                        className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
+                    >
+                        + Novo Usuário
+                    </button>
+                </div>
             </div>
 
+            <ImportUsersModal
+                isOpen={isImportModalOpen}
+                closeModal={() => setIsImportModalOpen(false)}
+                onImportSuccess={fetchUsers}
+            />
+
             {/* List */}
-            {isLoading ? (
-                <div className="text-center py-10 text-gray-500">Carregando usuários...</div>
-            ) : (
-                <div className="bg-white shadow-md border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
-                                <tr>
-                                    <th className="px-6 py-3 font-semibold text-sm">Usuário</th>
-                                    <th className="px-6 py-3 font-semibold text-sm">Nível de Acesso</th>
-                                    <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {paginatedUsers.length === 0 ? (
+            {
+                isLoading ? (
+                    <div className="text-center py-10 text-gray-500">Carregando usuários...</div>
+                ) : (
+                    <div className="bg-white shadow-md border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
                                     <tr>
-                                        <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
-                                            Nenhum usuário encontrado.
-                                        </td>
+                                        <th className="px-6 py-3 font-semibold text-sm">Usuário</th>
+                                        <th className="px-6 py-3 font-semibold text-sm">Nível de Acesso</th>
+                                        <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
                                     </tr>
-                                ) : (
-                                    paginatedUsers.map((u) => (
-                                        <tr key={u._id} className="hover:bg-gray-50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                    {u.role === 'admin' ? 'ADMINISTRADOR' : 'VISUALIZADOR'}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex justify-end gap-3">
-                                                    <button
-                                                        onClick={() => openEditModal(u)}
-                                                        className="text-gray-400 hover:text-blue-600 transition-colors"
-                                                        title="Editar"
-                                                    >
-                                                        <EditIcon />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => openDeleteModal(u)}
-                                                        className="text-gray-400 hover:text-red-600 transition-colors"
-                                                        title="Excluir"
-                                                    >
-                                                        <TrashIcon />
-                                                    </button>
-                                                </div>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100">
+                                    {paginatedUsers.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
+                                                Nenhum usuário encontrado.
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                                    ) : (
+                                        paginatedUsers.map((u) => (
+                                            <tr key={u._id} className="hover:bg-gray-50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                                                        {u.role === 'admin' ? 'ADMINISTRADOR' : 'VISUALIZADOR'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <div className="flex justify-end gap-3">
+                                                        <button
+                                                            onClick={() => openEditModal(u)}
+                                                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <EditIcon />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openResetModal(u)}
+                                                            className="text-gray-400 hover:text-red-600 transition-colors"
+                                                            title="Resetar Senha"
+                                                        >
+                                                            <ResetIcon />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => openDeleteModal(u)}
+                                                            className="text-gray-400 hover:text-red-600 transition-colors"
+                                                            title="Excluir"
+                                                        >
+                                                            <TrashIcon />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Pagination */}
-            {pageCount > 1 && (
-                <div className="flex items-center justify-between mt-6">
-                    <button
-                        onClick={handlePrevPage}
-                        disabled={currentPage === 1}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <ArrowLeftIcon />
-                        Anterior
-                    </button>
+            {
+                pageCount > 1 && (
+                    <div className="flex items-center justify-between mt-6">
+                        <button
+                            onClick={handlePrevPage}
+                            disabled={currentPage === 1}
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <ArrowLeftIcon />
+                            Anterior
+                        </button>
 
-                    <span className="text-sm text-gray-700">
-                        Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
-                    </span>
+                        <span className="text-sm text-gray-700">
+                            Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
+                        </span>
 
-                    <button
-                        onClick={handleNextPage}
-                        disabled={currentPage === pageCount}
-                        className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        Próxima
-                        <ArrowRightIcon />
-                    </button>
-                </div>
-            )}
+                        <button
+                            onClick={handleNextPage}
+                            disabled={currentPage === pageCount}
+                            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            Próxima
+                            <ArrowRightIcon />
+                        </button>
+                    </div>
+                )
+            }
 
             {/* Form Modal */}
             <Transition appear show={isFormModalOpen} as={Fragment}>
@@ -322,8 +376,20 @@ const UsersManager = () => {
                 title="Excluir Usuário"
                 message={`Tem certeza que deseja excluir o usuário "${userToDelete?.username}"? Esta ação não pode ser desfeita.`}
             />
-        </div>
+
+            {/* Reset Modal */}
+            <ConfirmationModal
+                isOpen={isResetModalOpen}
+                onClose={closeResetModal}
+                onConfirm={handleConfirmReset}
+                title="Resetar Senha"
+                message={`Tem certeza que deseja enviar um email de redefinição de senha para o usuário "${userToReset?.username}"?`}
+                confirmText="Resetar"
+                cancelText="Cancelar"
+            />
+        </div >
     );
 };
+
 
 export default UsersManager;

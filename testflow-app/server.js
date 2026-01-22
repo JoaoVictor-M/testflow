@@ -10,6 +10,10 @@ const User = require('./models/User');
 const jwt = require('jsonwebtoken');
 const authMiddleware = require('./middleware/authMiddleware');
 const roleMiddleware = require('./middleware/roleMiddleware');
+const SystemConfig = require('./models/SystemConfig');
+const { sendInviteEmail, sendResetPasswordEmail, reloadConfig } = require('./services/emailService');
+const { generatePassword } = require('./utils/passwordUtils');
+const crypto = require('crypto');
 
 require('dotenv').config();
 
@@ -73,11 +77,73 @@ app.post('/auth/login', async (req, res) => {
     const payload = {
       userId: user._id,
       username: user.username,
+      name: user.name, // Add name to token
       role: user.role
     };
     const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
 
-    res.json({ token, user: { username: user.username, role: user.role } });
+    res.json({ token, user: { username: user.username, name: user.name, role: user.role } });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/auth/forgot-password', async (req, res) => {
+  try {
+    const { username, email } = req.body;
+    const user = await User.findOne({ username, email });
+
+    // Verificação explícita solicitada pelo usuário
+    if (!user) {
+      return res.status(400).json({ message: 'Usuário ou email incorretos.' });
+    }
+
+    // Generate token
+    const token = crypto.randomBytes(20).toString('hex');
+
+    // Hash token to save in DB
+    user.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+
+    await user.save();
+
+    // Send email with unhashed token
+    // In production, this should be the frontend URL
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const resetLink = `${frontendUrl}/reset-password/${token}`;
+
+    sendResetPasswordEmail(email, user.name, resetLink)
+      .catch(err => console.error("Erro ao enviar email de reset:", err));
+
+    res.status(200).json({ message: 'Se os dados estiverem corretos, um email de recuperação será enviado.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.post('/auth/reset-password', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    // Hash token to compare with DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido ou expirado' });
+    }
+
+    user.password = newPassword; // Will be hashed by pre-save hook
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: 'Senha alterada com sucesso' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -86,21 +152,48 @@ app.post('/auth/login', async (req, res) => {
 
 app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, email, role, name } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ message: 'Username e Password são obrigatórios' });
+    if (!username || !email || !name) {
+      return res.status(400).json({ message: 'Nome, Username e Email são obrigatórios.' });
     }
 
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
     if (existingUser) {
-      return res.status(400).json({ message: 'Usuário já existe' });
+      return res.status(400).json({ message: 'Usuário ou Email já existe' });
     }
 
-    const newUser = new User({ username, password, role: role || 'viewer' });
+    // Generate token for account setup
+    const token = crypto.randomBytes(20).toString('hex');
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Create user with random password (secure placeholder) and setup tokens
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+
+    const newUser = new User({
+      name,
+      username,
+      email,
+      password: randomPassword, // Will be hashed by model
+      role: role || 'viewer',
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year (pseudo "no expire")
+    });
+
     await newUser.save();
 
-    res.status(201).json({ message: 'Usuário criado com sucesso', user: { username: newUser.username, role: newUser.role } });
+    // Generate Link
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const setupLink = `${frontendUrl}/reset-password/${token}`;
+
+    // Send email (failed email should not rollback user creation, but log error)
+    sendInviteEmail(email, username, name, setupLink)
+      .catch(err => console.error("Falha a enviar email de convite:", err));
+
+    res.status(201).json({
+      message: 'Usuário criado com sucesso. Link de definição de senha enviado por email.',
+      user: { username: newUser.username, name: newUser.name, role: newUser.role, email: newUser.email }
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -118,7 +211,7 @@ app.get('/api/users', authMiddleware, roleMiddleware(['admin']), async (req, res
 
 app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
   try {
-    const { username, password, role } = req.body;
+    const { username, password, role, name } = req.body;
     const userId = req.params.id;
 
     const user = await User.findById(userId);
@@ -126,6 +219,7 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
 
+    if (name) user.name = name;
     if (username) user.username = username;
     if (role) user.role = role;
     if (password && password.trim() !== '') {
@@ -133,7 +227,7 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
     }
 
     await user.save();
-    res.status(200).json({ message: 'Usuário atualizado com sucesso', user: { _id: user._id, username: user.username, role: user.role } });
+    res.status(200).json({ message: 'Usuário atualizado com sucesso', user: { _id: user._id, username: user.username, name: user.name, role: user.role } });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -154,6 +248,76 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (r
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
+});
+
+app.post('/api/users/import', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  const { users } = req.body; // Array of { username, email, role }
+
+  if (!users || !Array.isArray(users) || users.length === 0) {
+    return res.status(400).json({ message: 'Nenhum usuário para importar.' });
+  }
+
+  const results = {
+    success: 0,
+    failed: 0,
+    details: []
+  };
+
+  for (const userData of users) {
+    // Validate role
+    if (userData.role === 'admin') {
+      results.failed++;
+      results.details.push({ ...userData, error: 'Criação de admin não permitida via importação.' });
+      continue;
+    }
+
+    // Basic validation
+    if (!userData.username || !userData.email) {
+      results.failed++;
+      results.details.push({ ...userData, error: 'Dados incompletos.' });
+      continue;
+    }
+
+    try {
+      const existingUser = await User.findOne({ $or: [{ username: userData.username }, { email: userData.email }] });
+      if (existingUser) {
+        throw new Error('Usuário ou email já existe.');
+      }
+
+      // Logic same as Register
+      const token = crypto.randomBytes(20).toString('hex');
+      const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+      const randomPassword = crypto.randomBytes(32).toString('hex');
+
+      const newUser = new User({
+        username: userData.username,
+        email: userData.email,
+        password: randomPassword,
+        role: userData.role || 'viewer',
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: Date.now() + (365 * 24 * 60 * 60 * 1000)
+      });
+
+      await newUser.save();
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      const setupLink = `${frontendUrl}/reset-password/${token}`;
+
+      // Use the queue-enabled send function
+      sendInviteEmail(userData.email, userData.username, setupLink)
+        .catch(err => console.error(`Falha ao enviar convite para ${userData.email}:`, err));
+
+      results.success++;
+    } catch (err) {
+      results.failed++;
+      results.details.push({ ...userData, error: err.message });
+    }
+  }
+
+  res.json({
+    message: `Processamento concluído. Sucesso: ${results.success}, Falhas: ${results.failed}`,
+    results
+  });
 });
 
 
@@ -608,6 +772,68 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
   }
 });
 
+
+app.get('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  try {
+    const config = await SystemConfig.findOne({ key: 'email_settings' });
+    let value = config ? config.value : {};
+
+    // Mask password
+    if (value.pass) {
+      value.pass = '********';
+    }
+
+    // If no config in DB, return env vars (masked)
+    if (!config) {
+      value = {
+        host: process.env.SMTP_HOST || '',
+        port: process.env.SMTP_PORT || '',
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS ? '********' : '',
+        secure: process.env.SMTP_SECURE === 'true',
+        from: process.env.EMAIL_FROM || ''
+      };
+    }
+
+    res.json(value);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  try {
+    const { host, port, user, pass, secure, from } = req.body;
+
+    // Prepare object to save
+    let newSettings = { host, port, user, secure, from };
+
+    // Check if password is being updated
+    if (pass && pass !== '********') {
+      newSettings.pass = pass;
+    } else {
+      // Retain existing password if available
+      const existing = await SystemConfig.findOne({ key: 'email_settings' });
+      if (existing && existing.value.pass) {
+        newSettings.pass = existing.value.pass;
+      } else {
+        newSettings.pass = process.env.SMTP_PASS;
+      }
+    }
+
+    await SystemConfig.findOneAndUpdate(
+      { key: 'email_settings' },
+      { value: newSettings, updatedAt: Date.now() },
+      { upsert: true, new: true }
+    );
+
+    if (reloadConfig) reloadConfig();
+
+    res.json({ message: 'Configurações de email atualizadas com sucesso.' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Backend rodando na porta ${PORT}`);

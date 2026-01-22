@@ -302,7 +302,11 @@ function ScenariosListPage() {
         {scenarios.length === 0 && !isLoading && (
           <div className="text-center p-12 bg-white rounded-lg shadow border">
             <h3 className="text-xl font-semibold text-gray-700">Nenhum cenário cadastrado</h3>
-            <p className="text-gray-500 mt-2">Clique em "Novo Cenário" para começar.</p>
+            <p className="text-gray-500 mt-2">
+              {user?.role === 'admin'
+                ? 'Clique em "Novo Cenário" para começar.'
+                : 'Nenhum Cenário encontrado.'}
+            </p>
           </div>
         )}
         {scenarios.length > 0 && filteredScenarios.length === 0 && (

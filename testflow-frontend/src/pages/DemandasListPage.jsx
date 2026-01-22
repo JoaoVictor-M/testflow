@@ -328,7 +328,11 @@ function DemandasListPage() {
 
       {isLoading && <p>Carregando...</p>}
       {!isLoading && demandas.length === 0 && (
-        <p className="text-gray-600 col-span-3">Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.</p>
+        <p className="text-gray-600 col-span-3">
+          {user?.role === 'admin'
+            ? 'Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.'
+            : 'Nenhuma Demanda Encontrada.'}
+        </p>
       )}
       {!isLoading && demandas.length > 0 && filteredDemandas.length === 0 && (
         <p className="text-gray-600 col-span-3">Nenhuma demanda encontrada para os filtros aplicados.</p>

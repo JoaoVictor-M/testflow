@@ -14,6 +14,9 @@ import DashboardPage from './pages/DashboardPage'
 import ManageTagsPage from './pages/ManageTagsPage'
 import Login from './pages/Login'
 import UsersManager from './pages/UsersManager'
+import EmailSettings from './pages/EmailSettings'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 
 
 
@@ -68,17 +71,30 @@ function Navbar() {
                     )}
                   </Menu.Item>
                   {user.role === 'admin' && (
-                    <Menu.Item>
-                      {({ active }) => (
-                        <Link
-                          to="/users"
-                          className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
-                            } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-                        >
-                          Usuários
-                        </Link>
-                      )}
-                    </Menu.Item>
+                    <>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            to="/users"
+                            className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                          >
+                            Usuários
+                          </Link>
+                        )}
+                      </Menu.Item>
+                      <Menu.Item>
+                        {({ active }) => (
+                          <Link
+                            to="/email-settings"
+                            className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                          >
+                            Configurações de Email
+                          </Link>
+                        )}
+                      </Menu.Item>
+                    </>
                   )}
                 </div>
               </Menu.Items>
@@ -122,12 +138,54 @@ function Navbar() {
 
           <div className="h-6 w-px bg-gray-300 mx-2"></div>
 
-          <button
-            onClick={logout}
-            className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors shadow-sm"
-          >
-            Sair
-          </button>
+          {/* MENU USUÁRIO */}
+          <Menu as="div" className="relative inline-block text-left">
+            <div>
+              <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-bold text-base px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+                <span className="mr-2">
+                  {user.name && user.name.split(' ').length > 1
+                    ? `${user.name.split(' ')[0]} ${user.name.split(' ').pop()}`
+                    : user.name || user.username}
+                </span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+                <ChevronDownIcon />
+              </Menu.Button>
+            </div>
+            <Transition
+              as={Fragment}
+              enter="transition ease-out duration-100"
+              enterFrom="transform opacity-0 scale-95"
+              enterTo="transform opacity-100 scale-100"
+              leave="transition ease-in duration-75"
+              leaveFrom="transform opacity-100 scale-100"
+              leaveTo="transform opacity-0 scale-95"
+            >
+              {/* Ajuste: mt-1, w-full para acompanhar o botão pai, mas w-40 fixo pode ser melhor se o nome for grande. 
+                  O user pediu "lateralmente rente a risquinho". O risquinho está aa esquerda do menu.
+                  Então right-0 mantem na direita.
+                  Vou reduzir o width para w-32 ou w-full do parent. */}
+              <Menu.Items className="absolute right-0 mt-1 w-full min-w-[140px] origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                <div className="px-1 py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <button
+                        onClick={logout}
+                        className={`${active ? 'bg-red-500 text-white' : 'text-gray-900'
+                          } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
+                        Sair
+                      </button>
+                    )}
+                  </Menu.Item>
+                </div>
+              </Menu.Items>
+            </Transition>
+          </Menu>
         </div>
       </div>
     </nav>
@@ -136,17 +194,20 @@ function Navbar() {
 
 function AppContent() {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
 
-      {!isLoginPage && <Navbar />}
+      {!isPublicPage && <Navbar />}
 
-      <main className={`w-[95%] mx-auto flex-grow ${isLoginPage ? '' : 'py-8'}`}>
-        <div className={`${isLoginPage ? 'max-w-md mx-auto' : 'bg-white shadow-lg rounded-lg border border-gray-200 p-6 md:p-8 min-h-[85vh]'}`}>
+      <main className={`w-[95%] mx-auto flex-grow ${isPublicPage ? '' : 'py-8'}`}>
+        <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white shadow-lg rounded-lg border border-gray-200 p-6 md:p-8 min-h-[85vh]'}`}>
+
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
 
             <Route element={<PrivateRoute />}>
               <Route path="/" element={<WelcomePage />} />
@@ -159,19 +220,14 @@ function AppContent() {
 
             <Route element={<PrivateRoute requiredRole="admin" />}>
               <Route path="/users" element={<UsersManager />} />
+              <Route path="/email-settings" element={<EmailSettings />} />
             </Route>
 
           </Routes>
         </div>
       </main>
 
-      {!isLoginPage && (
-        <footer className="w-full text-center p-4">
-          <p className="text-xs text-gray-400">
-            TestFlow v1.0
-          </p>
-        </footer>
-      )}
+
 
       <Toaster
         position="bottom-right"

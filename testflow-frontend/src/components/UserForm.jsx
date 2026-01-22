@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { toast } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 
 const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
     const [formData, setFormData] = useState({
+        name: '',
         username: '',
-        password: '',
+        email: '',
         role: 'viewer'
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -14,19 +15,56 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
         if (isModalOpen) {
             if (userToEdit) {
                 setFormData({
-                    username: userToEdit.username,
-                    password: '', // Senha vazia na edição (só envia se quiser alterar)
-                    role: userToEdit.role
+                    name: userToEdit.name || '',
+                    username: userToEdit.username || '',
+                    email: userToEdit.email || '',
+                    role: userToEdit.role || 'viewer'
                 });
             } else {
                 setFormData({
+                    name: '',
                     username: '',
-                    password: '',
+                    email: '',
                     role: 'viewer'
                 });
             }
         }
     }, [userToEdit, isModalOpen]);
+
+    const handleNameChange = (e) => {
+        const newName = e.target.value;
+        const updates = { name: newName };
+
+        try {
+            if (newName && newName.trim()) {
+                const parts = newName.trim().split(/\s+/);
+                if (parts.length > 0) {
+                    const first = parts[0];
+                    const last = parts.length > 1 ? parts[parts.length - 1] : '';
+
+                    const normalize = (str) => {
+                        return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+                    };
+
+                    let generated = normalize(first);
+                    if (last) {
+                        generated += `.${normalize(last)}`;
+                    }
+                    // Only update username if we have a valid generated one
+                    if (generated) {
+                        updates.username = generated;
+                    }
+                }
+            } else {
+                updates.username = '';
+            }
+        } catch (err) {
+            console.error("Error generating username:", err);
+            // Don't crash, just don't update username
+        }
+
+        setFormData(prev => ({ ...prev, ...updates }));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -38,18 +76,12 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
 
             let response;
             if (userToEdit) {
-                // Edit Mode (PUT)
                 response = await axios.put(`http://localhost:3000/api/users/${userToEdit._id}`, formData, config);
                 toast.success('Usuário atualizado com sucesso!');
                 onSaveSuccess(response.data.user, 'update');
             } else {
-                // Create Mode (POST - via /auth/register)
-                // Note: The AuthContext has a registerUser function but we can call API directly here for consistency or use context.
-                // Let's call the API directly to keep it self-contained or better yet use the same endpoint structure logic.
-                // Current backend: POST /auth/register
                 response = await axios.post('http://localhost:3000/auth/register', formData, config);
                 toast.success('Usuário criado com sucesso!');
-                // Map response structure if needed. Register endpoint returns { message, user }
                 onSaveSuccess(response.data.user, 'create');
             }
             onClose();
@@ -65,28 +97,49 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm font-medium text-gray-700">Usuário</label>
+                <label className="block text-sm font-medium text-gray-700">Nome</label>
+                <input
+                    type="text"
+                    value={formData.name}
+                    onChange={handleNameChange}
+                    className="mt-1 w-full input-style"
+                    required
+                    maxLength={100}
+                />
+            </div>
+
+            <div>
+                <div className="flex items-center gap-1 mb-1">
+                    <label className="block text-sm font-medium text-gray-700">Usuário</label>
+                    {!userToEdit && (
+                        <div className="group relative flex items-center cursor-help">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 hidden group-hover:block w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg z-50">
+                                Um link de definição de senha será enviado para o email cadastrado.
+                            </div>
+                        </div>
+                    )}
+                </div>
                 <input
                     type="text"
                     value={formData.username}
                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="mt-1 w-full input-style"
+                    className="mt-1 w-full input-style bg-gray-50"
                     required
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">
-                    {userToEdit ? 'Nova Senha (deixe em branco para manter)' : 'Senha'}
-                </label>
+                <label className="block text-sm font-medium text-gray-700">Email</label>
                 <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="mt-1 w-full input-style"
-                    {...(!userToEdit && { required: true })}
+                    required
                 />
-                {userToEdit && <p className="text-xs text-gray-500 mt-1">Preencha apenas se desejar alterar a senha.</p>}
             </div>
 
             <div>
@@ -97,7 +150,6 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     className="mt-1 w-full input-style"
                 >
                     <option value="viewer">Visualizador</option>
-                    <option value="admin">Administrador</option>
                 </select>
             </div>
 
@@ -114,7 +166,7 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     disabled={isSubmitting}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                 >
-                    {isSubmitting ? 'Salvando...' : (userToEdit ? 'Salvar Alterações' : 'Criar Usuário')}
+                    {isSubmitting ? 'Salvando...' : 'Salvar'}
                 </button>
             </div>
         </form>

@@ -9,6 +9,14 @@
   }
 }
 
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  overflow-x: hidden; /* Prevent horizontal scroll */
+}
+
 /* --- CORREÇÃO DA BARRA DE ROLAGEM DAS TAGS --- */
 /*
   Isto mira a "caixa" interna do react-select onde as tags ficam
