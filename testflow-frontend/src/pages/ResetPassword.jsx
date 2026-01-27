@@ -16,12 +16,27 @@ function ResetPassword() {
     const [showTooltip, setShowTooltip] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
 
+    const [userData, setUserData] = useState(null);
+
     useEffect(() => {
-        // Clear token from URL for security/aesthetics
-        if (paramToken) {
-            setToken(paramToken);
-            window.history.replaceState(null, '', '/reset-password');
-        }
+        const validateToken = async () => {
+            if (!paramToken) return;
+            try {
+                const response = await axios.get(`http://localhost:3000/auth/validate-reset-token/${paramToken}`);
+                if (response.data.valid) {
+                    setUserData({ name: response.data.name, username: response.data.username });
+                    // Only set token in state if valid
+                    setToken(paramToken);
+                    // Clear URL
+                    window.history.replaceState(null, '', '/reset-password');
+                }
+            } catch (error) {
+                console.error("Token validation failed:", error);
+                // If validation fails, token remains null (or we set an error state)
+                setToken(null);
+            }
+        };
+        validateToken();
     }, [paramToken]);
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -89,7 +104,12 @@ function ResetPassword() {
                         </svg>
                     </div>
                 </div>
-                <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-8">Nova Senha</h2>
+                <h2 className="text-center text-3xl font-extrabold text-gray-900 mb-2">Nova Senha</h2>
+                {userData && (
+                    <p className="text-center text-gray-600 mb-6">
+                        Olá, <strong className="text-gray-900">{userData.name}</strong>
+                    </p>
+                )}
 
                 <form className="space-y-6" onSubmit={handleSubmit}>
                     <div className="relative group">
@@ -132,6 +152,7 @@ function ResetPassword() {
                             />
                             <button
                                 type="button"
+                                tabIndex={-1}
                                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
@@ -157,6 +178,7 @@ function ResetPassword() {
                             className="w-full input-style"
                             value={confirmPassword}
                             onChange={(e) => setConfirmPassword(e.target.value)}
+                            onPaste={(e) => e.preventDefault()}
                             placeholder="********"
                         />
                     </div>
@@ -170,7 +192,7 @@ function ResetPassword() {
                     </button>
                 </form>
             </div>
-        </div>
+        </div >
     );
 }
 

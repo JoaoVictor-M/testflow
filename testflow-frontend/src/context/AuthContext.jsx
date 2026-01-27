@@ -16,28 +16,14 @@ export const AuthProvider = ({ children }) => {
     // Let's assume we can set default verification.
 
     useEffect(() => {
-        // Check for token in localStorage on load
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                // Check expiration
-                const currentTime = Date.now() / 1000;
-                if (decoded.exp < currentTime) {
-                    logout();
-                } else {
-                    setUser({
-                        username: decoded.username,
-                        name: decoded.name, // [NEW]
-                        role: decoded.role,
-                        userId: decoded.userId
-                    });
-                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                }
-            } catch (error) {
-                logout();
-            }
-        }
+        // [STRICT MODE] Session Persistence Disabled
+        // Usuário pediu para obrigar login em qualquer recarregamento (F5) ou acesso direto.
+        // Portanto, não restauramos o token do localStorage.
+
+        // Se houver lógica de limpeza necessária, faça aqui.
+        // localStorage.removeItem('token'); // Opcional: limpar token antigo se quiser forçar limpeza total.
+
+        // Como não carregamos usuário, apenas finalizamos o loading.
         setLoading(false);
     }, []);
 

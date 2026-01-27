@@ -286,7 +286,7 @@ function ScenariosListPage() {
             </>
           )}
         </Popover>
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'qa') && (
           <button
             onClick={openCreateScenarioModal}
             className="w-full md:w-auto md:ml-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
@@ -303,7 +303,7 @@ function ScenariosListPage() {
           <div className="text-center p-12 bg-white rounded-lg shadow border">
             <h3 className="text-xl font-semibold text-gray-700">Nenhum cenário cadastrado</h3>
             <p className="text-gray-500 mt-2">
-              {user?.role === 'admin'
+              {(user?.role === 'admin' || user?.role === 'qa')
                 ? 'Clique em "Novo Cenário" para começar.'
                 : 'Nenhum Cenário encontrado.'}
             </p>
@@ -385,7 +385,7 @@ function ScenariosListPage() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t">
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'qa') && (
                       <>
                         <button
                           onClick={() => handleExecute(scenario._id, 'Passou')}
@@ -408,7 +408,7 @@ function ScenariosListPage() {
                       </>
                     )}
 
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'qa') && (
                       <div className="flex gap-2 ml-auto">
                         <button
                           onClick={() => openEditScenarioModal(scenario)}

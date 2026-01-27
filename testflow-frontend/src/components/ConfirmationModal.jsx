@@ -15,10 +15,11 @@ function ConfirmationModal({
   title,
   message,
   confirmText,
-  cancelText
+  cancelText,
+  afterLeave
 }) {
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition appear show={isOpen} as={Fragment} afterLeave={afterLeave}>
       <Dialog as="div" className="relative z-10" onClose={onClose}>
         {/* Overlay */}
         <Transition.Child

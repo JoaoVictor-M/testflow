@@ -90,7 +90,7 @@ const UsersManager = () => {
     };
     const closeFormModal = () => {
         setIsFormModalOpen(false);
-        setUserToEdit(null);
+        // Note: setUserToEdit(null) is called via afterLeave prop in the modal
     };
 
     const openDeleteModal = (user) => {
@@ -99,7 +99,7 @@ const UsersManager = () => {
     };
     const closeDeleteModal = () => {
         setIsDeleteModalOpen(false);
-        setUserToDelete(null);
+        // Note: setUserToDelete(null) is called via afterLeave prop in the modal
     };
 
     // Reset Handlers
@@ -109,7 +109,7 @@ const UsersManager = () => {
     };
     const closeResetModal = () => {
         setIsResetModalOpen(false);
-        setUserToReset(null);
+        // Note: setUserToReset(null) is called via afterLeave prop in the modal
     };
 
     const handleConfirmDelete = async () => {
@@ -201,13 +201,14 @@ const UsersManager = () => {
                             </Popover.Button>
                             <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
                                 <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Nível de Acesso</label>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
                                     <select
                                         value={roleFilter}
                                         onChange={(e) => setRoleFilter(e.target.value)}
                                         className="w-full input-style"
                                     >
                                         <option value="Todos">Todos</option>
+                                        <option value="qa">QA</option>
                                         <option value="viewer">Visualizador</option>
                                     </select>
                                 </Popover.Panel>
@@ -258,7 +259,7 @@ const UsersManager = () => {
                                 <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
                                     <tr>
                                         <th className="px-6 py-3 font-semibold text-sm">Usuário</th>
-                                        <th className="px-6 py-3 font-semibold text-sm">Nível de Acesso</th>
+                                        <th className="px-6 py-3 font-semibold text-sm">Perfil</th>
                                         <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
                                     </tr>
                                 </thead>
@@ -274,8 +275,8 @@ const UsersManager = () => {
                                             <tr key={u._id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                                                        {u.role === 'admin' ? 'ADMINISTRADOR' : 'VISUALIZADOR'}
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : (u.role === 'qa' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')}`}>
+                                                        {u.role === 'admin' ? 'ADMINISTRADOR' : (u.role === 'qa' ? 'QA' : 'VISUALIZADOR')}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -343,7 +344,7 @@ const UsersManager = () => {
             }
 
             {/* Form Modal */}
-            <Transition appear show={isFormModalOpen} as={Fragment}>
+            <Transition appear show={isFormModalOpen} as={Fragment} afterLeave={() => setUserToEdit(null)}>
                 <Dialog as="div" className="relative z-10" onClose={closeFormModal}>
                     <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
                         <div className="fixed inset-0 bg-black/30" />
@@ -375,6 +376,7 @@ const UsersManager = () => {
                 onConfirm={handleConfirmDelete}
                 title="Excluir Usuário"
                 message={`Tem certeza que deseja excluir o usuário "${userToDelete?.username}"? Esta ação não pode ser desfeita.`}
+                afterLeave={() => setUserToDelete(null)}
             />
 
             {/* Reset Modal */}
@@ -386,6 +388,7 @@ const UsersManager = () => {
                 message={`Tem certeza que deseja enviar um email de redefinição de senha para o usuário "${userToReset?.username}"?`}
                 confirmText="Resetar"
                 cancelText="Cancelar"
+                afterLeave={() => setUserToReset(null)}
             />
         </div >
     );

@@ -278,7 +278,7 @@ function ProjectsListPage() {
           )}
         </Popover>
 
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'qa') && (
           <button onClick={openCreateModal} className="w-full md:w-auto md:ml-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
             + Novo Projeto
           </button>
@@ -290,7 +290,7 @@ function ProjectsListPage() {
       {isLoading && <p>Carregando...</p>}
       {!isLoading && projects.length === 0 && (
         <p className="text-gray-600 col-span-3">
-          {user?.role === 'admin'
+          {(user?.role === 'admin' || user?.role === 'qa')
             ? 'Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.'
             : 'Nenhum Projeto Encontrado.'}
         </p>
@@ -307,7 +307,7 @@ function ProjectsListPage() {
               className={`relative shadow-md rounded-lg border border-gray-200 transition-all duration-300 h-full flex flex-col justify-between group ${getProjectCardBgClass(project.status)}`}
             >
               {/* --- 5. BOTÕES DE AÇÃO DO CARD --- */}
-              {user?.role === 'admin' && (
+              {(user?.role === 'admin' || user?.role === 'qa') && (
                 <div className="absolute top-3 right-3 flex gap-1 z-10">
                   <button
                     onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(project); }}
@@ -360,7 +360,7 @@ function ProjectsListPage() {
                   <th className="px-6 py-3 font-semibold text-sm w-48 text-center">Status</th>
                   <th className="px-6 py-3 font-semibold text-sm">Projeto</th>
                   <th className="px-6 py-3 font-semibold text-sm text-right pr-12">Tags</th>
-                  {user?.role === 'admin' && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
+                  {(user?.role === 'admin' || user?.role === 'qa') && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -394,7 +394,7 @@ function ProjectsListPage() {
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'qa') && (
                       <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} title="Editar Projeto"

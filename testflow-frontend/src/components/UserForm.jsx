@@ -31,10 +31,17 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
         }
     }, [userToEdit, isModalOpen]);
 
+    // Debounce timer
+    const [typingTimeout, setTypingTimeout] = useState(null);
+
     const handleNameChange = (e) => {
         const newName = e.target.value;
-        const updates = { name: newName };
 
+        // Update name immediately
+        setFormData(prev => ({ ...prev, name: newName }));
+
+        // 1. Optimistic Update (Client-side generation)
+        // This restores fluidity by attempting to guess the username instantly
         try {
             if (newName && newName.trim()) {
                 const parts = newName.trim().split(/\s+/);
@@ -43,27 +50,59 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     const last = parts.length > 1 ? parts[parts.length - 1] : '';
 
                     const normalize = (str) => {
-                        return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase() : "";
+                        // Same logic as backend to minimize jumps
+                        return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "") : "";
                     };
 
                     let generated = normalize(first);
                     if (last) {
                         generated += `.${normalize(last)}`;
                     }
-                    // Only update username if we have a valid generated one
+
                     if (generated) {
-                        updates.username = generated;
+                        // Set the "guess" immediately
+                        setFormData(prev => ({ ...prev, username: generated }));
                     }
                 }
             } else {
-                updates.username = '';
+                setFormData(prev => ({ ...prev, username: '' }));
             }
         } catch (err) {
-            console.error("Error generating username:", err);
-            // Don't crash, just don't update username
+            console.error("Erro na geração otimista:", err);
         }
 
-        setFormData(prev => ({ ...prev, ...updates }));
+        // Clear previous timeout
+        if (typingTimeout) {
+            clearTimeout(typingTimeout);
+        }
+
+        // 2. Background Validation (Server-side uniqueness check)
+        // Only call API if name has valid length
+        if (newName && newName.trim().length > 2) {
+            const timeoutId = setTimeout(async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const config = { headers: { Authorization: `Bearer ${token}` } };
+                    const response = await axios.post(
+                        'http://localhost:3000/api/users/generate-username',
+                        { name: newName },
+                        config
+                    );
+
+                    // Only update if server returns something different (collision handled)
+                    if (response.data && response.data.username) {
+                        setFormData(prev => {
+                            // If the user hasn't typed something completely different in the meantime...
+                            // (Simple check: simplistic approach rely on React state consistency)
+                            return { ...prev, username: response.data.username };
+                        });
+                    }
+                } catch (error) {
+                    console.error("Erro ao validar usuário:", error);
+                }
+            }, 600); // 600ms debounce
+            setTypingTimeout(timeoutId);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -125,9 +164,8 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                 <input
                     type="text"
                     value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                    className="mt-1 w-full input-style bg-gray-50"
-                    required
+                    readOnly
+                    className="mt-1 w-full input-style bg-gray-100 text-gray-500 cursor-not-allowed"
                 />
             </div>
 
@@ -143,13 +181,14 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">Nível de Acesso</label>
+                <label className="block text-sm font-medium text-gray-700">Perfil</label>
                 <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="mt-1 w-full input-style"
                 >
                     <option value="viewer">Visualizador</option>
+                    <option value="qa">QA</option>
                 </select>
             </div>
 

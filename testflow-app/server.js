@@ -121,6 +121,33 @@ app.post('/auth/forgot-password', async (req, res) => {
   }
 });
 
+app.get('/auth/validate-reset-token/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    // Hash token to compare with DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      resetPasswordToken: hashedToken,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Token inválido ou expirado' });
+    }
+
+    // Return partial user info (safe)
+    res.status(200).json({
+      valid: true,
+      name: user.name,
+      username: user.username
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.post('/auth/reset-password', async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -138,8 +165,8 @@ app.post('/auth/reset-password', async (req, res) => {
     }
 
     user.password = newPassword; // Will be hashed by pre-save hook
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
 
     await user.save();
 
@@ -150,7 +177,7 @@ app.post('/auth/reset-password', async (req, res) => {
 });
 
 
-app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.post('/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const { username, email, role, name } = req.body;
 
@@ -158,9 +185,20 @@ app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req
       return res.status(400).json({ message: 'Nome, Username e Email são obrigatórios.' });
     }
 
-    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
-    if (existingUser) {
-      return res.status(400).json({ message: 'Usuário ou Email já existe' });
+
+    // QA Restriction: Cannot create Admin
+    if (req.user.role === 'qa' && role === 'admin') {
+      return res.status(403).json({ message: 'QAs não têm permissão para criar Administradores.' });
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: 'Este endereço de email já está cadastrado.' });
+    }
+
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(400).json({ message: 'Este nome de usuário já existe.' });
     }
 
     // Generate token for account setup
@@ -199,8 +237,45 @@ app.post('/auth/register', authMiddleware, roleMiddleware(['admin']), async (req
   }
 });
 
+app.post('/api/users/generate-username', authMiddleware, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name || !name.trim()) {
+      return res.json({ username: '' });
+    }
 
-app.get('/api/users', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 0) return res.json({ username: '' });
+
+    const first = parts[0];
+    const last = parts.length > 1 ? parts[parts.length - 1] : '';
+
+    const normalize = (str) => {
+      return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+    };
+
+    let baseUsername = normalize(first);
+    if (last) {
+      baseUsername += `.${normalize(last)}`;
+    }
+
+    let username = baseUsername;
+    let counter = 1;
+
+    // Loop until unique
+    while (await User.findOne({ username })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
+    res.json({ username });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const users = await User.find({ username: { $ne: 'admin' } }, '-password').sort({ username: 1 });
     res.json(users);
@@ -209,7 +284,7 @@ app.get('/api/users', authMiddleware, roleMiddleware(['admin']), async (req, res
   }
 });
 
-app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const { username, password, role, name } = req.body;
     const userId = req.params.id;
@@ -217,6 +292,16 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
+    }
+
+    // QA Restriction: Cannot edit Admin
+    if (req.user.role === 'qa' && user.role === 'admin') {
+      return res.status(403).json({ message: 'QAs não podem editar Administradores.' });
+    }
+
+    // QA Restriction: Cannot promote to Admin
+    if (req.user.role === 'qa' && role === 'admin') {
+      return res.status(403).json({ message: 'QAs não podem promover usuários a Administrador.' });
     }
 
     if (name) user.name = name;
@@ -227,13 +312,13 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req,
     }
 
     await user.save();
-    res.status(200).json({ message: 'Usuário atualizado com sucesso', user: { _id: user._id, username: user.username, name: user.name, role: user.role } });
+    res.status(200).json({ message: 'Usuário atualizado com sucesso', user: { _id: user._id, username: user.username, name: user.name, role: user.role, email: user.email } });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 });
 
-app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const userId = req.params.id;
     if (req.user.userId === userId) {
@@ -250,8 +335,9 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin']), async (r
   }
 });
 
-app.post('/api/users/import', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
-  const { users } = req.body; // Array of { username, email, role }
+app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+  const { users } = req.body; // Array of { name, email, role }
+  console.log(`[DEBUG] Received import request for ${users ? users.length : 0} users.`);
 
   if (!users || !Array.isArray(users) || users.length === 0) {
     return res.status(400).json({ message: 'Nenhum usuário para importar.' });
@@ -271,17 +357,48 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin']), async (
       continue;
     }
 
-    // Basic validation
-    if (!userData.username || !userData.email) {
+    // QA Restriction: Cannot import admins (redundant check but safe)
+    if (req.user.role === 'qa' && userData.role === 'admin') {
       results.failed++;
-      results.details.push({ ...userData, error: 'Dados incompletos.' });
+      results.details.push({ ...userData, error: 'QAs não podem importar Admins.' });
+      continue;
+    }
+
+    // Basic validation
+    if (!userData.name || !userData.email) {
+      results.failed++;
+      results.details.push({ ...userData, error: 'Nome ou Email ausente.' });
       continue;
     }
 
     try {
-      const existingUser = await User.findOne({ $or: [{ username: userData.username }, { email: userData.email }] });
-      if (existingUser) {
-        throw new Error('Usuário ou email já existe.');
+      // Check if email already exists
+      const existingEmail = await User.findOne({ email: userData.email });
+      if (existingEmail) {
+        throw new Error('Email já cadastrado.');
+      }
+
+      // Generate Unique Username
+      const normalize = (str) => {
+        return str ? str.normalize('NFD').replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "") : "";
+      };
+
+      const parts = userData.name.trim().split(/\s+/);
+      const first = parts[0];
+      const last = parts.length > 1 ? parts[parts.length - 1] : '';
+
+      let baseUsername = normalize(first);
+      if (last) {
+        baseUsername += `.${normalize(last)}`;
+      }
+
+      let username = baseUsername;
+      let counter = 1;
+
+      // Loop until unique
+      while (await User.findOne({ username })) {
+        username = `${baseUsername}${counter}`;
+        counter++;
       }
 
       // Logic same as Register
@@ -290,7 +407,8 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin']), async (
       const randomPassword = crypto.randomBytes(32).toString('hex');
 
       const newUser = new User({
-        username: userData.username,
+        name: userData.name,
+        username: username,
         email: userData.email,
         password: randomPassword,
         role: userData.role || 'viewer',
@@ -304,7 +422,8 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin']), async (
       const setupLink = `${frontendUrl}/reset-password/${token}`;
 
       // Use the queue-enabled send function
-      sendInviteEmail(userData.email, userData.username, setupLink)
+      console.log(`[DEBUG] Sending invite email to ${userData.email} (User: ${username}, Name: ${userData.name})...`);
+      sendInviteEmail(userData.email, username, userData.name, setupLink)
         .catch(err => console.error(`Falha ao enviar convite para ${userData.email}:`, err));
 
       results.success++;
@@ -331,7 +450,7 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
   }
 });
 
-app.post('/api/projects', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const tagIds = await findOrCreateTags(req.body.tags);
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
@@ -349,7 +468,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin']), async (req,
   }
 });
 
-app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const tagIds = await findOrCreateTags(req.body.tags);
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
@@ -368,7 +487,7 @@ app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin']), async (r
   }
 });
 
-app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const projectId = req.params.id;
     const project = await Project.findById(projectId);
@@ -420,7 +539,7 @@ app.get('/api/responsaveis', authMiddleware, async (req, res) => {
 });
 
 
-app.post('/api/demandas', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
     const newDemanda = new Demanda({
@@ -451,7 +570,7 @@ app.get('/api/demandas', authMiddleware, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
     const demandaData = {
@@ -470,7 +589,7 @@ app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin']), async (r
     res.status(400).json({ message: error.message });
   }
 });
-app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const demandaId = req.params.id;
     const demanda = await Demanda.findById(demandaId);
@@ -486,7 +605,7 @@ app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin']), async
 });
 
 
-app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const newScenario = new Scenario({
       title: req.body.title,
@@ -527,7 +646,7 @@ app.get('/api/scenarios/:id', authMiddleware, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const updatedScenario = await Scenario.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
     if (!updatedScenario) return res.status(404).json({ message: 'Cenário não encontrado' });
@@ -536,7 +655,7 @@ app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin']), async (
     res.status(400).json({ message: error.message });
   }
 });
-app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const deletedScenario = await Scenario.findByIdAndDelete(req.params.id);
     if (!deletedScenario) return res.status(404).json({ message: 'Cenário não encontrado' });
@@ -545,7 +664,7 @@ app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin']), asyn
     res.status(500).json({ message: error.message });
   }
 });
-app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const { status, mantisLink } = req.body;
     const scenarioId = req.params.id;

@@ -13,9 +13,12 @@ const PrivateRoute = ({ requiredRole }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole && user.role !== requiredRole && user.role !== 'admin') {
-        // Se o usuário não tem o papel necessário (e não é admin, que tem acesso a tudo), redireciona
-        return <Navigate to="/" replace />;
+    if (requiredRole) {
+        const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+        if (!roles.includes(user.role) && user.role !== 'admin') {
+            // Se o usuário não tem o papel necessário (e não é admin, que tem acesso a tudo), redireciona
+            return <Navigate to="/" replace />;
+        }
     }
 
     return <Outlet />;

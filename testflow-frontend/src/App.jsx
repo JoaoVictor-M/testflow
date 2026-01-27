@@ -40,7 +40,6 @@ function Navbar() {
         </Link>
         <div className="flex items-center space-x-6">
 
-          {/* MENU GERENCIAMENTO */}
           <Menu as="div" className="relative inline-block text-left">
             <div>
               <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
@@ -70,7 +69,7 @@ function Navbar() {
                       </Link>
                     )}
                   </Menu.Item>
-                  {user.role === 'admin' && (
+                  {(user.role === 'admin' || user.role === 'qa') && (
                     <>
                       <Menu.Item>
                         {({ active }) => (
@@ -83,17 +82,19 @@ function Navbar() {
                           </Link>
                         )}
                       </Menu.Item>
-                      <Menu.Item>
-                        {({ active }) => (
-                          <Link
-                            to="/email-settings"
-                            className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
-                              } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-                          >
-                            Configurações de Email
-                          </Link>
-                        )}
-                      </Menu.Item>
+                      {user.role === 'admin' && (
+                        <Menu.Item>
+                          {({ active }) => (
+                            <Link
+                              to="/email-settings"
+                              className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                                } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                            >
+                              Configurações de Email
+                            </Link>
+                          )}
+                        </Menu.Item>
+                      )}
                     </>
                   )}
                 </div>
@@ -101,7 +102,6 @@ function Navbar() {
             </Transition>
           </Menu>
 
-          {/* MENU VISUALIZAÇÃO */}
           <Menu as="div" className="relative inline-block text-left">
             <div>
               <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
@@ -218,8 +218,11 @@ function AppContent() {
               <Route path="/tags" element={<ManageTagsPage />} />
             </Route>
 
-            <Route element={<PrivateRoute requiredRole="admin" />}>
+            <Route element={<PrivateRoute requiredRole={['admin', 'qa']} />}>
               <Route path="/users" element={<UsersManager />} />
+            </Route>
+
+            <Route element={<PrivateRoute requiredRole="admin" />}>
               <Route path="/email-settings" element={<EmailSettings />} />
             </Route>
 

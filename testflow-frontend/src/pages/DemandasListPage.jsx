@@ -314,7 +314,7 @@ function DemandasListPage() {
         </Popover>
 
         {/* Botão + Nova Demanda */}
-        {user?.role === 'admin' && (
+        {(user?.role === 'admin' || user?.role === 'qa') && (
           <button
             onClick={openCreateModal}
             className="w-full md:w-auto md:ml-auto px-3 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
@@ -329,7 +329,7 @@ function DemandasListPage() {
       {isLoading && <p>Carregando...</p>}
       {!isLoading && demandas.length === 0 && (
         <p className="text-gray-600 col-span-3">
-          {user?.role === 'admin'
+          {(user?.role === 'admin' || user?.role === 'qa')
             ? 'Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.'
             : 'Nenhuma Demanda Encontrada.'}
         </p>
@@ -352,7 +352,7 @@ function DemandasListPage() {
                     <LinkIcon />
                   </a>
                 )}
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'qa') && (
                   <>
                     <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); openEditModal(demanda); }} className="p-1.5 rounded-full text-gray-400 bg-white/50 opacity-0 group-hover:opacity-100 hover:text-blue-600 hover:bg-blue-100 transition-opacity" title="Editar Demanda">
                       <EditIcon />
@@ -449,7 +449,7 @@ function DemandasListPage() {
                             <LinkIcon />
                           </a>
                         )}
-                        {user?.role === 'admin' && (
+                        {(user?.role === 'admin' || user?.role === 'qa') && (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(demanda); }} title="Editar Demanda"
                               className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100">

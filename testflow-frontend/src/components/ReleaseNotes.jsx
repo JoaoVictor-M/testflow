@@ -40,20 +40,12 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">Segurança e Identidade</h3>
                                     <p className="text-gray-600 mt-1 leading-relaxed">
-                                        Reforçamos a identificação e segurança dos usuários.
+                                        Melhorias na identificação do usuário em fluxos críticos.
                                     </p>
                                     <ul className="mt-3 space-y-2">
                                         <li className="flex items-center gap-2 text-sm text-gray-700">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                            <strong>Novo Campo "Nome":</strong> Agora os usuários possuem identificação real (Nome + Sobrenome) além do usuário técnico.
-                                        </li>
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                            <strong>Emails Inteligentes:</strong> O sistema detecta automaticamente a configuração de segurança (SSL/TLS) ideal para seu servidor de email.
-                                        </li>
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                            <strong>Recuperação de Senha:</strong> Emails de redefinição agora são personalizados com o nome do usuário para maior confiança.
+                                            <strong>Redefinição de Senha Personalizada:</strong> A tela de nova senha agora saúda o usuário pelo nome ("Olá, [Nome]"), garantindo que você está alterando a senha da conta correta.
                                         </li>
                                     </ul>
                                 </div>
@@ -71,20 +63,16 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                 <div>
                                     <h3 className="text-lg font-bold text-gray-900">Melhorias de Visual e Usabilidade</h3>
                                     <p className="text-gray-600 mt-1 leading-relaxed">
-                                        Pequenos ajustes que fazem toda a diferença no dia a dia.
+                                        Refinamentos visuais para uma experiência mais fluida.
                                     </p>
                                     <ul className="mt-3 space-y-2">
                                         <li className="flex items-center gap-2 text-sm text-gray-700">
                                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            Menu de usuário aprimorado e alinhado na barra superior.
+                                            <strong>Correção Visual (Flicker):</strong> Eliminamos o efeito de "piscar" indesejado ao interagir com alguns modais do sistema.
                                         </li>
                                         <li className="flex items-center gap-2 text-sm text-gray-700">
                                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            Validação mais clara e direta na tela "Esqueci minha senha".
-                                        </li>
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            Correção na criação de usuários para evitar travamentos.
+                                            <strong>Estabilidade do Tema:</strong> Revertemos a implementação experimental do Modo Escuro para garantir consistência visual enquanto trabalhamos em um design Premium para a versão 1.4.
                                         </li>
                                     </ul>
                                 </div>

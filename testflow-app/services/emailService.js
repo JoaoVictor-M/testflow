@@ -91,6 +91,7 @@ const sendEmail = async (to, subject, html, type = 'generic') => {
 };
 
 const sendInviteEmail = async (to, username, name, setupLink) => {
+    console.log(`[DEBUG_SERVICE] sendInviteEmail called for ${to}`);
     const subject = 'Bem-vindo ao TestFlow - Ative sua conta';
     // Use first name for greeting
     const firstName = name.split(' ')[0];
