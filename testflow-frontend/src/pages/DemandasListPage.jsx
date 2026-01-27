@@ -59,25 +59,25 @@ const TrashIcon = () => (
 const getDemandaStatusClasses = (status) => {
   switch (status) {
     case 'Testado':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     case 'Testando':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
     case 'Aguardando Correção':
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
     default: // Pendente
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-300';
   }
 };
 const getDemandaCardBgClass = (status) => {
   switch (status) {
     case 'Testado':
-      return 'bg-green-50';
+      return 'bg-green-50 dark:bg-green-900/10';
     case 'Testando':
-      return 'bg-blue-50';
+      return 'bg-blue-50 dark:bg-blue-900/10';
     case 'Aguardando Correção':
-      return 'bg-yellow-50';
+      return 'bg-yellow-50 dark:bg-yellow-900/10';
     default: // Pendente
-      return 'bg-white';
+      return 'bg-white dark:bg-slate-800';
   }
 };
 
@@ -239,15 +239,15 @@ function DemandasListPage() {
     <div>
       {/* --- Navegação "Migalha de Pão" --- */}
       <nav className="mb-6 flex items-center justify-between">
-        <div className="text-sm font-medium text-gray-600">
-          <Link to="/projects" className="hover:text-blue-600">Projetos</Link>
+        <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <Link to="/projects" className="hover:text-blue-600 dark:hover:text-blue-400">Projetos</Link>
           <span className="mx-2">/</span>
-          <span className="text-gray-800">Demandas</span>
+          <span className="text-gray-800 dark:text-gray-200">Demandas</span>
         </div>
       </nav>
 
       {/* --- CÁBEÇALHO --- */}
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Demandas</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Demandas</h1>
 
       {/* --- BARRA DE AÇÕES --- */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
@@ -265,10 +265,10 @@ function DemandasListPage() {
 
         {/* Seletor de Visualização (Grid/Lista) */}
         <div className="flex items-center border rounded-lg shadow-sm">
-          <button onClick={() => setViewMode('grid')} title="Visualização em Grade" className={`p-2 rounded-l-lg ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+          <button onClick={() => setViewMode('grid')} title="Visualização em Grade" className={`p-2 rounded-l-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-slate-700'}`}>
             <GridIcon />
           </button>
-          <button onClick={() => setViewMode('list')} title="Visualização em Lista" className={`p-2 rounded-r-lg border-l ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+          <button onClick={() => setViewMode('list')} title="Visualização em Lista" className={`p-2 rounded-r-lg border-l border-gray-200 dark:border-slate-600 transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-slate-700'}`}>
             <ListIcon />
           </button>
         </div>
@@ -277,7 +277,7 @@ function DemandasListPage() {
         <button
           onClick={toggleSortOrder}
           title={sortOrder === 'alpha' ? 'Ordenado por A-Z (clique para ordenar por criação)' : 'Ordenado por Criação (clique para ordenar por A-Z)'}
-          className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700 transition-colors"
         >
           <SortIcon />
         </button>
@@ -286,21 +286,21 @@ function DemandasListPage() {
         <Popover className="relative w-full md:w-auto">
           {({ open }) => (
             <>
-              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium ${open ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700'}`}>
                 <FilterIcon /> Filtros
               </Popover.Button>
               <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
-                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700">Status</label>
+                      <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                       <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option>Todos</option>
                         {allStatus.map(status => (<option key={status} value={status}>{status}</option>))}
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700">Responsável</label>
+                      <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Responsável</label>
                       <select id="filter-responsavel" className="w-full input-style" value={responsavelFilter} onChange={(e) => setResponsavelFilter(e.target.value)}>
                         <option>Todos</option>
                         {allResponsaveis.map(resp => (<option key={resp} value={resp}>{resp}</option>))}
@@ -328,14 +328,14 @@ function DemandasListPage() {
 
       {isLoading && <p>Carregando...</p>}
       {!isLoading && demandas.length === 0 && (
-        <p className="text-gray-600 col-span-3">
+        <p className="text-gray-600 dark:text-gray-400 col-span-3">
           {(user?.role === 'admin' || user?.role === 'qa')
             ? 'Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.'
             : 'Nenhuma Demanda Encontrada.'}
         </p>
       )}
       {!isLoading && demandas.length > 0 && filteredDemandas.length === 0 && (
-        <p className="text-gray-600 col-span-3">Nenhuma demanda encontrada para os filtros aplicados.</p>
+        <p className="text-gray-600 dark:text-gray-400 col-span-3">Nenhuma demanda encontrada para os filtros aplicados.</p>
       )}
 
       {/* Renderização em Grade */}
@@ -344,7 +344,7 @@ function DemandasListPage() {
           {paginatedDemandas.map((demanda) => (
             <div
               key={demanda._id}
-              className={`relative shadow-md rounded-lg border border-gray-200 transition-all duration-300 h-full flex flex-col justify-between group ${getDemandaCardBgClass(demanda.status)}`}
+              className={`relative shadow-md rounded-lg border border-gray-200 dark:border-slate-700 transition-all duration-300 h-full flex flex-col justify-between group ${getDemandaCardBgClass(demanda.status)}`}
             >
               <div className="absolute top-3 right-3 flex gap-1 z-10">
                 {demanda.linkDemanda && (
@@ -369,17 +369,17 @@ function DemandasListPage() {
                   <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full mb-2 ${getDemandaStatusClasses(demanda.status)}`}>
                     {demanda.status}
                   </span>
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    <span className="text-blue-600">[{demanda.demandaId}]</span>: {demanda.nome}
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
+                    <span className="text-blue-600 dark:text-blue-400">[{demanda.demandaId}]</span>: {demanda.nome}
                   </h3>
-                  <p className="mt-2 text-sm text-gray-600">Tempo: {demanda.tempoEstimado || 'N/D'} horas</p>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Tempo: {demanda.tempoEstimado || 'N/D'} horas</p>
                 </div>
                 {Array.isArray(demanda.responsaveis) && demanda.responsaveis.length > 0 && (
                   <div className="mt-4">
-                    <h4 className="text-xs font-semibold text-gray-500 mb-1">Responsáveis:</h4>
+                    <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Responsáveis:</h4>
                     <div className="flex flex-wrap gap-1">
                       {demanda.responsaveis.map((resp) => (
-                        <span key={resp._id} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full capitalize">
+                        <span key={resp._id} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-xs font-medium rounded-full capitalize">
                           {resp.name}
                         </span>
                       ))}
@@ -394,10 +394,10 @@ function DemandasListPage() {
 
       {/* Renderização em Lista */}
       {viewMode === 'list' && filteredDemandas.length > 0 && (
-        <div className="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-sm w-48 text-center">Status</th>
                   <th className="px-6 py-3 font-semibold text-sm w-24 text-center">ID</th>
@@ -406,23 +406,23 @@ function DemandasListPage() {
                   <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                 {paginatedDemandas.map((demanda) => (
                   <tr
                     key={demanda._id}
                     onClick={() => navigate(`/demanda/${demanda._id}/scenarios`)}
-                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer"
                   >
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${getDemandaStatusClasses(demanda.status)}`}>
                         {demanda.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 font-semibold text-blue-600 text-center">
+                    <td className="px-6 py-4 font-semibold text-blue-600 dark:text-blue-400 text-center">
                       [{demanda.demandaId}]
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-medium text-gray-900 hover:text-blue-600">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
                         {demanda.nome}
                       </span>
                     </td>
@@ -430,7 +430,7 @@ function DemandasListPage() {
                       {Array.isArray(demanda.responsaveis) && demanda.responsaveis.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-end">
                           {demanda.responsaveis.map((resp) => (
-                            <span key={resp._id} className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full capitalize">
+                            <span key={resp._id} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-xs font-medium rounded-full capitalize">
                               {resp.name}
                             </span>
                           ))}
@@ -476,7 +476,7 @@ function DemandasListPage() {
         <div className="flex gap-2">
           <button
             onClick={() => navigate('/projects')}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md border border-gray-300 hover:bg-gray-50"
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 rounded-md border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
           >
             <ArrowLeftIcon />
             Voltar
@@ -485,7 +485,7 @@ function DemandasListPage() {
             <button
               onClick={handlePrevPage}
               disabled={currentPage === 1}
-              className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anterior
             </button>
@@ -493,7 +493,7 @@ function DemandasListPage() {
         </div>
 
         {pageCount > 1 && (
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-gray-700 dark:text-gray-400">
             Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
           </span>
         )}
@@ -502,7 +502,7 @@ function DemandasListPage() {
           <button
             onClick={handleNextPage}
             disabled={currentPage === pageCount}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Próxima <ArrowRightIcon />
           </button>
@@ -518,8 +518,8 @@ function DemandasListPage() {
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
                     {demandaToEdit ? 'Editar Demanda' : 'Adicionar Nova Demanda'}
                   </Dialog.Title>
                   <DemandaForm

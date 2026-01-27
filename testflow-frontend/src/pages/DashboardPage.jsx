@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import { 
+import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid
 } from 'recharts';
@@ -17,11 +17,11 @@ const CardIcon = ({ iconColor, path }) => (
 // Componente "Card" reutilizável
 function StatCard({ title, value, icon }) {
   return (
-    <div className="bg-white p-6 rounded-lg shadow border border-gray-200 flex items-center space-x-4" title={title}>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 flex items-center space-x-4 transition-colors" title={title}>
       {icon}
       <div>
-        <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-        <dd className="mt-1 text-3xl font-semibold text-gray-900">{value}</dd>
+        <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">{title}</dt>
+        <dd className="mt-1 text-3xl font-semibold text-gray-900 dark:text-white">{value}</dd>
       </div>
     </div>
   );
@@ -33,13 +33,13 @@ function StatList({ title, data, unit = '', color = 'text-blue-600' }) {
   const validData = data.filter(item => item._id && item.count > 0);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow border border-gray-200 h-full" title={title}>
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">{title}</h2>
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 h-full transition-colors" title={title}>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">{title}</h2>
       {validData.length > 0 ? (
         <ul className="space-y-3">
           {validData.map((item, index) => (
-            <li key={item._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-              <span className="font-medium text-gray-800 capitalize truncate" title={item._id}>
+            <li key={item._id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700/50 rounded-md transition-colors">
+              <span className="font-medium text-gray-800 dark:text-gray-200 capitalize truncate" title={item._id}>
                 {index + 1}. {item._id}
               </span>
               <span className={`font-semibold ${color}`}>
@@ -49,7 +49,7 @@ function StatList({ title, data, unit = '', color = 'text-blue-600' }) {
           ))}
         </ul>
       ) : (
-        <p className="text-gray-500 text-center py-10">Nenhum dado encontrado.</p>
+        <p className="text-gray-500 dark:text-gray-400 text-center py-10">Nenhum dado encontrado.</p>
       )}
     </div>
   );
@@ -90,7 +90,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 function DashboardPage() {
   const [stats, setStats] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [filterProjectId, setFilterProjectId] = useState('all');
   const [filterResponsavelId, setFilterResponsavelId] = useState('all');
 
@@ -126,7 +126,7 @@ function DashboardPage() {
         if (filterResponsavelId !== 'all') {
           params.append('responsavelId', filterResponsavelId);
         }
-        
+
         const response = await api.get(`/stats?${params.toString()}`);
         setStats(response.data);
       } catch (err) {
@@ -151,7 +151,7 @@ function DashboardPage() {
   // const totalErro = stats.scenariosByStatus['Com Erro'] || 0;   // Removido
   // const totalExecutados = totalPassou + totalErro;               // Removido
   // const passRate = totalExecutados === 0 ? 0 : (totalPassou / totalExecutados) * 100; // Removido
-  
+
   const statusScenarioData = [
     { name: 'Passou', value: stats.scenariosByStatus['Passou'] || 0 },
     { name: 'Com Erro', value: stats.scenariosByStatus['Com Erro'] || 0 },
@@ -166,20 +166,20 @@ function DashboardPage() {
   ].filter(entry => entry.value > 0);
 
   const horasData = (stats.horasPorProjeto || []).map(item => ({ name: item._id, Horas: item.count }));
-  
+
   const demandasByTester = stats.demandasByTester || [];
   const horasByTester = (stats.horasByTester || []).map(item => ({ _id: item._id, count: item.count }));
   const testandoByTester = (stats.testandoByTester || []).map(item => ({ _id: item._id, count: item.count }));
   const demandasMaisBugs = stats.demandasMaisBugs || [];
-  
+
   return (
     <div className="space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">Dashboard</h1>
-      
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Dashboard</h1>
+
       {/* --- BARRA DE FILTROS DO DASHBOARD --- */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white rounded-lg shadow border border-gray-200">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700 transition-colors">
         <div title="Filtre todos os gráficos por um projeto específico">
-          <label htmlFor="filter-projeto" className="block text-sm font-medium text-gray-700">Filtrar por Projeto</label>
+          <label htmlFor="filter-projeto" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Filtrar por Projeto</label>
           <select
             id="filter-projeto"
             className="w-full input-style"
@@ -193,7 +193,7 @@ function DashboardPage() {
           </select>
         </div>
         <div title="Filtre todos os gráficos por um responsável específico">
-          <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700">Filtrar por Responsável</label>
+          <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Filtrar por Responsável</label>
           <select
             id="filter-responsavel"
             className="w-full input-style"
@@ -211,18 +211,18 @@ function DashboardPage() {
       {/* --- CARDS DE NÚMEROS (AGORA 3 CARDS) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Taxa de Aprovação REMOVIDA */}
-        <StatCard 
-          title="Horas Estimadas" 
+        <StatCard
+          title="Horas Estimadas"
           value={stats.totalHorasEstimadas}
           icon={<CardIcon iconColor="bg-indigo-500" path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />}
         />
-        <StatCard 
-          title="Total de Demandas" 
+        <StatCard
+          title="Total de Demandas"
           value={stats.totalDemandas}
           icon={<CardIcon iconColor="bg-purple-500" path="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />}
         />
-        <StatCard 
-          title="Total de Cenários" 
+        <StatCard
+          title="Total de Cenários"
           value={stats.totalScenarios}
           icon={<CardIcon iconColor="bg-blue-500" path="M4 6h16M4 12h16M4 18h16" />}
         />
@@ -230,10 +230,10 @@ function DashboardPage() {
 
       {/* --- GRÁFICOS E LISTAS (LAYOUT DE 3 COLUNAS) --- */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         {/* Coluna 1: Execução de Cenários (Pizza) */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-lg shadow border border-gray-200" title="Distribuição de status de todos os cenários de teste (Passou, Com Erro, Aguardando)">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Execução de Cenários</h2>
+        <div className="lg:col-span-1 bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 transition-colors" title="Distribuição de status de todos os cenários de teste (Passou, Com Erro, Aguardando)">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Execução de Cenários</h2>
           {statusScenarioData.length > 0 ? (
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
@@ -257,12 +257,12 @@ function DashboardPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="text-gray-500 text-center py-20">Nenhum cenário executado.</p>}
+          ) : <p className="text-gray-500 dark:text-gray-400 text-center py-20">Nenhum cenário executado.</p>}
         </div>
 
         {/* Coluna 2: Status das Demandas (Barras) */}
-        <div className="lg:col-span-2 bg-white p-6 rounded-lg shadow border border-gray-200" title="Distribuição de status de todas as demandas (Pendente, Testando, Aguardando Correção, Testado)">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Status das Demandas</h2>
+        <div className="lg:col-span-2 bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 transition-colors" title="Distribuição de status de todas as demandas (Pendente, Testando, Aguardando Correção, Testado)">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Status das Demandas</h2>
           {statusDemandaData.length > 0 ? (
             <div style={{ width: '100%', height: 300 }}>
               <ResponsiveContainer>
@@ -280,9 +280,9 @@ function DashboardPage() {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          ) : <p className="text-gray-500 text-center py-20">Nenhuma demanda encontrada.</p>}
+          ) : <p className="text-gray-500 dark:text-gray-400 text-center py-20">Nenhuma demanda encontrada.</p>}
         </div>
-        
+
         {/* Coluna 3: Demandas por Analista (Lista) */}
         <div className="lg:col-span-1">
           <StatList
@@ -292,7 +292,7 @@ function DashboardPage() {
             color="text-blue-600"
           />
         </div>
-        
+
         {/* Coluna 4: Horas Estimadas por Analista (Lista) */}
         <div className="lg:col-span-1">
           <StatList
@@ -302,7 +302,7 @@ function DashboardPage() {
             color="text-indigo-600"
           />
         </div>
-        
+
         {/* Coluna 5: Demandas em Teste x Analista (Lista) */}
         <div className="lg:col-span-1">
           <StatList
@@ -315,15 +315,15 @@ function DashboardPage() {
 
         {/* Gráfico de Barras (Horas por Projeto) */}
         {filterProjectId === 'all' && horasData.length > 0 && (
-          <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow border border-gray-200" title="Horas estimadas totais para cada projeto (visível apenas quando 'Todos os Projetos' está selecionado)">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Horas Estimadas por Projeto</h2>
+          <div className="lg:col-span-3 bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 transition-colors" title="Horas estimadas totais para cada projeto (visível apenas quando 'Todos os Projetos' está selecionado)">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Horas Estimadas por Projeto</h2>
             <div style={{ width: '100%', height: 300 }}> {/* Altura ajustada */}
               <ResponsiveContainer>
                 <BarChart data={horasData} layout="vertical" margin={{ top: 10, right: 100, left: 10, bottom: 20 }}> {/* Margens ajustadas */}
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis 
-                    type="number" 
-                    label={{ value: 'Horas', position: 'insideBottom', offset: -5 }} 
+                  <XAxis
+                    type="number"
+                    label={{ value: 'Horas', position: 'insideBottom', offset: -5 }}
                   />
                   <YAxis dataKey="name" type="category" width={150} interval={0} />
                   <Tooltip />
@@ -333,15 +333,15 @@ function DashboardPage() {
             </div>
           </div>
         )}
-        
+
         {/* Lista (Top 5 Demandas com Erro) */}
         {demandasMaisBugs.length > 0 && (
-          <div className="lg:col-span-3 bg-white p-6 rounded-lg shadow border border-gray-200" title="As 5 demandas com a maior contagem de cenários marcados como 'Com Erro'">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Top 5 Demandas com Mais Erros</h2>
+          <div className="lg:col-span-3 bg-white dark:bg-slate-800 p-6 rounded-lg shadow border border-gray-200 dark:border-slate-700 transition-colors" title="As 5 demandas com a maior contagem de cenários marcados como 'Com Erro'">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Top 5 Demandas com Mais Erros</h2>
             <ul className="space-y-3">
               {demandasMaisBugs.map((dem, index) => (
-                <li key={dem._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                  <span className="font-medium text-gray-800 capitalize truncate" title={dem._id}>
+                <li key={dem._id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700/50 rounded-md transition-colors">
+                  <span className="font-medium text-gray-800 dark:text-gray-200 capitalize truncate" title={dem._id}>
                     {index + 1}. <span className="text-blue-600">[{dem.demandaId}]</span> {dem._id}
                   </span>
                   <span className="font-semibold text-red-600">{dem.count}</span>

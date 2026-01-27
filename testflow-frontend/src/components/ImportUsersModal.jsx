@@ -136,8 +136,8 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 flex justify-between items-center">
+                            <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all">
+                                <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white flex justify-between items-center">
                                     Importar Usuários em Lote
                                     <button onClick={downloadTemplate} className="text-sm text-blue-600 hover:underline flex items-center gap-1">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
@@ -151,7 +151,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
                                             type="file"
                                             accept=".csv"
                                             onChange={handleFileChange}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                                            className="block w-full text-sm text-gray-500 dark:text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-700 dark:file:text-blue-300 hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50"
                                         />
                                         <div className="group relative">
                                             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -164,26 +164,26 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
                                     </div>
 
                                     {file && (
-                                        <div className="border rounded-md overflow-hidden max-h-60 overflow-y-auto mb-4">
-                                            <table className="min-w-full divide-y divide-gray-200">
-                                                <thead className="bg-gray-50">
+                                        <div className="border border-gray-200 dark:border-slate-700 rounded-md overflow-hidden max-h-60 overflow-y-auto mb-4">
+                                            <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                                                <thead className="bg-gray-50 dark:bg-slate-900/50">
                                                     <tr>
-                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Nome</th>
-                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Permissão</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Nome</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
+                                                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Permissão</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="bg-white divide-y divide-gray-200">
+                                                <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
                                                     {previewData.slice(0, 50).map((row, idx) => (
                                                         <tr key={idx}>
-                                                            <td className="px-4 py-2 text-sm text-gray-900">{row.name}</td>
-                                                            <td className="px-4 py-2 text-sm text-gray-500">{row.email}</td>
-                                                            <td className="px-4 py-2 text-sm text-gray-500">{row.role}</td>
+                                                            <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">{row.name}</td>
+                                                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{row.email}</td>
+                                                            <td className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{row.role}</td>
                                                         </tr>
                                                     ))}
                                                 </tbody>
                                             </table>
-                                            {previewData.length > 50 && <p className="text-center text-xs text-gray-500 p-2">... e mais {previewData.length - 50} linhas.</p>}
+                                            {previewData.length > 50 && <p className="text-center text-xs text-gray-500 dark:text-gray-400 p-2">... e mais {previewData.length - 50} linhas.</p>}
                                         </div>
                                     )}
 
@@ -199,7 +199,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
                                     <div className="mt-6 flex justify-end gap-3">
                                         <button
                                             type="button"
-                                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                                            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                                             onClick={closeModal}
                                             disabled={importing}
                                         >

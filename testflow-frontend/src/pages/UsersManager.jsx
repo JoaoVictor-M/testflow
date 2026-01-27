@@ -178,7 +178,7 @@ const UsersManager = () => {
         <div>
             {/* Header */}
             <div className="mb-6 flex flex-col md:flex-row gap-4 items-center justify-between">
-                <h1 className="text-3xl font-bold text-gray-800">Gerenciamento de Usuários</h1>
+                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Gerenciamento de Usuários</h1>
             </div>
 
             {/* Action Bar */}
@@ -196,12 +196,12 @@ const UsersManager = () => {
                 <Popover className="relative w-full md:w-auto">
                     {({ open }) => (
                         <>
-                            <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium ${open ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+                            <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700'}`}>
                                 <FilterIcon /> Filtros
                             </Popover.Button>
                             <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
-                                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
+                                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700">
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Perfil</label>
                                     <select
                                         value={roleFilter}
                                         onChange={(e) => setRoleFilter(e.target.value)}
@@ -219,7 +219,7 @@ const UsersManager = () => {
 
                 <button
                     onClick={() => setSortOrder(prev => prev === 'alpha' ? 'creation' : 'alpha')}
-                    className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                    className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700 transition-colors"
                     title={sortOrder === 'alpha' ? "Ordenado por Nome (clique para Recentes)" : "Ordenado por Recentes (clique para Nome)"}
                 >
                     <SortIcon />
@@ -253,17 +253,17 @@ const UsersManager = () => {
                 isLoading ? (
                     <div className="text-center py-10 text-gray-500">Carregando usuários...</div>
                 ) : (
-                    <div className="bg-white shadow-md border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-white dark:bg-slate-800 shadow-md border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
-                                <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+                                <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-700">
                                     <tr>
                                         <th className="px-6 py-3 font-semibold text-sm">Usuário</th>
                                         <th className="px-6 py-3 font-semibold text-sm">Perfil</th>
                                         <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                                     {paginatedUsers.length === 0 ? (
                                         <tr>
                                             <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
@@ -272,8 +272,8 @@ const UsersManager = () => {
                                         </tr>
                                     ) : (
                                         paginatedUsers.map((u) => (
-                                            <tr key={u._id} className="hover:bg-gray-50 transition-colors">
-                                                <td className="px-6 py-4 font-medium text-gray-900">{u.username}</td>
+                                            <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{u.username}</td>
                                                 <td className="px-6 py-4">
                                                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : (u.role === 'qa' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')}`}>
                                                         {u.role === 'admin' ? 'ADMINISTRADOR' : (u.role === 'qa' ? 'QA' : 'VISUALIZADOR')}
@@ -321,20 +321,20 @@ const UsersManager = () => {
                         <button
                             onClick={handlePrevPage}
                             disabled={currentPage === 1}
-                            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ArrowLeftIcon />
                             Anterior
                         </button>
 
-                        <span className="text-sm text-gray-700">
+                        <span className="text-sm text-gray-700 dark:text-gray-400">
                             Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
                         </span>
 
                         <button
                             onClick={handleNextPage}
                             disabled={currentPage === pageCount}
-                            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             Próxima
                             <ArrowRightIcon />
@@ -352,8 +352,8 @@ const UsersManager = () => {
                     <div className="fixed inset-0 overflow-y-auto">
                         <div className="flex min-h-full items-center justify-center p-4 text-center">
                             <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                                    <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
                                         {userToEdit ? 'Editar Usuário' : 'Novo Usuário'}
                                     </Dialog.Title>
                                     <UserForm

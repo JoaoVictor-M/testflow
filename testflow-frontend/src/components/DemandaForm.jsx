@@ -13,7 +13,7 @@ const customSelectStyles = {
   }),
   menuPortal: (base) => ({
     ...base,
-    zIndex: 9999 
+    zIndex: 9999
   }),
   menu: (provided) => ({
     ...provided,
@@ -69,7 +69,7 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
 
 
 function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModalOpen }) {
-  
+
   const [demandaId, setDemandaId] = useState('');
   const [nome, setNome] = useState('');
   // --- MUDANÇA: 'tempoEstimado' agora é um número ---
@@ -106,15 +106,15 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     const responsavelNames = responsaveis.map(r => r.value);
-    
-    const demandaData = { 
+
+    const demandaData = {
       demandaId,
-      nome, 
+      nome,
       tempoEstimado: Number(tempoEstimado), // Garante que é enviado como número
       linkDemanda,
-      status, 
+      status,
       responsaveis: responsavelNames,
       project: projectId
     };
@@ -142,10 +142,10 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        
+
         {/* Número da Demanda (NOVO) */}
         <div>
-          <label htmlFor="dem-id" className="block text-sm font-medium text-gray-700">Número da Demanda (ID)</label>
+          <label htmlFor="dem-id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Número da Demanda (ID)</label>
           <input
             type="text"
             id="dem-id"
@@ -159,7 +159,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* Nome (Obrigatório) */}
         <div>
-          <label htmlFor="dem-nome" className="block text-sm font-medium text-gray-700">Nome da Demanda</label>
+          <label htmlFor="dem-nome" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da Demanda</label>
           <input
             type="text"
             id="dem-nome"
@@ -173,7 +173,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* Status (Obrigatório) */}
         <div>
-          <label htmlFor="dem-status" className="block text-sm font-medium text-gray-700">Status</label>
+          <label htmlFor="dem-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
           <select
             id="dem-status"
             className="mt-1 block w-full input-style"
@@ -186,10 +186,10 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
             <option>Testado</option>
           </select>
         </div>
-        
+
         {/* Responsáveis */}
         <div>
-          <label htmlFor="dem-responsaveis" className="block text-sm font-medium text-gray-700">Responsáveis</label>
+          <label htmlFor="dem-responsaveis" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Responsáveis</label>
           <ResponsavelSelector
             value={responsaveis}
             onChange={(selectedOptions) => setResponsaveis(selectedOptions)}
@@ -199,7 +199,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* --- TEMPO ESTIMADO (ATUALIZADO) --- */}
         <div>
-          <label htmlFor="dem-tempo" className="block text-sm font-medium text-gray-700">Tempo Estimado (em horas)</label>
+          <label htmlFor="dem-tempo" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tempo Estimado (em horas)</label>
           <input
             type="number" // Garante que só números sejam digitados
             id="dem-tempo"
@@ -211,10 +211,10 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
             min="0"
           />
         </div>
-        
+
         {/* Link da Demanda (Opcional) */}
         <div>
-          <label htmlFor="dem-link" className="block text-sm font-medium text-gray-700">Link da Demanda (Jira, etc.)</label>
+          <label htmlFor="dem-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Link da Demanda (Jira, etc.)</label>
           <input
             type="url"
             id="dem-link"
@@ -229,7 +229,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             onClick={onClose}
           >
             Cancelar

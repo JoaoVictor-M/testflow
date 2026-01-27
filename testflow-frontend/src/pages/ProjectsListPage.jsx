@@ -55,25 +55,25 @@ const TrashIcon = () => (
 const getProjectStatusClasses = (status) => {
   switch (status) {
     case 'Concluído':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     case 'Em Andamento':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
     case 'Interrompido':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     default: // Não Iniciado
-      return 'bg-gray-100 text-gray-800';
+      return 'bg-gray-100 text-gray-800 dark:bg-slate-700 dark:text-gray-300';
   }
 };
 const getProjectCardBgClass = (status) => {
   switch (status) {
     case 'Concluído':
-      return 'bg-green-50';
+      return 'bg-green-50 dark:bg-green-900/10';
     case 'Em Andamento':
-      return 'bg-blue-50';
+      return 'bg-blue-50 dark:bg-blue-900/10';
     case 'Interrompido':
-      return 'bg-red-50';
+      return 'bg-red-50 dark:bg-red-900/10';
     default: // Não Iniciado
-      return 'bg-white';
+      return 'bg-white dark:bg-slate-800';
   }
 };
 
@@ -215,7 +215,7 @@ function ProjectsListPage() {
   return (
     <div>
       {/* --- CÁBEÇALHO --- */}
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Projetos</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Projetos</h1>
 
       {/* --- BARRA DE AÇÕES --- */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
@@ -231,10 +231,10 @@ function ProjectsListPage() {
         </div>
 
         <div className="flex items-center border rounded-lg shadow-sm">
-          <button onClick={() => setViewMode('grid')} title="Visualização em Grade" className={`p-2 rounded-l-lg ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+          <button onClick={() => setViewMode('grid')} title="Visualização em Grade" className={`p-2 rounded-l-lg transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-slate-700'}`}>
             <GridIcon />
           </button>
-          <button onClick={() => setViewMode('list')} title="Visualização em Lista" className={`p-2 rounded-r-lg border-l ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+          <button onClick={() => setViewMode('list')} title="Visualização em Lista" className={`p-2 rounded-r-lg border-l border-gray-200 dark:border-slate-600 transition-colors ${viewMode === 'list' ? 'bg-blue-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-400 dark:hover:bg-slate-700'}`}>
             <ListIcon />
           </button>
         </div>
@@ -242,7 +242,7 @@ function ProjectsListPage() {
         <button
           onClick={toggleSortOrder}
           title={sortOrder === 'alpha' ? 'Ordenado por A-Z (clique para ordenar por criação)' : 'Ordenado por Criação (clique para ordenar por A-Z)'}
-          className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          className="flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700 transition-colors"
         >
           <SortIcon />
         </button>
@@ -250,14 +250,14 @@ function ProjectsListPage() {
         <Popover className="relative w-full md:w-auto">
           {({ open }) => (
             <>
-              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium ${open ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}>
+              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700'}`}>
                 <FilterIcon /> Filtros
               </Popover.Button>
               <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
-                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700">Status</label>
+                      <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                       <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                         <option>Todos</option>
                         {allStatus.map(status => (<option key={status} value={status}>{status}</option>))}
@@ -265,7 +265,7 @@ function ProjectsListPage() {
                     </div>
 
                     <div>
-                      <label htmlFor="filter-tag" className="block text-sm font-medium text-gray-700">Tag</label>
+                      <label htmlFor="filter-tag" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tag</label>
                       <select id="filter-tag" className="w-full input-style" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
                         <option>Todos</option>
                         {allTags.map(tag => (<option key={tag} value={tag}>{tag}</option>))}
@@ -289,14 +289,14 @@ function ProjectsListPage() {
 
       {isLoading && <p>Carregando...</p>}
       {!isLoading && projects.length === 0 && (
-        <p className="text-gray-600 col-span-3">
+        <p className="text-gray-600 dark:text-gray-400 col-span-3">
           {(user?.role === 'admin' || user?.role === 'qa')
             ? 'Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.'
             : 'Nenhum Projeto Encontrado.'}
         </p>
       )}
       {!isLoading && projects.length > 0 && filteredProjects.length === 0 && (
-        <p className="text-gray-600 col-span-3">Nenhum projeto encontrado para os filtros aplicados.</p>
+        <p className="text-gray-600 dark:text-gray-400 col-span-3">Nenhum projeto encontrado para os filtros aplicados.</p>
       )}
 
       {viewMode === 'grid' && filteredProjects.length > 0 && (
@@ -304,7 +304,7 @@ function ProjectsListPage() {
           {paginatedProjects.map((project) => (
             <div
               key={project._id}
-              className={`relative shadow-md rounded-lg border border-gray-200 transition-all duration-300 h-full flex flex-col justify-between group ${getProjectCardBgClass(project.status)}`}
+              className={`relative shadow-md rounded-lg border border-gray-200 dark:border-slate-700 transition-all duration-300 h-full flex flex-col justify-between group ${getProjectCardBgClass(project.status)}`}
             >
               {/* --- 5. BOTÕES DE AÇÃO DO CARD --- */}
               {(user?.role === 'admin' || user?.role === 'qa') && (
@@ -331,7 +331,7 @@ function ProjectsListPage() {
                   <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full mb-2 ${getProjectStatusClasses(project.status)}`}>
                     {project.status}
                   </span>
-                  <h3 className="text-xl font-semibold text-gray-900">{project.title}</h3>
+                  <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100">{project.title}</h3>
                 </div>
 
 
@@ -339,7 +339,7 @@ function ProjectsListPage() {
                 {Array.isArray(project.tags) && project.tags.length > 0 && (
                   <div className="mt-4 flex flex-wrap gap-2">
                     {project.tags.map((tag) => (
-                      <span key={tag._id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full capitalize">
+                      <span key={tag._id} className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium rounded-full capitalize">
                         {tag.name}
                       </span>
                     ))}
@@ -352,10 +352,10 @@ function ProjectsListPage() {
       )}
 
       {viewMode === 'list' && filteredProjects.length > 0 && (
-        <div className="bg-white shadow border border-gray-200 rounded-lg overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-gray-50 text-gray-700 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-slate-900/50 text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-3 font-semibold text-sm w-48 text-center">Status</th>
                   <th className="px-6 py-3 font-semibold text-sm">Projeto</th>
@@ -363,12 +363,12 @@ function ProjectsListPage() {
                   {(user?.role === 'admin' || user?.role === 'qa') && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 dark:divide-slate-700">
                 {paginatedProjects.map((project) => (
                   <tr
                     key={project._id}
                     onClick={() => navigate(`/project/${project._id}/demandas`)}
-                    className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                    className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors group cursor-pointer"
                   >
                     <td className="px-6 py-4 text-center">
                       <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${getProjectStatusClasses(project.status)}`}>
@@ -376,7 +376,7 @@ function ProjectsListPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="font-medium text-gray-900 hover:text-blue-600">
+                      <span className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400">
                         {project.title}
                       </span>
                     </td>
@@ -385,7 +385,7 @@ function ProjectsListPage() {
                       {Array.isArray(project.tags) && project.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-end">
                           {project.tags.map((tag) => (
-                            <span key={tag._id} className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded-full capitalize">
+                            <span key={tag._id} className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 text-xs font-medium rounded-full capitalize">
                               {tag.name}
                             </span>
                           ))}
@@ -422,20 +422,20 @@ function ProjectsListPage() {
           <button
             onClick={handlePrevPage}
             disabled={currentPage === 1}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowLeftIcon />
             Anterior
           </button>
 
-          <span className="text-sm text-gray-700">
+          <span className="text-sm text-gray-700 dark:text-gray-400">
             Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
           </span>
 
           <button
             onClick={handleNextPage}
             disabled={currentPage === pageCount}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-sm font-medium text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Próxima
             <ArrowRightIcon />
@@ -452,8 +452,8 @@ function ProjectsListPage() {
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
                     {projectToEdit ? 'Editar Projeto' : 'Adicionar Novo Projeto'}
                   </Dialog.Title>
 

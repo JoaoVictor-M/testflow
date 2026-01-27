@@ -4,8 +4,8 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 transition-all duration-300">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm p-4 transition-all duration-300">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 border border-gray-100 dark:border-slate-700 transition-colors">
 
                 {/* Header Elegante */}
                 <div className="bg-gradient-to-r from-blue-700 to-blue-600 p-8 text-white relative overflow-hidden">
@@ -34,16 +34,16 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                         {/* Destaque Principal */}
                         <section>
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl shrink-0">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
                                     <ShieldCheck size={28} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Segurança e Identidade</h3>
-                                    <p className="text-gray-600 mt-1 leading-relaxed">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Segurança e Identidade</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                                         Melhorias na identificação do usuário em fluxos críticos.
                                     </p>
                                     <ul className="mt-3 space-y-2">
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
+                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                             <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                             <strong>Redefinição de Senha Personalizada:</strong> A tela de nova senha agora saúda o usuário pelo nome ("Olá, [Nome]"), garantindo que você está alterando a senha da conta correta.
                                         </li>
@@ -52,25 +52,25 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             </div>
                         </section>
 
-                        <hr className="border-gray-100" />
+                        <hr className="border-gray-100 dark:border-slate-700" />
 
                         {/* Visual */}
                         <section>
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-purple-100 text-purple-600 rounded-xl shrink-0">
+                                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">
                                     <Sparkles size={28} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Melhorias de Visual e Usabilidade</h3>
-                                    <p className="text-gray-600 mt-1 leading-relaxed">
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Melhorias de Visual e Usabilidade</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
                                         Refinamentos visuais para uma experiência mais fluida.
                                     </p>
                                     <ul className="mt-3 space-y-2">
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
+                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                             <strong>Correção Visual (Flicker):</strong> Eliminamos o efeito de "piscar" indesejado ao interagir com alguns modais do sistema.
                                         </li>
-                                        <li className="flex items-center gap-2 text-sm text-gray-700">
+                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                                             <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
                                             <strong>Estabilidade do Tema:</strong> Revertemos a implementação experimental do Modo Escuro para garantir consistência visual enquanto trabalhamos em um design Premium para a versão 1.4.
                                         </li>
@@ -82,11 +82,11 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                     </div>
                 </div>
 
-                <div className="bg-gray-50 p-6 border-t border-gray-100 flex justify-between items-center">
-                    <p className="text-sm text-gray-500 font-medium">Obrigado por utilizar o TestFlow.</p>
+                <div className="bg-gray-50 dark:bg-slate-900/50 p-6 border-t border-gray-100 dark:border-slate-700 flex justify-between items-center transition-colors">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Obrigado por utilizar o TestFlow.</p>
                     <button
                         onClick={onClose}
-                        className="px-6 py-2 bg-gray-900 text-white font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
+                        className="px-6 py-2 bg-gray-900 text-white dark:bg-slate-700 dark:hover:bg-slate-600 font-medium rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
                     >
                         Fechar
                     </button>

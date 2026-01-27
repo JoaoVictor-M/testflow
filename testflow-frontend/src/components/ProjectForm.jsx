@@ -175,7 +175,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
 
         {/* Título */}
         <div>
-          <label htmlFor="proj-title" className="block text-sm font-medium text-gray-700">Título do Projeto</label>
+          <label htmlFor="proj-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título do Projeto</label>
           <input
             type="text"
             id="proj-title"
@@ -191,7 +191,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
 
         {/* Status */}
         <div>
-          <label htmlFor="proj-status" className="block text-sm font-medium text-gray-700">Status</label>
+          <label htmlFor="proj-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
           <select
             id="proj-status"
             className="mt-1 block w-full input-style"
@@ -207,7 +207,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
 
         {/* Tags */}
         <div>
-          <label htmlFor="proj-tags" className="block text-sm font-medium text-gray-700">Tags</label>
+          <label htmlFor="proj-tags" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tags</label>
           <TagSelector
             value={tags}
             onChange={(selectedOptions) => setTags(selectedOptions)}
@@ -219,7 +219,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             onClick={onClose}
           >
             Cancelar

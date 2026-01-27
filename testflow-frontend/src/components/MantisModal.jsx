@@ -38,16 +38,16 @@ function MantisModal({ isOpen, onClose, onSubmit }) {
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all">
                 <Dialog.Title
                   as="h3"
-                  className="text-lg font-medium leading-6 text-gray-900"
+                  className="text-lg font-medium leading-6 text-gray-900 dark:text-white"
                 >
                   Registrar Erro
                 </Dialog.Title>
                 <form onSubmit={handleSubmit}>
                   <div className="mt-4">
-                    <label htmlFor="mantisLink" className="block text-sm font-medium text-gray-700">
+                    <label htmlFor="mantisLink" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Link do Mantis (Opcional)
                     </label>
                     <input
@@ -57,14 +57,14 @@ function MantisModal({ isOpen, onClose, onSubmit }) {
                       placeholder="https://mantis.suaempresa.com/view.php?id=123"
                       value={link}
                       onChange={(e) => setLink(e.target.value)}
-                      // O ATRIBUTO 'required' FOI REMOVIDO
+                    // O ATRIBUTO 'required' FOI REMOVIDO
                     />
                   </div>
 
                   <div className="mt-6 flex justify-end gap-3">
                     <button
                       type="button"
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
                       onClick={onClose}
                     >
                       Cancelar

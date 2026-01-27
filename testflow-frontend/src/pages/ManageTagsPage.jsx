@@ -34,7 +34,7 @@ function ManageTagsPage() {
   // --- 4. FUNÇÃO QUE O MODAL CHAMA AO CONFIRMAR ---
   const handleConfirmDelete = async () => {
     if (!tagToDelete) return; // Segurança
-    
+
     try {
       await api.delete(`/tags/${tagToDelete}`);
       toast.success('Tag deletada com sucesso!');
@@ -50,26 +50,26 @@ function ManageTagsPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6 text-gray-800">
+      <h1 className="text-3xl font-bold mb-6 text-gray-800 dark:text-gray-100">
         Gerenciar Tags
       </h1>
-      <p className="mb-4 text-gray-600">
+      <p className="mb-4 text-gray-600 dark:text-gray-400">
         Tags são criadas automaticamente ao adicioná-las a um projeto. Aqui você pode ver todas as tags em uso e deletar as que não são mais necessárias.
       </p>
-      
-      <div className="bg-white shadow border border-gray-200 rounded-lg">
-        <ul className="divide-y divide-gray-200">
+
+      <div className="bg-white dark:bg-slate-800 shadow border border-gray-200 dark:border-slate-700 rounded-lg transition-colors">
+        <ul className="divide-y divide-gray-200 dark:divide-slate-700">
           {tags.length === 0 ? (
-            <li className="p-4 text-center text-gray-500">Nenhuma tag criada ainda.</li>
+            <li className="p-4 text-center text-gray-500 dark:text-gray-400">Nenhuma tag criada ainda.</li>
           ) : (
             tags.map(tag => (
-              <li key={tag._id} className="p-4 flex justify-between items-center">
-                <span className="text-base font-medium text-gray-800 capitalize">{tag.name}</span>
+              <li key={tag._id} className="p-4 flex justify-between items-center hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                <span className="text-base font-medium text-gray-800 dark:text-gray-200 capitalize">{tag.name}</span>
                 <button
                   // 5. O ONCLICK AGORA ABRE O MODAL
                   onClick={() => openDeleteModal(tag._id)}
                   title="Deletar Tag"
-                  className="p-1.5 rounded-full text-gray-400 hover:bg-red-100 hover:text-red-600"
+                  className="p-1.5 rounded-full text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
                   <TrashIcon />
                 </button>

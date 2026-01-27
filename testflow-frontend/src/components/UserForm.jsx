@@ -136,7 +136,7 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-                <label className="block text-sm font-medium text-gray-700">Nome</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome</label>
                 <input
                     type="text"
                     value={formData.name}
@@ -149,7 +149,7 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
 
             <div>
                 <div className="flex items-center gap-1 mb-1">
-                    <label className="block text-sm font-medium text-gray-700">Usuário</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Usuário</label>
                     {!userToEdit && (
                         <div className="group relative flex items-center cursor-help">
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -165,12 +165,12 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     type="text"
                     value={formData.username}
                     readOnly
-                    className="mt-1 w-full input-style bg-gray-100 text-gray-500 cursor-not-allowed"
+                    className="mt-1 w-full input-style bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-slate-900 dark:text-gray-400 dark:border-slate-600"
                 />
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
                 <input
                     type="email"
                     value={formData.email}
@@ -181,7 +181,7 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
             </div>
 
             <div>
-                <label className="block text-sm font-medium text-gray-700">Perfil</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Perfil</label>
                 <select
                     value={formData.role}
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
@@ -192,11 +192,11 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                 </select>
             </div>
 
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-100 dark:border-slate-700">
                 <button
                     type="button"
                     onClick={onClose}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white dark:bg-slate-700 dark:text-gray-200 border border-gray-300 dark:border-slate-600 rounded-md hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                 >
                     Cancelar
                 </button>

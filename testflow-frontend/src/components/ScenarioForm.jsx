@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 
 // 1. RECEBE 'demandaId'
 function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
-  
+
   const initialState = {
     title: '',
     description: '',
@@ -46,7 +46,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
       ...formData,
       steps: formData.steps.split('\n'),
       // 2. ENVIA 'demandaId'
-      demanda: demandaId, 
+      demanda: demandaId,
     };
 
     try {
@@ -72,10 +72,10 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        
+
         {/* Título */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700">Título</label>
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Título</label>
           <input
             type="text"
             id="title"
@@ -90,7 +90,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
 
         {/* Descrição */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">Descrição</label>
+          <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Descrição</label>
           <input
             type="text"
             id="description"
@@ -105,7 +105,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
 
         {/* Passos */}
         <div>
-          <label htmlFor="steps" className="block text-sm font-medium text-gray-700">Passos (um por linha)</label>
+          <label htmlFor="steps" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Passos (um por linha)</label>
           <textarea
             id="steps"
             name="steps"
@@ -120,7 +120,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
 
         {/* Resultado Esperado */}
         <div>
-          <label htmlFor="expectedResult" className="block text-sm font-medium text-gray-700">Resultado Esperado</label>
+          <label htmlFor="expectedResult" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Resultado Esperado</label>
           <input
             type="text"
             id="expectedResult"
@@ -137,7 +137,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-slate-700 rounded-md hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors"
             onClick={onClose}
           >
             Cancelar

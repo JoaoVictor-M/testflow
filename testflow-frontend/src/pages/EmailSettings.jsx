@@ -67,14 +67,14 @@ function EmailSettings() {
 
     return (
         <div className="max-w-4xl mx-auto">
-            <h1 className="text-2xl font-bold mb-6 text-gray-800">Configurações de Email (SMTP)</h1>
+            <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-100">Configurações de Email (SMTP)</h1>
 
-            <div className="bg-white rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-6 transition-colors">
                 <form onSubmit={handleSubmit} className="space-y-6">
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Host SMTP</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Host SMTP</label>
                             <input
                                 type="text"
                                 name="host"
@@ -86,7 +86,7 @@ function EmailSettings() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Porta</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Porta</label>
                             <input
                                 type="text"
                                 name="port"
@@ -98,7 +98,7 @@ function EmailSettings() {
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Usuário (Email)</label>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usuário (Email)</label>
                             <input
                                 type="text"
                                 name="user"
@@ -111,7 +111,7 @@ function EmailSettings() {
 
                         <div>
                             <div className="flex items-center gap-1 mb-1">
-                                <label className="block text-sm font-medium text-gray-700">Senha</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Senha</label>
                                 <div className="group relative flex items-center cursor-help">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -152,7 +152,7 @@ function EmailSettings() {
 
                         <div className="md:col-span-2">
                             <div className="flex items-center gap-1 mb-1">
-                                <label className="block text-sm font-medium text-gray-700">Email de Envio (From)</label>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Email de Envio (From)</label>
                                 <div className="group relative flex items-center cursor-help">
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -182,12 +182,12 @@ function EmailSettings() {
                             onChange={handleChange}
                             className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
-                        <label htmlFor="secure" className="ml-2 block text-sm text-gray-900">
+                        <label htmlFor="secure" className="ml-2 block text-sm text-gray-900 dark:text-gray-200">
                             Usar conexão segura (SSL/TLS)
                         </label>
                     </div>
 
-                    <div className="flex justify-end pt-4 border-t border-gray-100">
+                    <div className="flex justify-end pt-4 border-t border-gray-100 dark:border-slate-700">
                         <button
                             type="submit"
                             disabled={saving}

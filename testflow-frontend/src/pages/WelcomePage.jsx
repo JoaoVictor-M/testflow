@@ -35,7 +35,7 @@ function WelcomePage() {
           </svg>
 
           {/* Título */}
-          <h1 className="text-4xl font-bold text-gray-800 mt-6 mb-1">
+          <h1 className="text-4xl font-bold text-gray-800 dark:text-white mt-6 mb-1 transition-colors">
             Bem-vindo ao TestFlow
           </h1>
 
@@ -49,7 +49,7 @@ function WelcomePage() {
                 group-hover:mt-4
                 "
           >
-            <p className="text-lg text-gray-600 max-w-md text-center">
+            <p className="text-lg text-gray-600 dark:text-gray-300 max-w-md text-center transition-colors">
               Esta ferramenta foi construída para centralizar o gerenciamento de projetos, demandas e cenários de Teste, otimizando o fluxo de trabalho da equipe de QA.
             </p>
           </div>
@@ -62,7 +62,7 @@ function WelcomePage() {
         <div className="pt-8">
           <button
             onClick={() => setShowReleaseNotes(true)}
-            className="text-xs text-gray-400 hover:text-blue-600 hover:underline transition-colors"
+            className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
           >
             {APP_VERSION}
           </button>

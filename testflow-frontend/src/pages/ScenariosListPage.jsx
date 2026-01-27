@@ -49,21 +49,21 @@ const TrashIcon = () => (
 const getStatusClasses = (status) => {
   switch (status) {
     case 'Passou':
-      return 'bg-green-100 text-green-800';
+      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
     case 'Com Erro':
-      return 'bg-red-100 text-red-800';
+      return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
     default: // Aguardando
-      return 'bg-yellow-100 text-yellow-800';
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
   }
 };
 const getCardBgClass = (status) => {
   switch (status) {
     case 'Passou':
-      return 'bg-green-50';
+      return 'bg-green-50 dark:bg-green-900/10';
     case 'Com Erro':
-      return 'bg-red-50';
+      return 'bg-red-50 dark:bg-red-900/10';
     default: // Aguardando
-      return 'bg-white';
+      return 'bg-white dark:bg-slate-800';
   }
 };
 
@@ -221,18 +221,18 @@ function ScenariosListPage() {
     <div>
       {/* --- CABEÇALHO (COM CORREÇÃO) --- */}
       <nav className="mb-6 flex items-center justify-between">
-        <div className="text-sm font-medium text-gray-600">
-          <Link to="/projects" className="hover:text-blue-600">Projetos</Link>
+        <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+          <Link to="/projects" className="hover:text-blue-600 dark:hover:text-blue-400">Projetos</Link>
           <span className="mx-2">/</span>
           {/* A classe 'underline' foi removida e 'hover:underline' foi adicionada */}
           <button
             onClick={() => navigate(-1)}
-            className="hover:text-blue-600"
+            className="hover:text-blue-600 dark:hover:text-blue-400"
           >
             Demandas
           </button>
           <span className="mx-2">/</span>
-          <span className="text-gray-800">Cenários</span>
+          <span className="text-gray-800 dark:text-gray-200">Cenários</span>
         </div>
       </nav>
 
@@ -251,8 +251,8 @@ function ScenariosListPage() {
           {({ open }) => (
             <>
               <Popover.Button
-                className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium
-                            ${open ? 'bg-blue-50 text-blue-700 border-blue-300' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors
+                            ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-slate-800 dark:text-gray-200 dark:border-slate-600 dark:hover:bg-slate-700'}`}
               >
                 <FilterIcon />
                 Filtros
@@ -266,9 +266,9 @@ function ScenariosListPage() {
                 leaveFrom="opacity-100 translate-y-0"
                 leaveTo="opacity-0 translate-y-1"
               >
-                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+                <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700">
                   <div>
-                    <label htmlFor="filter-status-scenario" className="block text-sm font-medium text-gray-700">Status</label>
+                    <label htmlFor="filter-status-scenario" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
                     <select
                       id="filter-status-scenario"
                       className="w-full input-style"
@@ -297,12 +297,12 @@ function ScenariosListPage() {
       </div>
 
       {/* --- LISTAGEM DE CENÁRIOS --- */}
-      <h2 className="text-2xl font-bold mt-10 mb-4 text-gray-800">Cenários Cadastrados</h2>
+      <h2 className="text-2xl font-bold mt-10 mb-4 text-gray-800 dark:text-gray-100">Cenários Cadastrados</h2>
       <div className="space-y-3">
         {scenarios.length === 0 && !isLoading && (
-          <div className="text-center p-12 bg-white rounded-lg shadow border">
-            <h3 className="text-xl font-semibold text-gray-700">Nenhum cenário cadastrado</h3>
-            <p className="text-gray-500 mt-2">
+          <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700">
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Nenhum cenário cadastrado</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
               {(user?.role === 'admin' || user?.role === 'qa')
                 ? 'Clique em "Novo Cenário" para começar.'
                 : 'Nenhum Cenário encontrado.'}
@@ -310,9 +310,9 @@ function ScenariosListPage() {
           </div>
         )}
         {scenarios.length > 0 && filteredScenarios.length === 0 && (
-          <div className="text-center p-12 bg-white rounded-lg shadow border">
-            <h3 className="text-xl font-semibold text-gray-700">Nenhum resultado</h3>
-            <p className="text-gray-500 mt-2">Nenhum cenário encontrado para os filtros aplicados.</p>
+          <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow border border-gray-200 dark:border-slate-700">
+            <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Nenhum resultado</h3>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">Nenhum cenário encontrado para os filtros aplicados.</p>
           </div>
         )}
         {filteredScenarios.map((scenario, index) => {
@@ -323,12 +323,12 @@ function ScenariosListPage() {
               className={`shadow rounded-lg border border-gray-200 overflow-hidden ${getCardBgClass(scenario.status)}`}
             >
               <div
-                className={`flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 ${getCardBgClass(scenario.status)}`}
+                className={`flex items-center justify-between p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700/50 transition-colors ${getCardBgClass(scenario.status)}`}
                 onClick={() => toggleScenarioExpand(scenario._id)}
               >
                 <div className="flex items-center space-x-3 min-w-0">
-                  <span className="text-lg font-medium text-gray-500">{index + 1}.</span>
-                  <h3 className="text-lg font-semibold text-gray-900 truncate">{scenario.title}</h3>
+                  <span className="text-lg font-medium text-gray-500 dark:text-gray-400">{index + 1}.</span>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 truncate">{scenario.title}</h3>
                 </div>
                 <div className="flex items-center space-x-3 flex-shrink-0">
                   {scenario.mantisLink && (
@@ -338,7 +338,7 @@ function ScenariosListPage() {
                       rel="noopener noreferrer"
                       title="Ver bug no Mantis"
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded-full text-blue-600 hover:bg-blue-100"
+                      className="p-1 rounded-full text-blue-600 hover:bg-blue-100 dark:text-blue-400 dark:hover:bg-blue-900/30"
                     >
                       <BugIcon />
                     </a>
@@ -362,29 +362,29 @@ function ScenariosListPage() {
                 leaveFrom="opacity-100 translate-y-0 max-h-screen"
                 leaveTo="opacity-0 -translate-y-2 max-h-0"
               >
-                <div className="p-5 border-t border-gray-200 bg-white">
-                  <p className="text-gray-700 mb-3">{scenario.description}</p>
+                <div className="p-5 border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                  <p className="text-gray-700 dark:text-gray-300 mb-3">{scenario.description}</p>
                   <div className="mb-3">
-                    <h4 className="font-semibold text-gray-700">Passos:</h4>
-                    <ul className="list-decimal list-inside pl-2 text-gray-600">
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Passos:</h4>
+                    <ul className="list-decimal list-inside pl-2 text-gray-600 dark:text-gray-400">
                       {scenario.steps.map((step, idx) => (
                         <li key={idx}>{step}</li>
                       ))}
                     </ul>
                   </div>
                   <div className="mb-3">
-                    <h4 className="font-semibold text-gray-700">Resultado Esperado:</h4>
-                    <p className="text-gray-600">{scenario.expectedResult}</p>
+                    <h4 className="font-semibold text-gray-700 dark:text-gray-200">Resultado Esperado:</h4>
+                    <p className="text-gray-600 dark:text-gray-400">{scenario.expectedResult}</p>
                   </div>
                   {scenario.mantisLink && (
                     <div className="mt-3">
-                      <h4 className="font-semibold text-red-700">Link do Bug (Mantis):</h4>
-                      <a href={scenario.mantisLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                      <h4 className="font-semibold text-red-700 dark:text-red-400">Link do Bug (Mantis):</h4>
+                      <a href={scenario.mantisLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline break-all">
                         {scenario.mantisLink}
                       </a>
                     </div>
                   )}
-                  <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t">
+                  <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t border-gray-200 dark:border-slate-700">
                     {(user?.role === 'admin' || user?.role === 'qa') && (
                       <>
                         <button
@@ -401,7 +401,7 @@ function ScenariosListPage() {
                         </button>
                         <button
                           onClick={() => handleExecute(scenario._id, 'Aguardando')}
-                          className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                          className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-slate-700 dark:text-gray-200 dark:hover:bg-slate-600"
                         >
                           ↻ Resetar (Aguardando)
                         </button>
@@ -412,14 +412,14 @@ function ScenariosListPage() {
                       <div className="flex gap-2 ml-auto">
                         <button
                           onClick={() => openEditScenarioModal(scenario)}
-                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md border border-gray-300 hover:bg-gray-50"
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-slate-700 rounded-md border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors"
                         >
                           <EditIcon />
                           <span className="hidden sm:inline">Editar</span>
                         </button>
                         <button
                           onClick={() => openDeleteModal(scenario)}
-                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-md border border-red-200 hover:bg-red-100"
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-md border border-red-200 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
                           title="Deletar Cenário"
                         >
                           <TrashIcon />
@@ -439,7 +439,7 @@ function ScenariosListPage() {
       <div className="flex items-center justify-start mt-8">
         <button
           onClick={() => navigate(-1)} // Ação de voltar
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 bg-white rounded-md border border-gray-300 hover:bg-gray-50"
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 rounded-md border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
         >
           <ArrowLeftIcon />
           Voltar
@@ -456,8 +456,8 @@ function ScenariosListPage() {
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
-                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 mb-4">
+                <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-slate-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-slate-700">
+                  <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
                     {scenarioToEdit ? 'Editar Cenário' : 'Adicionar Novo Cenário'}
                   </Dialog.Title>
                   <ScenarioForm

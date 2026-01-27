@@ -4,6 +4,8 @@ import { Toaster } from 'react-hot-toast'
 import { useContext, Fragment } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
+import ThemeToggle from './components/ThemeToggle'
 import PrivateRoute from './components/PrivateRoute'
 
 import WelcomePage from './pages/WelcomePage'
@@ -33,16 +35,16 @@ function Navbar() {
   if (!user) return null;
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-300">
       <div className="w-[95%] mx-auto px-4 py-4 flex justify-between items-center">
-        <Link to="/" className="text-2xl font-bold text-blue-600 flex items-center hover:opacity-80 transition-opacity">
+        <Link to="/" className="text-2xl font-bold text-blue-600 dark:text-blue-400 flex items-center hover:opacity-80 transition-opacity">
           TestFlow
         </Link>
         <div className="flex items-center space-x-6">
 
           <Menu as="div" className="relative inline-block text-left">
             <div>
-              <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+              <Menu.Button className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                 Gerenciamento
                 <ChevronDownIcon />
               </Menu.Button>
@@ -56,13 +58,13 @@ function Navbar() {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 dark:divide-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-slate-700">
                 <div className="px-1 py-1">
                   <Menu.Item>
                     {({ active }) => (
                       <Link
                         to="/projects"
-                        className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                        className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-slate-200'
                           } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         Projetos
@@ -75,7 +77,7 @@ function Navbar() {
                         {({ active }) => (
                           <Link
                             to="/users"
-                            className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                            className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-slate-200'
                               } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                           >
                             Usuários
@@ -104,7 +106,7 @@ function Navbar() {
 
           <Menu as="div" className="relative inline-block text-left">
             <div>
-              <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-medium px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+              <Menu.Button className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                 Visualização
                 <ChevronDownIcon />
               </Menu.Button>
@@ -118,13 +120,13 @@ function Navbar() {
               leaveFrom="transform opacity-100 scale-100"
               leaveTo="transform opacity-0 scale-95"
             >
-              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right divide-y divide-gray-100 dark:divide-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-slate-700">
                 <div className="px-1 py-1">
                   <Menu.Item>
                     {({ active }) => (
                       <Link
                         to="/dashboard"
-                        className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900'
+                        className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-slate-200'
                           } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         Dashboard
@@ -136,18 +138,18 @@ function Navbar() {
             </Transition>
           </Menu>
 
-          <div className="h-6 w-px bg-gray-300 mx-2"></div>
+          <div className="h-6 w-px bg-gray-300 dark:bg-slate-600 mx-2"></div>
 
           {/* MENU USUÁRIO */}
           <Menu as="div" className="relative inline-block text-left">
             <div>
-              <Menu.Button className="flex items-center text-gray-700 hover:text-blue-600 font-bold text-base px-3 py-2 rounded-md hover:bg-gray-50 transition-colors">
+              <Menu.Button className="flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 font-bold text-base px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors">
                 <span className="mr-2">
                   {user.name && user.name.split(' ').length > 1
                     ? `${user.name.split(' ')[0]} ${user.name.split(' ').pop()}`
                     : user.name || user.username}
                 </span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                 </svg>
                 <ChevronDownIcon />
@@ -166,13 +168,23 @@ function Navbar() {
                   O user pediu "lateralmente rente a risquinho". O risquinho está aa esquerda do menu.
                   Então right-0 mantem na direita.
                   Vou reduzir o width para w-32 ou w-full do parent. */}
-              <Menu.Items className="absolute right-0 mt-1 w-full min-w-[140px] origin-top-right divide-y divide-gray-100 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <Menu.Items className="absolute right-0 mt-1 w-full min-w-[200px] origin-top-right divide-y divide-gray-100 dark:divide-slate-700 rounded-lg bg-white dark:bg-slate-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-slate-700">
+                <div className="px-1 py-1">
+                  <Menu.Item>
+                    {({ active }) => (
+                      <div className="flex items-center justify-between px-2 py-2">
+                        <span className="text-sm text-gray-700 dark:text-slate-200 font-medium">Tema Escuro</span>
+                        <ThemeToggle />
+                      </div>
+                    )}
+                  </Menu.Item>
+                </div>
                 <div className="px-1 py-1">
                   <Menu.Item>
                     {({ active }) => (
                       <button
                         onClick={logout}
-                        className={`${active ? 'bg-red-500 text-white' : 'text-gray-900'
+                        className={`${active ? 'bg-red-500 text-white' : 'text-gray-900 dark:text-slate-200'
                           } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -197,12 +209,12 @@ function AppContent() {
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-300">
 
       {!isPublicPage && <Navbar />}
 
       <main className={`w-[95%] mx-auto flex-grow ${isPublicPage ? '' : 'py-8'}`}>
-        <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white shadow-lg rounded-lg border border-gray-200 p-6 md:p-8 min-h-[85vh]'}`}>
+        <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white dark:bg-slate-800 shadow-lg rounded-lg border border-gray-200 dark:border-slate-700 p-6 md:p-8 min-h-[85vh] transition-colors duration-300'}`}>
 
           <Routes>
             <Route path="/login" element={<Login />} />
@@ -249,7 +261,9 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </AuthProvider>
   );
 }

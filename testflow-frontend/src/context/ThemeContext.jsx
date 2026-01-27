@@ -3,7 +3,7 @@ import { createContext, useState, useEffect } from 'react';
 export const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-    // Check local storage or system preference
+    // Inicializa o tema verificando localStorage ou preferência do sistema
     const [theme, setTheme] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedTheme = localStorage.getItem('theme');
@@ -20,20 +20,32 @@ export const ThemeProvider = ({ children }) => {
     useEffect(() => {
         const root = window.document.documentElement;
 
-        // Remove both consistent classes to be safe
+        // Remove classes antigas para evitar conflitos
         root.classList.remove('light', 'dark');
 
         if (theme === 'system') {
             const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
             root.classList.add(systemTheme);
-            localStorage.removeItem('theme'); // Don't save 'system' in LS if we want to track explicit choices, but commonly we save the preference 'system'
-            // Actually, let's keep it simple: if 'dark', add dark. if 'light', don't (or add light).
-            // Tailwind 'class' strategy relies on 'dark' class presence.
+            localStorage.removeItem('theme'); // Limpa preferência manual se for system
         } else {
             root.classList.add(theme);
             localStorage.setItem('theme', theme);
         }
+    }, [theme]);
 
+    // Listener para mudanças no sistema operacional quando em modo 'system' (ou sem preferência)
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = () => {
+            if (theme === 'system' || !localStorage.getItem('theme')) {
+                const root = window.document.documentElement;
+                root.classList.remove('light', 'dark');
+                root.classList.add(mediaQuery.matches ? 'dark' : 'light');
+            }
+        };
+
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
     }, [theme]);
 
     const toggleTheme = () => {

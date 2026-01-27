@@ -23,19 +23,19 @@ const Login = () => {
     };
 
     return (
-        <div className="min-h-screen h-screen flex items-center justify-center bg-gray-50 overflow-hidden px-4">
+        <div className="min-h-screen h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 overflow-hidden px-4 transition-colors">
             <ReleaseNotes
                 isOpen={showReleaseNotes}
                 onClose={() => setShowReleaseNotes(false)}
                 version={APP_VERSION}
             />
 
-            <div className="w-full max-w-sm bg-white rounded-xl shadow-lg border border-gray-200 p-8 transform transition-all">
+            <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-gray-200 dark:border-slate-700 p-8 transform transition-all">
                 <div className="mb-6 text-center">
-                    <h1 className="text-3xl font-bold text-blue-600">TestFlow</h1>
+                    <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-500">TestFlow</h1>
                     <button
                         onClick={() => setShowReleaseNotes(true)}
-                        className="text-xs text-gray-400 mt-1 hover:text-blue-600 hover:underline transition-colors"
+                        className="text-xs text-gray-400 dark:text-gray-500 mt-1 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
                     >
                         {APP_VERSION}
                     </button>
@@ -44,31 +44,31 @@ const Login = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Usuário</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Usuário</label>
                         <input
                             type="text"
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 text-sm"
+                            className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 dark:text-white text-sm"
                             placeholder="Digite seu usuário"
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Senha</label>
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 text-sm pr-10"
+                                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-slate-900 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 dark:text-white text-sm pr-10"
                                 placeholder="Digite sua senha"
                                 required
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
                                 tabIndex="-1"
                             >
                                 {showPassword ? (
@@ -87,7 +87,7 @@ const Login = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/forgot-password')}
-                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline font-medium"
                             >
                                 Esqueci minha senha
                             </button>
@@ -101,7 +101,7 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-6 text-center text-xs text-gray-400">
+                <div className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
                     <p>© 2026 TestFlow. All rights reserved.</p>
                 </div>
             </div>
