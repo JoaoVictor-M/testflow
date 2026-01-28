@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Estilos personalizados que podemos reutilizar */
+@layer components {
+  .input-style {
+    @apply block w-full px-3 py-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-white transition-colors;
+  }
+}
+
+html {
+  @apply bg-gray-50 dark:bg-neutral-950 transition-colors duration-300 ease-in-out;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply text-gray-900 dark:text-neutral-100 transition-colors duration-300 ease-in-out;
+  overflow-x: hidden;
+}
+
+/* --- CORREÇÃO DA BARRA DE ROLAGEM DAS TAGS --- */
+/*
+  Isto mira a "caixa" interna do react-select onde as tags ficam
+  e força uma altura máxima + barra de rolagem.
+*/
+.react-select__value-container--is-multi {
+  max-height: 120px;
+  overflow-y: auto !important;
+}
+
+/* --- REACT SELECT DARK MODE OVERRIDES --- */
+.react-select__control {
+  @apply bg-white dark:bg-neutral-800 border-gray-300 dark:border-neutral-700 transition-colors !important;
+}
+
+.react-select__control:hover {
+  @apply border-gray-400 dark:border-neutral-600 !important;
+}
+
+.react-select__menu {
+  @apply bg-white dark:bg-neutral-800 border border-gray-100 dark:border-neutral-700 shadow-lg !important;
+}
+
+.react-select__option {
+  @apply bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-200 !important;
+}
+
+.react-select__option:hover {
+  @apply bg-gray-100 dark:bg-neutral-700 !important;
+}
+
+.react-select__option--is-focused {
+  @apply bg-gray-100 dark:bg-neutral-700 !important;
+}
+
+.react-select__option--is-selected {
+  @apply bg-blue-600 text-white !important;
+}
+
+.react-select__single-value {
+  @apply text-gray-900 dark:text-gray-200 !important;
+}
+
+.react-select__input-container {
+  @apply text-gray-900 dark:text-gray-200 !important;
+}
+
+.react-select__multi-value {
+  @apply bg-gray-200 dark:bg-neutral-700 !important;
+}
+
+.react-select__multi-value__label {
+  @apply text-gray-800 dark:text-gray-200 !important;
+}
+
+.react-select__multi-value__remove {
+  @apply hover:bg-gray-300 dark:hover:bg-neutral-600 dark:text-gray-300 !important;
+}

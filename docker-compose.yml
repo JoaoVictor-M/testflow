@@ -1,0 +1,35 @@
+
+
+services:
+  mongodb-service:
+    image: mongo:latest
+    container_name: mongodb_testflow
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+
+  backend-service:
+    build: ./testflow-app
+    container_name: backend_testflow
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb-service
+
+  frontend-service:
+    build: ./testflow-frontend
+    container_name: frontend_testflow
+    restart: always
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend-service
+
+volumes:
+  mongo-data:
+
+

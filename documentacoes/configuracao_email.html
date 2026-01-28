@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração de Email - TestFlow</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #1e40af;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #374151;
+            margin-top: 20px;
+        }
+        code {
+            background-color: #e5e7eb;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            color: #c026d3;
+        }
+        .note {
+            background-color: #dbeafe;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .warning {
+            background-color: #fee2e2;
+            border-left: 4px solid #dc2626;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin-bottom: 8px;
+        }
+        .container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Guia de Configuração de Email</h1>
+        <p>Este documento orienta como configurar o servidor SMTP no <strong>TestFlow</strong> para envio de credenciais e notificações de sistema.</p>
+
+        <h2>Acesso</h2>
+        <ol>
+            <li>Faça login como <strong>Administrador</strong>.</li>
+            <li>Acesse o menu <strong>Gerenciamento > Configurações de Email</strong>.</li>
+        </ol>
+
+        <h2>Exemplos de Configuração</h2>
+
+        <h3>1. Gmail (Google Workspace ou Pessoal)</h3>
+        <div class="warning">
+            <strong>Importante:</strong> Contas pessoais requerem o uso de "Senha de Aplicativo" (App Password) devido à autenticação de dois fatores (2FA). <strong>Não use sua senha de login normal.</strong>
+        </div>
+        <ul>
+            <li><strong>Host SMTP:</strong> <code>smtp.gmail.com</code></li>
+            <li><strong>Porta:</strong> <code>465</code></li>
+            <li><strong>Usuário:</strong> <code>seu.email@gmail.com</code></li>
+            <li><strong>Senha:</strong> <code>xxxx xxxx xxxx xxxx</code> (Sua Senha de App de 16 dígitos)</li>
+            <li><strong>Conexão Segura (SSL/TLS):</strong> Marcado (Sim)</li>
+            <li><strong>Email de Envio (From):</strong> <code>TestFlow &lt;seu.email@gmail.com&gt;</code></li>
+        </ul>
+
+        <h3>2. Microsoft Outlook / Office 365</h3>
+        <div class="note">
+            Para contas Office 365, o <strong>SMTP AUTH</strong> deve estar habilitado na organização.
+        </div>
+        <ul>
+            <li><strong>Host SMTP:</strong> <code>smtp.office365.com</code></li>
+            <li><strong>Porta:</strong> <code>587</code></li>
+            <li><strong>Usuário:</strong> <code>seu.email@empresa.com</code></li>
+            <li><strong>Senha:</strong> <code>SuaSenhaDoOffice</code></li>
+            <li><strong>Conexão Segura:</strong> Desmarcado (O Outlook usa STARTTLS na porta 587, que o sistema negocia automaticamente)</li>
+            <li><strong>Email de Envio (From):</strong> Deve ser idêntico ao usuário autenticado.</li>
+        </ul>
+
+        <h3>3. Servidores Genéricos (cPanel, Postfix, etc.)</h3>
+        <p>Consulte seu provedor de hospedagem. Geralmente:</p>
+        <ul>
+            <li><strong>Host:</strong> <code>mail.seudominio.com</code></li>
+            <li><strong>Porta:</strong> <code>465</code> (SSL) ou <code>587</code> (TLS)</li>
+            <li><strong>Seguro:</strong> Marque para 465, desmarque para 587.</li>
+        </ul>
+
+        <h2>Solução de Problemas</h2>
+        <ul>
+            <li><strong>Erro de Autenticação:</strong> Verifique se a senha está correta ou se precisa de uma "Senha de App".</li>
+            <li><strong>Timeout:</strong> Verifique se o firewall da rede não bloqueia as portas 465 ou 587.</li>
+            <li><strong>Logs:</strong> O sistema grava tentativas de envio em um arquivo de log no servidor (<code>email.log</code>) para auditoria.</li>
+        </ul>
+
+        <footer>
+            TestFlow Documentation &copy; 2026
+        </footer>
+    </div>
+</body>
+</html>
