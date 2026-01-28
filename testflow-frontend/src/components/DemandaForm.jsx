@@ -58,8 +58,8 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
       options={options}
       value={value}
       onChange={onChange}
-      placeholder="Selecione ou crie responsáveis..."
-      formatCreateLabel={(inputValue) => `Criar novo responsável: "${inputValue}"`}
+      placeholder="Selecione ou crie analistas..."
+      formatCreateLabel={(inputValue) => `Criar novo analista: "${inputValue}"`}
       classNamePrefix="react-select"
       styles={customSelectStyles}
       menuPortalTarget={document.body}
@@ -68,7 +68,7 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
 };
 
 
-function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModalOpen }) {
+function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModalOpen, onOpenEvidence, isClone }) {
 
   const [demandaId, setDemandaId] = useState('');
   const [nome, setNome] = useState('');
@@ -83,11 +83,19 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
   useEffect(() => {
     if (isEditing) {
-      setDemandaId(demandaToEdit.demandaId);
-      setNome(demandaToEdit.nome);
-      setTempoEstimado(demandaToEdit.tempoEstimado || 0); // Garante que é um número
-      setLinkDemanda(demandaToEdit.linkDemanda || '');
-      setStatus(demandaToEdit.status);
+      if (isClone) {
+        setDemandaId(`COPY-${demandaToEdit.demandaId}`); // Suggest a new ID or clear it? Keeping original might conflict if unique. I'll prepend COPY
+        setNome(`${demandaToEdit.nome} (Cópia)`);
+        setTempoEstimado(demandaToEdit.tempoEstimado || 0);
+        setLinkDemanda(demandaToEdit.linkDemanda || '');
+        setStatus(demandaToEdit.status);
+      } else {
+        setDemandaId(demandaToEdit.demandaId);
+        setNome(demandaToEdit.nome);
+        setTempoEstimado(demandaToEdit.tempoEstimado || 0);
+        setLinkDemanda(demandaToEdit.linkDemanda || '');
+        setStatus(demandaToEdit.status);
+      }
       const safeResponsaveis = Array.isArray(demandaToEdit.responsaveis) ? demandaToEdit.responsaveis : [];
       setResponsaveis(safeResponsaveis.map(r => ({
         value: r.name,
@@ -109,6 +117,23 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
     const responsavelNames = responsaveis.map(r => r.value);
 
+    // Validação de Evidência para Conclusão
+    if (status === 'Testado') {
+      if (!isEditing) {
+        toast.error("Para marcar como Testado, crie a demanda primeiro, anexe evidências e depois atualize o status.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const hasEvidence = demandaToEdit.evidences && demandaToEdit.evidences.length > 0;
+      if (!hasEvidence) {
+        toast.error("É necessário anexar evidências antes de marcar como Testado.");
+        if (onOpenEvidence) onOpenEvidence(); // Abre o modal de evidências
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     const demandaData = {
       demandaId,
       nome,
@@ -121,13 +146,14 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
     try {
       let response;
-      if (isEditing) {
+      if (isEditing && !isClone) {
         response = await api.put(`/demandas/${demandaToEdit._id}`, demandaData);
         toast.success('Demanda atualizada com sucesso!');
         onSaveSuccess(response.data, 'update');
       } else {
-        response = await api.post('/demandas', demandaData);
-        toast.success('Demanda criada com sucesso!');
+        const payload = isClone ? { ...demandaData, sourceId: demandaToEdit._id } : demandaData;
+        response = await api.post('/demandas', payload);
+        toast.success(isClone ? 'Demanda duplicada com sucesso!' : 'Demanda criada com sucesso!');
         onSaveSuccess(response.data, 'create');
       }
       onClose();
@@ -189,7 +215,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* Responsáveis */}
         <div>
-          <label htmlFor="dem-responsaveis" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Responsáveis</label>
+          <label htmlFor="dem-responsaveis" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Analista(s)</label>
           <ResponsavelSelector
             value={responsaveis}
             onChange={(selectedOptions) => setResponsaveis(selectedOptions)}
@@ -214,12 +240,12 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* Link da Demanda (Opcional) */}
         <div>
-          <label htmlFor="dem-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link da Demanda (Jira, etc.)</label>
+          <label htmlFor="dem-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link da Demanda (Bitrix, Redmine, etc.)</label>
           <input
             type="url"
             id="dem-link"
             className="mt-1 block w-full input-style"
-            placeholder="https://jira.suaempresa.com/..."
+            placeholder="https://bitrix.suaempresa.com/..."
             value={linkDemanda}
             onChange={(e) => setLinkDemanda(e.target.value)}
           />
@@ -239,7 +265,7 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
             disabled={isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSubmitting ? 'Salvando...' : (isEditing ? 'Atualizar Demanda' : 'Salvar Demanda')}
+            {isSubmitting ? 'Salvando...' : (isEditing && !isClone ? 'Atualizar Demanda' : (isClone ? 'Duplicar Demanda' : 'Salvar Demanda'))}
           </button>
         </div>
       </div>

@@ -43,6 +43,12 @@ const TrashIcon = () => (
     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
   </svg>
 );
+const DuplicateIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+    <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+  </svg>
+);
 // --- FIM DOS ÍCONES ---
 
 // Funções de Cor
@@ -82,6 +88,7 @@ function ScenariosListPage() {
   const [scenarioToEdit, setScenarioToEdit] = useState(null);
   const [scenarioSearchTerm, setScenarioSearchTerm] = useState('');
   const [scenarioStatusFilter, setScenarioStatusFilter] = useState('Todos');
+  const [isClone, setIsClone] = useState(false);
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [scenarioToDelete, setScenarioToDelete] = useState(null);
@@ -105,10 +112,17 @@ function ScenariosListPage() {
 
   const openCreateScenarioModal = () => {
     setScenarioToEdit(null);
+    setIsClone(false);
     setIsFormModalOpen(true);
   };
   const openEditScenarioModal = (scenario) => {
     setScenarioToEdit(scenario);
+    setIsClone(false);
+    setIsFormModalOpen(true);
+  };
+  const openCloneScenarioModal = (scenario) => {
+    setScenarioToEdit(scenario);
+    setIsClone(true);
     setIsFormModalOpen(true);
   };
   const closeFormModal = () => {
@@ -416,6 +430,14 @@ function ScenariosListPage() {
                           <span className="hidden sm:inline">Editar</span>
                         </button>
                         <button
+                          onClick={() => openCloneScenarioModal(scenario)}
+                          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/10 rounded-md border border-purple-200 dark:border-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/20 transition-colors"
+                          title="Duplicar Cenário"
+                        >
+                          <DuplicateIcon />
+                          <span className="hidden sm:inline">Duplicar</span>
+                        </button>
+                        <button
                           onClick={() => openDeleteModal(scenario)}
                           className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/10 rounded-md border border-red-200 dark:border-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
                           title="Deletar Cenário"
@@ -447,7 +469,7 @@ function ScenariosListPage() {
 
       {/* --- OS MODAIS (ESCONDIDOS) --- */}
       <Transition appear show={isFormModalOpen} as={Fragment} afterLeave={() => setScenarioToEdit(null)}>
-        <Dialog as="div" className="relative z-10" onClose={closeFormModal}>
+        <Dialog as="div" className="relative z-10" onClose={() => { }}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
           </Transition.Child>
@@ -456,7 +478,7 @@ function ScenariosListPage() {
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
                 <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
                   <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-                    {scenarioToEdit ? 'Editar Cenário' : 'Adicionar Novo Cenário'}
+                    {scenarioToEdit ? (isClone ? 'Duplicar Cenário' : 'Editar Cenário') : 'Adicionar Novo Cenário'}
                   </Dialog.Title>
                   <ScenarioForm
                     demandaId={demandaId}
@@ -464,6 +486,7 @@ function ScenariosListPage() {
                     onSaveSuccess={handleScenarioSaveSuccess}
                     onClose={closeFormModal}
                     isModalOpen={isFormModalOpen}
+                    isClone={isClone}
                   />
                 </Dialog.Panel>
               </Transition.Child>

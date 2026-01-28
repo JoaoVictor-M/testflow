@@ -3,7 +3,7 @@ import api from '../api';
 import toast from 'react-hot-toast';
 
 // 1. RECEBE 'demandaId'
-function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
+function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose, isClone }) {
 
   const initialState = {
     title: '',
@@ -19,12 +19,21 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
 
   useEffect(() => {
     if (isEditing) {
-      setFormData({
-        title: scenarioToEdit.title,
-        description: scenarioToEdit.description,
-        steps: scenarioToEdit.steps.join('\n'),
-        expectedResult: scenarioToEdit.expectedResult,
-      });
+      if (isClone) {
+        setFormData({
+          title: `${scenarioToEdit.title} (Cópia)`,
+          description: scenarioToEdit.description,
+          steps: scenarioToEdit.steps.join('\n'),
+          expectedResult: scenarioToEdit.expectedResult,
+        });
+      } else {
+        setFormData({
+          title: scenarioToEdit.title,
+          description: scenarioToEdit.description,
+          steps: scenarioToEdit.steps.join('\n'),
+          expectedResult: scenarioToEdit.expectedResult,
+        });
+      }
     } else {
       setFormData(initialState);
     }
@@ -51,13 +60,13 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
 
     try {
       let response;
-      if (isEditing) {
+      if (isEditing && !isClone) {
         response = await api.put(`/scenarios/${scenarioToEdit._id}`, postData);
         toast.success('Cenário atualizado com sucesso!');
         onSaveSuccess(response.data, 'update');
       } else {
         response = await api.post('/scenarios', postData);
-        toast.success('Cenário criado com sucesso!');
+        toast.success(isClone ? 'Cenário duplicado com sucesso!' : 'Cenário criado com sucesso!');
         onSaveSuccess(response.data, 'create');
       }
       onClose();
@@ -147,7 +156,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose }) {
             disabled={isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSubmitting ? 'Salvando...' : (isEditing ? 'Atualizar Cenário' : 'Salvar Cenário')}
+            {isSubmitting ? 'Salvando...' : (isEditing && !isClone ? 'Atualizar Cenário' : (isClone ? 'Duplicar Cenário' : 'Salvar Cenário'))}
           </button>
         </div>
       </div>

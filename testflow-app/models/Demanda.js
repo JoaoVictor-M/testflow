@@ -11,7 +11,7 @@ const demandaSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  
+
   // --- MUDANÇA AQUI ---
   tempoEstimado: {
     type: Number, // Trocado de String para Number
@@ -37,6 +37,13 @@ const demandaSchema = new mongoose.Schema({
   responsaveis: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Responsavel'
+  }],
+  evidences: [{
+    filename: String,
+    originalName: String,
+    mimetype: String,
+    size: Number,
+    uploadDate: { type: Date, default: Date.now }
   }]
 }, { timestamps: true });
 

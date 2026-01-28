@@ -4,7 +4,7 @@ import { Toaster } from 'react-hot-toast'
 import { useContext, Fragment } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
-import { ThemeProvider } from './context/ThemeContext'
+import { ThemeProvider, ThemeContext } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
 import PrivateRoute from './components/PrivateRoute'
 
@@ -31,6 +31,7 @@ const ChevronDownIcon = () => (
 
 function Navbar() {
   const { user, logout } = useContext(AuthContext);
+  const { theme } = useContext(ThemeContext);
 
   if (!user) return null;
 
@@ -169,13 +170,15 @@ function Navbar() {
                   O user pediu "lateralmente rente a risquinho". O risquinho está aa esquerda do menu.
                   Então right-0 mantem na direita.
                   Vou reduzir o width para w-32 ou w-full do parent. */}
-              <Menu.Items className="absolute right-0 mt-1 w-full min-w-[200px] origin-top-right divide-y divide-gray-100 dark:divide-neutral-700 rounded-lg bg-white dark:bg-neutral-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-neutral-700">
+              <Menu.Items className="absolute right-0 mt-1 w-44 origin-top-right divide-y divide-gray-100 dark:divide-neutral-700 rounded-lg bg-white dark:bg-neutral-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-neutral-700">
                 <div className="px-1 py-1">
                   <Menu.Item>
                     {({ active }) => (
-                      <div className="flex items-center justify-between px-2 py-2">
-                        <span className="text-sm text-gray-700 dark:text-neutral-200 font-medium">Tema Escuro</span>
+                      <div className="flex items-center gap-2 px-2 py-2">
                         <ThemeToggle />
+                        <span className="text-sm text-gray-700 dark:text-neutral-200 font-medium">
+                          {theme === 'dark' ? 'Dark' : 'Light'}
+                        </span>
                       </div>
                     )}
                   </Menu.Item>

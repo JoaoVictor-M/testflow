@@ -5,7 +5,8 @@ import { Link, useParams, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import DemandaForm from '../components/DemandaForm';
-import ConfirmationModal from '../components/ConfirmationModal'; // 1. IMPORTA O MODAL
+import ConfirmationModal from '../components/ConfirmationModal';
+import EvidenceModal from '../components/EvidenceModal';
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -44,9 +45,21 @@ const SortIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
   </svg>
 );
+// 2. NOVO ÍCONE DE LIXEIRA
 const TrashIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+  </svg>
+);
+const PaperClipIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a7 7 0 11-14 0V7a5 5 0 0110 0v4a3 3 0 11-6 0V7a1 1 0 012 0v4a1 1 0 102 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+  </svg>
+);
+const DuplicateIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+    <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
   </svg>
 );
 // --- FIM DOS ÍCONES ---
@@ -89,10 +102,15 @@ function DemandasListPage() {
   const [responsavelFilter, setResponsavelFilter] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState(() => localStorage.getItem('demandasSortOrder') || 'creation');
+  const [isClone, setIsClone] = useState(false);
 
   // Estados para o modal de deleção
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [demandaToDelete, setDemandaToDelete] = useState(null);
+
+  // --- EVIDENCE MODAL STATE ---
+  const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
+  const [demandaForEvidence, setDemandaForEvidence] = useState(null);
 
   const { user } = useContext(AuthContext); // [NEW]
 
@@ -106,10 +124,17 @@ function DemandasListPage() {
   };
   const openCreateModal = () => {
     setDemandaToEdit(null);
+    setIsClone(false);
     setIsModalOpen(true);
   };
   const openEditModal = (demanda) => {
     setDemandaToEdit(demanda);
+    setIsClone(false);
+    setIsModalOpen(true);
+  };
+  const openCloneModal = (demanda) => {
+    setDemandaToEdit(demanda);
+    setIsClone(true);
     setIsModalOpen(true);
   };
 
@@ -131,6 +156,17 @@ function DemandasListPage() {
       toast.error('Erro ao deletar a demanda.');
       console.error(err);
     }
+  };
+
+  const openEvidenceModal = (demanda) => {
+    setDemandaForEvidence(demanda);
+    setIsEvidenceModalOpen(true);
+  };
+
+  const handleEvidenceUpdate = (updatedDemanda) => {
+    // Update local state when evidence changes
+    setDemandas(prev => prev.map(d => d._id === updatedDemanda._id ? updatedDemanda : d));
+    setDemandaForEvidence(updatedDemanda);
   };
 
   // Função para buscar dados
@@ -282,7 +318,7 @@ function DemandasListPage() {
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Responsável</label>
+                      <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Analista</label>
                       <select id="filter-responsavel" className="w-full input-style" value={responsavelFilter} onChange={(e) => setResponsavelFilter(e.target.value)}>
                         <option>Todos</option>
                         {allResponsaveis.map(resp => (<option key={resp} value={resp}>{resp}</option>))}
@@ -333,7 +369,7 @@ function DemandasListPage() {
                   <th className="px-6 py-3 font-semibold text-sm w-48 text-center">Status</th>
                   <th className="px-6 py-3 font-semibold text-sm w-24 text-center">ID</th>
                   <th className="px-6 py-3 font-semibold text-sm">Demanda</th>
-                  <th className="px-6 py-3 font-semibold text-sm text-right pr-12">Responsáveis</th>
+                  <th className="px-6 py-3 font-semibold text-sm text-center">Analista(s)</th>
                   <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
                 </tr>
               </thead>
@@ -357,9 +393,9 @@ function DemandasListPage() {
                         {demanda.nome}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right pr-12">
+                    <td className="px-6 py-4 text-center">
                       {Array.isArray(demanda.responsaveis) && demanda.responsaveis.length > 0 ? (
-                        <div className="flex flex-wrap gap-1 justify-end">
+                        <div className="flex flex-wrap gap-1 justify-center">
                           {demanda.responsaveis.map((resp) => (
                             <span key={resp._id} className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 text-xs font-medium rounded-full capitalize">
                               {resp.name}
@@ -380,11 +416,19 @@ function DemandasListPage() {
                             <LinkIcon />
                           </a>
                         )}
+                        <button onClick={(e) => { e.stopPropagation(); openEvidenceModal(demanda); }} title="Evidências"
+                          className="p-1.5 rounded-full text-gray-400 hover:text-green-600 hover:bg-green-100 dark:text-gray-500 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors">
+                          <PaperClipIcon />
+                        </button>
                         {(user?.role === 'admin' || user?.role === 'qa') && (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(demanda); }} title="Editar Demanda"
                               className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                               <EditIcon />
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); openCloneModal(demanda); }} title="Duplicar Demanda"
+                              className="p-1.5 rounded-full text-gray-400 hover:text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                              <DuplicateIcon />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); openDeleteModal(demanda); }} title="Deletar Demanda"
                               className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
@@ -442,7 +486,7 @@ function DemandasListPage() {
 
       {/* --- MODAL DA DEMANDA --- */}
       <Transition appear show={isModalOpen} as={Fragment} afterLeave={() => setDemandaToEdit(null)}>
-        <Dialog as="div" className="relative z-10" onClose={closeModal}>
+        <Dialog as="div" className="relative z-10" onClose={() => { }}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
           </Transition.Child>
@@ -451,7 +495,7 @@ function DemandasListPage() {
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
                 <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
                   <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-                    {demandaToEdit ? 'Editar Demanda' : 'Adicionar Nova Demanda'}
+                    {demandaToEdit ? (isClone ? 'Duplicar Demanda' : 'Editar Demanda') : 'Adicionar Nova Demanda'}
                   </Dialog.Title>
                   <DemandaForm
                     projectId={projectId}
@@ -459,6 +503,8 @@ function DemandasListPage() {
                     onSaveSuccess={handleSaveSuccess}
                     onClose={closeModal}
                     isModalOpen={isModalOpen}
+                    onOpenEvidence={() => openEvidenceModal(demandaToEdit)}
+                    isClone={isClone}
                   />
                 </Dialog.Panel>
               </Transition.Child>
@@ -475,6 +521,14 @@ function DemandasListPage() {
         title="Deletar Demanda"
         message={`Tem certeza que deseja deletar a demanda "${demandaToDelete?.nome}"? TODOS os seus cenários serão apagados permanentemente.`}
         afterLeave={() => setDemandaToDelete(null)}
+      />
+
+      {/* --- EVIDENCE MODAL --- */}
+      <EvidenceModal
+        isOpen={isEvidenceModalOpen}
+        onClose={() => setIsEvidenceModalOpen(false)}
+        demanda={demandaForEvidence}
+        onUpdate={handleEvidenceUpdate}
       />
     </div>
   );

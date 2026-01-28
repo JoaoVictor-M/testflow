@@ -1,0 +1,14 @@
+# Dependencias
+node_modules/
+
+# Ambiente
+.env
+
+# Evidencias
+evidencias_testes/
+
+# IDE e Sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

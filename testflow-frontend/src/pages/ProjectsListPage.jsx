@@ -5,7 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import ProjectForm from '../components/ProjectForm';
-import ConfirmationModal from '../components/ConfirmationModal'; // 1. IMPORTA O MODAL
+import ConfirmationModal from '../components/ConfirmationModal';
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -45,6 +45,12 @@ const TrashIcon = () => (
     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
   </svg>
 );
+const DuplicateIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+    <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+    <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+  </svg>
+);
 // --- FIM DOS ÍCONES ---
 
 // Funções de Cor
@@ -81,10 +87,13 @@ function ProjectsListPage() {
   const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState(null);
+  const [isClone, setIsClone] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todos');
   const [tagFilter, setTagFilter] = useState('Todos');
+  const [versionFilter, setVersionFilter] = useState('Todos');
+  const [serverFilter, setServerFilter] = useState('Todos');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState(() => localStorage.getItem('projectsSortOrder') || 'creation');
 
@@ -102,10 +111,17 @@ function ProjectsListPage() {
   };
   const openCreateModal = () => {
     setProjectToEdit(null);
+    setIsClone(false);
     setIsModalOpen(true);
   };
   const openEditModal = (project) => {
     setProjectToEdit(project);
+    setIsClone(false);
+    setIsModalOpen(true);
+  };
+  const openCloneModal = (project) => {
+    setProjectToEdit(project);
+    setIsClone(true);
     setIsModalOpen(true);
   };
 
@@ -130,6 +146,7 @@ function ProjectsListPage() {
     }
     // O modal já é fechado pelo onConfirm no JSX
   };
+
   // --- FIM DAS FUNÇÕES DE DELEÇÃO ---
 
   const fetchProjects = async () => {
@@ -152,7 +169,7 @@ function ProjectsListPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter, tagFilter, sortOrder]);
+  }, [searchTerm, statusFilter, tagFilter, versionFilter, serverFilter, sortOrder]);
 
   useEffect(() => {
     localStorage.setItem('projectsSortOrder', sortOrder);
@@ -176,6 +193,8 @@ function ProjectsListPage() {
   if (error) { /* ... (Erro) ... */ }
 
   const allTags = [...new Set(projects.flatMap(p => (Array.isArray(p.tags) ? p.tags.map(t => t.name) : [])))].sort();
+  const allVersions = [...new Set(projects.flatMap(p => (Array.isArray(p.versions) ? p.versions.map(v => v.name) : [])))].sort();
+  const allServers = [...new Set(projects.flatMap(p => (Array.isArray(p.servers) ? p.servers.map(s => s.name) : [])))].sort();
   const allStatus = ['Não Iniciado', 'Em Andamento', 'Concluído', 'Interrompido'];
 
   const filteredProjects = projects.filter(project => {
@@ -183,7 +202,9 @@ function ProjectsListPage() {
     const titleMatch = project.title && project.title.toLowerCase().includes(term);
     const statusMatch = statusFilter === 'Todos' || project.status === statusFilter;
     const tagMatch = tagFilter === 'Todos' || (Array.isArray(project.tags) && project.tags.some(tag => tag.name === tagFilter));
-    return titleMatch && statusMatch && tagMatch;
+    const versionMatch = versionFilter === 'Todos' || (Array.isArray(project.versions) && project.versions.some(v => v.name === versionFilter));
+    const serverMatch = serverFilter === 'Todos' || (Array.isArray(project.servers) && project.servers.some(s => s.name === serverFilter));
+    return titleMatch && statusMatch && tagMatch && versionMatch && serverMatch;
   });
 
   const sortedProjects = [...filteredProjects].sort((a, b) => {
@@ -255,6 +276,22 @@ function ProjectsListPage() {
                         {allTags.map(tag => (<option key={tag} value={tag}>{tag}</option>))}
                       </select>
                     </div>
+
+                    <div>
+                      <label htmlFor="filter-version" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Versão</label>
+                      <select id="filter-version" className="w-full input-style" value={versionFilter} onChange={(e) => setVersionFilter(e.target.value)}>
+                        <option>Todos</option>
+                        {allVersions.map(v => (<option key={v} value={v}>{v}</option>))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="filter-server" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Servidor</label>
+                      <select id="filter-server" className="w-full input-style" value={serverFilter} onChange={(e) => setServerFilter(e.target.value)}>
+                        <option>Todos</option>
+                        {allServers.map(s => (<option key={s} value={s}>{s}</option>))}
+                      </select>
+                    </div>
                   </div>
                 </Popover.Panel>
               </Transition>
@@ -293,6 +330,8 @@ function ProjectsListPage() {
                 <tr>
                   <th className="px-6 py-3 font-semibold text-sm w-48 text-center">Status</th>
                   <th className="px-6 py-3 font-semibold text-sm">Projeto</th>
+                  <th className="px-6 py-3 font-semibold text-sm text-center">Versão</th>
+                  <th className="px-6 py-3 font-semibold text-sm text-center">Servidor</th>
                   <th className="px-6 py-3 font-semibold text-sm text-right pr-12">Tags</th>
                   {(user?.role === 'admin' || user?.role === 'qa') && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
                 </tr>
@@ -314,7 +353,35 @@ function ProjectsListPage() {
                         {project.title}
                       </span>
                     </td>
-                    {/* Responsáveis column removed */}
+                    {/* Versões */}
+                    <td className="px-6 py-4 text-center">
+                      {Array.isArray(project.versions) && project.versions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {project.versions.map((v) => (
+                            <span key={v._id} className="px-2 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 text-xs font-medium rounded-full">
+                              {v.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
+
+                    {/* Servidores */}
+                    <td className="px-6 py-4 text-center">
+                      {Array.isArray(project.servers) && project.servers.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 justify-center">
+                          {project.servers.map((s) => (
+                            <span key={s._id} className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs font-medium rounded-full">
+                              {s.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-right pr-12">
                       {Array.isArray(project.tags) && project.tags.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-end">
@@ -334,6 +401,10 @@ function ProjectsListPage() {
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} title="Editar Projeto"
                             className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                             <EditIcon />
+                          </button>
+                          <button onClick={(e) => { e.stopPropagation(); openCloneModal(project); }} title="Duplicar Projeto"
+                            className="p-1.5 rounded-full text-gray-400 hover:text-purple-600 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                            <DuplicateIcon />
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); openDeleteModal(project); }} title="Deletar Projeto"
                             className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
@@ -369,7 +440,7 @@ function ProjectsListPage() {
           <button
             onClick={handleNextPage}
             disabled={currentPage === pageCount}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Próxima
             <ArrowRightIcon />
@@ -379,7 +450,7 @@ function ProjectsListPage() {
 
       {/* --- MODAL DO PROJETO --- */}
       <Transition appear show={isModalOpen} as={Fragment} afterLeave={() => setProjectToEdit(null)}>
-        <Dialog as="div" className="relative z-10" onClose={closeModal}>
+        <Dialog as="div" className="relative z-10" onClose={() => { }}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
           </Transition.Child>
@@ -388,7 +459,7 @@ function ProjectsListPage() {
               <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0 scale-95" enterTo="opacity-100 scale-100" leave="ease-in duration-200" leaveFrom="opacity-100 scale-100" leaveTo="opacity-0 scale-95">
                 <Dialog.Panel className="w-full max-w-lg transform overflow-hidden rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
                   <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-white mb-4">
-                    {projectToEdit ? 'Editar Projeto' : 'Adicionar Novo Projeto'}
+                    {projectToEdit ? (isClone ? 'Duplicar Projeto' : 'Editar Projeto') : 'Adicionar Novo Projeto'}
                   </Dialog.Title>
 
                   <ProjectForm
@@ -396,6 +467,7 @@ function ProjectsListPage() {
                     onSaveSuccess={handleSaveSuccess}
                     onClose={closeModal}
                     isModalOpen={isModalOpen}
+                    isClone={isClone}
                   />
                 </Dialog.Panel>
               </Transition.Child>

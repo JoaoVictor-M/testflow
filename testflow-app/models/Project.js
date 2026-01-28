@@ -6,14 +6,14 @@ const projectSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  
+
   // --- CAMPO ATUALIZADO ---
   // Substituímos 'responsavel: String' por:
   responsaveis: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Responsavel'
   }],
-  
+
   status: {
     type: String,
     enum: ['Não Iniciado', 'Em Andamento', 'Concluído', 'Interrompido'],
@@ -22,6 +22,14 @@ const projectSchema = new mongoose.Schema({
   tags: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tag'
+  }],
+  versions: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Version'
+  }],
+  servers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Server'
   }]
 
 }, { timestamps: true });

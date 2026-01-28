@@ -4,6 +4,8 @@ const cors = require('cors');
 const Scenario = require('./models/Scenario');
 const Project = require('./models/Project');
 const Tag = require('./models/Tag');
+const Version = require('./models/Version');
+const Server = require('./models/Server');
 const Responsavel = require('./models/Responsavel');
 const Demanda = require('./models/Demanda');
 const User = require('./models/User');
@@ -14,6 +16,9 @@ const SystemConfig = require('./models/SystemConfig');
 const { sendInviteEmail, sendResetPasswordEmail, reloadConfig } = require('./services/emailService');
 const { generatePassword } = require('./utils/passwordUtils');
 const crypto = require('crypto');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
 
 require('dotenv').config();
 
@@ -56,6 +61,32 @@ const findOrCreateResponsaveis = async (responsavelNames) => {
     return saved._id;
   });
   return Promise.all(responsavelPromises);
+};
+
+const findOrCreateVersions = async (versionNames) => {
+  if (!versionNames || versionNames.length === 0) return [];
+  const uniqueNames = [...new Set(versionNames.map(name => name.trim().toLowerCase()))];
+  const promises = uniqueNames.map(async (name) => {
+    const existing = await Version.findOne({ name: name });
+    if (existing) return existing._id;
+    const novo = new Version({ name: name });
+    const saved = await novo.save();
+    return saved._id;
+  });
+  return Promise.all(promises);
+};
+
+const findOrCreateServers = async (serverNames) => {
+  if (!serverNames || serverNames.length === 0) return [];
+  const uniqueNames = [...new Set(serverNames.map(name => name.trim().toLowerCase()))];
+  const promises = uniqueNames.map(async (name) => {
+    const existing = await Server.findOne({ name: name });
+    if (existing) return existing._id;
+    const novo = new Server({ name: name });
+    const saved = await novo.save();
+    return saved._id;
+  });
+  return Promise.all(promises);
 };
 
 
@@ -443,7 +474,7 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), a
 
 app.get('/api/projects', authMiddleware, async (req, res) => {
   try {
-    const projects = await Project.find({}).populate('tags').populate('responsaveis');
+    const projects = await Project.find({}).populate('tags').populate('responsaveis').populate('versions').populate('servers');
     res.status(200).json(projects);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -454,16 +485,78 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
   try {
     const tagIds = await findOrCreateTags(req.body.tags);
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
+    const versionIds = await findOrCreateVersions(req.body.versions);
+    const serverIds = await findOrCreateServers(req.body.servers);
+
     const newProject = new Project({
       title: req.body.title,
       status: req.body.status,
       tags: tagIds,
-      responsaveis: responsavelIds
+      responsaveis: responsavelIds,
+      versions: versionIds,
+      servers: serverIds
     });
     const savedProject = await newProject.save();
-    const populatedProject = await Project.findById(savedProject._id).populate('tags').populate('responsaveis');
+
+    // DEEP CLONE LOGIC
+    if (req.body.sourceId) {
+      const sourceId = req.body.sourceId;
+      console.log(`[CLONE] Duplicando demandas do projeto ${sourceId} para ${savedProject._id}`);
+
+      const demandas = await Demanda.find({ project: sourceId });
+      for (const dem of demandas) {
+        const responsavelIdsDemanda = await findOrCreateResponsaveis(dem.responsaveis.map(r => r.name)); // Simplify if they are objects
+
+        // Check if we need to ensure uniqueness or just copy
+        // For simplicity, we copy. Frontend logic added " (Cópia)" to Project title only.
+        // We usually want exact copies of children unless uniqueness is enforced by DB index.
+        // DemandaId might be unique?
+        // Let's assume typical flow: user clones project, we copy everything.
+
+        const newDem = new Demanda({
+          demandaId: dem.demandaId, // Use original or maybe append COPY? Let's keep original for now unless it errors.
+          nome: dem.nome,
+          tempoEstimado: dem.tempoEstimado,
+          linkDemanda: dem.linkDemanda,
+          status: dem.status, // Copy status? Yes.
+          project: savedProject._id,
+          responsaveis: dem.responsaveis // Assuming IDs are compatible or we need to re-fetch/map. 
+          // Wait, findOrCreateResponsaveis expects names. 
+          // 'dem.responsaveis' in find result is Array of ObjectIds if not populated, or Objects if populated.
+          // The previous query `Demanda.find({})` does NOT autopopulate unless we say so.
+          // Let's check `Demanda` schema usage. Ideally we just copy the array of IDs.
+        });
+
+        // Correct way to copy array of ObjectIds:
+        newDem.responsaveis = dem.responsaveis;
+
+        const savedDem = await newDem.save();
+
+        // Clone Scenarios
+        const scenarios = await Scenario.find({ demanda: dem._id });
+        for (const scen of scenarios) {
+          const newScen = new Scenario({
+            title: scen.title,
+            description: scen.description,
+            steps: scen.steps,
+            expectedResult: scen.expectedResult,
+            demanda: savedDem._id,
+            status: scen.status,
+            mantisLink: scen.mantisLink
+          });
+          await newScen.save();
+        }
+      }
+    }
+
+    const populatedProject = await Project.findById(savedProject._id)
+      .populate('tags')
+      .populate('responsaveis')
+      .populate('versions')
+      .populate('servers');
     res.status(201).json(populatedProject);
   } catch (error) {
+    console.error(error); // Log error
     res.status(400).json({ message: error.message });
   }
 });
@@ -472,15 +565,24 @@ app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
   try {
     const tagIds = await findOrCreateTags(req.body.tags);
     const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
+    const versionIds = await findOrCreateVersions(req.body.versions);
+    const serverIds = await findOrCreateServers(req.body.servers);
+
     const projectData = {
       title: req.body.title,
       status: req.body.status,
       tags: tagIds,
-      responsaveis: responsavelIds
+      responsaveis: responsavelIds,
+      versions: versionIds,
+      servers: serverIds
     };
     const updatedProject = await Project.findByIdAndUpdate(req.params.id, projectData, { new: true, runValidators: true });
     if (!updatedProject) return res.status(404).json({ message: 'Projeto não encontrado' });
-    const populatedProject = await Project.findById(updatedProject._id).populate('tags').populate('responsaveis');
+    const populatedProject = await Project.findById(updatedProject._id)
+      .populate('tags')
+      .populate('responsaveis')
+      .populate('versions')
+      .populate('servers');
     res.status(200).json(populatedProject);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -538,6 +640,24 @@ app.get('/api/responsaveis', authMiddleware, async (req, res) => {
   }
 });
 
+app.get('/api/versions', async (req, res) => {
+  try {
+    const items = await Version.find({}).sort({ name: 1 });
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/servers', async (req, res) => {
+  try {
+    const items = await Server.find({}).sort({ name: 1 });
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
@@ -552,6 +672,26 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async
       responsaveis: responsavelIds
     });
     const savedDemanda = await newDemanda.save();
+
+    // DEEP CLONE LOGIC
+    if (req.body.sourceId) {
+      const sourceId = req.body.sourceId;
+      console.log(`[CLONE] Duplicando cenários da demanda ${sourceId} para ${savedDemanda._id}`);
+      const scenarios = await Scenario.find({ demanda: sourceId });
+      for (const scen of scenarios) {
+        const newScen = new Scenario({
+          title: scen.title,
+          description: scen.description,
+          steps: scen.steps,
+          expectedResult: scen.expectedResult,
+          demanda: savedDemanda._id,
+          status: scen.status,
+          mantisLink: scen.mantisLink
+        });
+        await newScen.save();
+      }
+    }
+
     const populatedDemanda = await Demanda.findById(savedDemanda._id).populate('responsaveis');
     res.status(201).json(populatedDemanda);
   } catch (error) {
@@ -950,6 +1090,245 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 
     res.json({ message: 'Configurações de email atualizadas com sucesso.' });
   } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// --- EVIDENCE ROUTES (ADAPTED FOR DEMANDAS) ---
+
+// Helper para encontrar pasta da demanda
+// Nota: A lógica de busca exata agora depende dos dados da demanda (ID e Nome)
+// Por isso, este helper agora apenas retorna o caminho BASE ou tenta um match simples.
+// A lógica robusta de verificação será movida para dentro das rotas que possuem o objeto Demanda.
+const getBaseEvidenceDir = () => {
+  const baseDir = path.join(__dirname, '..', 'evidencias_testes');
+  if (!fs.existsSync(baseDir)) {
+    try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; }
+  }
+  return baseDir;
+};
+
+// Helper legado para compatibilidade ou buscas simples por string
+const findLegacyDir = (searchStr) => {
+  const baseDir = getBaseEvidenceDir();
+  if (!baseDir) return null;
+  const dirs = fs.readdirSync(baseDir);
+  return dirs.find(dir => dir.includes(searchStr));
+};
+
+// Configuração do Multer
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Tenta usar nome enviado via header para criar pasta mais amigável
+    let folderName = req.params.id; // Default: apenas ID (Mongo)
+
+    // Updated naming convention: FriendlyID_DemandaName (e.g. WEB-123_BugNoLogin)
+
+    const friendlyId = req.headers['x-demanda-id'];
+    const friendlyName = req.headers['x-demanda-nome'];
+
+    if (friendlyId && friendlyName) {
+      const safeId = friendlyId.replace(/[^a-z0-9-]/gi, '_');
+      const safeName = friendlyName
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/gi, '_')
+        .replace(/_+/g, '_')
+        .toLowerCase();
+
+      folderName = `${safeId}_${safeName}`;
+    } else {
+      // Fallback to params ID if headers missing
+      folderName = req.params.id;
+    }
+
+    // Se já existe uma pasta com este ID (mesmo que com outro nome base), devemos usar a existente?
+    // Usamos findLegacyDir para procurar qualquer pasta que contenha o MongoID
+    let dir;
+    const existingFolderName = findLegacyDir(req.params.id);
+
+    if (existingFolderName) {
+      dir = path.join(getBaseEvidenceDir(), existingFolderName);
+    } else {
+      dir = path.join(getBaseEvidenceDir(), folderName);
+    }
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+});
+
+
+// Upload Evidence
+app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'qa']), upload.single('file'), async (req, res) => {
+  try {
+    const demandaId = req.params.id; // Now Demanda ID
+    const file = req.file;
+
+    if (!file) {
+      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
+    }
+
+    const demanda = await Demanda.findById(demandaId);
+    if (!demanda) {
+      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      return res.status(404).json({ message: 'Demanda não encontrada.' });
+    }
+
+    const newEvidence = {
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size
+    };
+
+    demanda.evidences.push(newEvidence);
+    await demanda.save();
+
+    res.status(201).json(demanda);
+  } catch (error) {
+    console.error('Erro no upload:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+// Delete Evidence
+app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+  try {
+    const { id, evidenceId } = req.params;
+
+    const demanda = await Demanda.findById(id);
+    if (!demanda) {
+      return res.status(404).json({ message: 'Demanda não encontrada.' });
+    }
+
+    const evidence = demanda.evidences.id(evidenceId);
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidência não encontrada.' });
+    }
+
+    // Resolve directory dynamically
+    const baseDir = getBaseEvidenceDir();
+    let dirPath = null;
+
+    if (baseDir) {
+      // Pattern 1: FriendlyID_Name (New)
+      if (demanda.demandaId && demanda.nome) {
+        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
+        const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
+        const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
+        if (fs.existsSync(tryPath)) dirPath = tryPath;
+      }
+
+      // Pattern 2: FriendlyID_MongoID (Previous Attempt)
+      if (!dirPath && demanda.demandaId) {
+        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
+        const tryPath = path.join(baseDir, `${safeId}_${id}`);
+        if (fs.existsSync(tryPath)) dirPath = tryPath;
+      }
+
+      // Pattern 3: MongoID or Suffix (Legacy/Fallback)
+      if (!dirPath) {
+        const dirs = fs.readdirSync(baseDir);
+        const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
+        if (targetDir) dirPath = path.join(baseDir, targetDir);
+      }
+    }
+
+    if (dirPath) {
+      const filePath = path.join(dirPath, evidence.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Remove from DB
+    demanda.evidences.pull(evidenceId);
+
+    // [New] Check if evidences are empty and status is 'Testado' -> Revert to 'Pendente'
+    if (demanda.evidences.length === 0 && demanda.status === 'Testado') {
+      demanda.status = 'Pendente';
+    }
+
+    await demanda.save();
+
+    res.status(200).json(demanda);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Serve Evidence File
+app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
+  try {
+    const { id, evidenceId } = req.params;
+
+    const demanda = await Demanda.findById(id);
+    if (!demanda) {
+      return res.status(404).json({ message: 'Demanda não encontrada.' });
+    }
+
+    const evidence = demanda.evidences.id(evidenceId);
+    if (!evidence) {
+      return res.status(404).json({ message: 'Evidência não encontrada.' });
+    }
+
+    // Resolve directory dynamically
+    const baseDir = getBaseEvidenceDir();
+    let dirPath = null;
+
+    if (baseDir) {
+      // Pattern 1: FriendlyID_Name (New)
+      if (demanda.demandaId && demanda.nome) {
+        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
+        const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
+        const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
+        if (fs.existsSync(tryPath)) dirPath = tryPath;
+      }
+
+      // Pattern 2: FriendlyID_MongoID (Previous Attempt)
+      if (!dirPath && demanda.demandaId) {
+        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
+        const tryPath = path.join(baseDir, `${safeId}_${id}`);
+        if (fs.existsSync(tryPath)) dirPath = tryPath;
+      }
+
+      // Pattern 3: MongoID or Suffix (Legacy/Fallback)
+      if (!dirPath) {
+        const dirs = fs.readdirSync(baseDir);
+        const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
+        if (targetDir) dirPath = path.join(baseDir, targetDir);
+      }
+    }
+
+    if (!dirPath) {
+      return res.status(404).json({ message: 'Pasta de evidências não encontrada.' });
+    }
+
+    const filePath = path.join(dirPath, evidence.filename);
+
+    if (fs.existsSync(filePath)) {
+      res.setHeader('Content-Type', evidence.mimetype);
+      res.setHeader('Content-Disposition', `inline; filename="${evidence.originalName}"`);
+      fs.createReadStream(filePath).pipe(res);
+    } else {
+      res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
+    }
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ message: error.message });
   }
 });

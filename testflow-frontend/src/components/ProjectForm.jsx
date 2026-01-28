@@ -108,20 +108,109 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
   );
 };
 
+// --- COMPONENTE SELETOR DE VERSÕES ---
+const VersionSelector = ({ value, onChange, isModalOpen }) => {
+  const [options, setOptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
+  useEffect(() => {
+    const fetchVersions = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get('/versions');
+        setOptions(response.data.map(v => ({
+          value: v.name,
+          label: v.name
+        })));
+      } catch (err) {
+        console.error("Erro ao buscar versões", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (isModalOpen) {
+      fetchVersions();
+    }
+  }, [isModalOpen]);
+
+  return (
+    <CreatableSelect
+      isMulti
+      isLoading={isLoading}
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder="Selecione ou crie versões..."
+      formatCreateLabel={(inputValue) => `Criar nova versão: "${inputValue}"`}
+      classNamePrefix="react-select"
+      styles={customSelectStyles}
+      menuPortalTarget={document.body}
+    />
+  );
+};
+
+// --- COMPONENTE SELETOR DE SERVIDORES ---
+const ServerSelector = ({ value, onChange, isModalOpen }) => {
+  const [options, setOptions] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchServers = async () => {
+      try {
+        setIsLoading(true);
+        const response = await api.get('/servers');
+        setOptions(response.data.map(s => ({
+          value: s.name,
+          label: s.name
+        })));
+      } catch (err) {
+        console.error("Erro ao buscar servidores", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (isModalOpen) {
+      fetchServers();
+    }
+  }, [isModalOpen]);
+
+  return (
+    <CreatableSelect
+      isMulti
+      isLoading={isLoading}
+      options={options}
+      value={value}
+      onChange={onChange}
+      placeholder="Selecione ou crie servidores..."
+      formatCreateLabel={(inputValue) => `Criar novo servidor: "${inputValue}"`}
+      classNamePrefix="react-select"
+      styles={customSelectStyles}
+      menuPortalTarget={document.body}
+    />
+  );
+};
+
+
+function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen, isClone }) {
 
   const [title, setTitle] = useState('');
   const [status, setStatus] = useState('Não Iniciado');
   const [tags, setTags] = useState([]);
+  const [versions, setVersions] = useState([]);
+  const [servers, setServers] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isEditing = Boolean(projectToEdit);
 
   useEffect(() => {
     if (isEditing) {
-      setTitle(projectToEdit.title);
-      setStatus(projectToEdit.status);
+      if (isClone) {
+        setTitle(`${projectToEdit.title} (Cópia)`);
+        setStatus(projectToEdit.status); // Keep original status or reset? Plan said keep.
+      } else {
+        setTitle(projectToEdit.title);
+        setStatus(projectToEdit.status);
+      }
 
       const safeTags = Array.isArray(projectToEdit.tags) ? projectToEdit.tags : [];
       setTags(safeTags.map(tag => ({
@@ -129,10 +218,24 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
         label: tag.name
       })));
 
+      const safeVersions = Array.isArray(projectToEdit.versions) ? projectToEdit.versions : [];
+      setVersions(safeVersions.map(v => ({
+        value: v.name,
+        label: v.name
+      })));
+
+      const safeServers = Array.isArray(projectToEdit.servers) ? projectToEdit.servers : [];
+      setServers(safeServers.map(s => ({
+        value: s.name,
+        label: s.name
+      })));
+
     } else {
       setTitle('');
       setStatus('Não Iniciado');
       setTags([]);
+      setVersions([]);
+      setServers([]);
     }
   }, [projectToEdit, isEditing]);
 
@@ -142,22 +245,27 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
 
     // Converte de volta para array de strings
     const tagNames = tags.map(tag => tag.value);
+    const versionNames = versions.map(v => v.value);
+    const serverNames = servers.map(s => s.value);
 
     const projectData = {
       title,
       status,
       tags: tagNames,
+      versions: versionNames,
+      servers: serverNames,
     };
 
     try {
       let response;
-      if (isEditing) {
+      if (isEditing && !isClone) {
         response = await api.put(`/projects/${projectToEdit._id}`, projectData);
         toast.success('Projeto atualizado com sucesso!');
         onSaveSuccess(response.data, 'update');
       } else {
-        response = await api.post('/projects', projectData);
-        toast.success('Projeto criado com sucesso!');
+        const payload = isClone ? { ...projectData, sourceId: projectToEdit._id } : projectData;
+        response = await api.post('/projects', payload);
+        toast.success(isClone ? 'Projeto duplicado com sucesso!' : 'Projeto criado com sucesso!');
         onSaveSuccess(response.data, 'create');
       }
       onClose();
@@ -215,6 +323,26 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
           />
         </div>
 
+        {/* Versões */}
+        <div>
+          <label htmlFor="proj-versions" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Versão</label>
+          <VersionSelector
+            value={versions}
+            onChange={(selectedOptions) => setVersions(selectedOptions)}
+            isModalOpen={isModalOpen}
+          />
+        </div>
+
+        {/* Servidores */}
+        <div>
+          <label htmlFor="proj-servers" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Servidor</label>
+          <ServerSelector
+            value={servers}
+            onChange={(selectedOptions) => setServers(selectedOptions)}
+            isModalOpen={isModalOpen}
+          />
+        </div>
+
         {/* Botões */}
         <div className="mt-6 flex justify-end gap-3">
           <button
@@ -229,7 +357,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen }) {
             disabled={isSubmitting}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            {isSubmitting ? 'Salvando...' : (isEditing ? 'Atualizar Projeto' : 'Salvar Projeto')}
+            {isSubmitting ? 'Salvando...' : (isEditing && !isClone ? 'Atualizar Projeto' : (isClone ? 'Duplicar Projeto' : 'Salvar Projeto'))}
           </button>
         </div>
       </div>

@@ -37,7 +37,7 @@ function ConfirmationModal({
 
   return (
     <Transition appear show={isOpen} as={Fragment} afterLeave={afterLeave}>
-      <Dialog as="div" className="relative z-10" onClose={onClose}>
+      <Dialog as="div" className="relative z-10" onClose={() => { }}>
         {/* Overlay */}
         <Transition.Child
           as={Fragment}
