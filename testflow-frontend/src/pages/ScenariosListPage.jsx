@@ -113,7 +113,6 @@ function ScenariosListPage() {
   };
   const closeFormModal = () => {
     setIsFormModalOpen(false);
-    setScenarioToEdit(null);
   };
   const openMantisModal = (scenarioId) => {
     setScenarioEmExecucao(scenarioId);
@@ -129,7 +128,6 @@ function ScenariosListPage() {
     setIsDeleteModalOpen(true);
   };
   const closeDeleteModal = () => {
-    setScenarioToDelete(null);
     setIsDeleteModalOpen(false);
   };
   const handleConfirmDelete = async () => {
@@ -448,7 +446,7 @@ function ScenariosListPage() {
 
 
       {/* --- OS MODAIS (ESCONDIDOS) --- */}
-      <Transition appear show={isFormModalOpen} as={Fragment}>
+      <Transition appear show={isFormModalOpen} as={Fragment} afterLeave={() => setScenarioToEdit(null)}>
         <Dialog as="div" className="relative z-10" onClose={closeFormModal}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
@@ -486,6 +484,7 @@ function ScenariosListPage() {
         onConfirm={handleConfirmDelete}
         title="Deletar Cenário"
         message={`Tem certeza que deseja deletar o cenário "${scenarioToDelete?.title}"? Esta ação é permanente.`}
+        afterLeave={() => setScenarioToDelete(null)}
       />
     </div >
   );

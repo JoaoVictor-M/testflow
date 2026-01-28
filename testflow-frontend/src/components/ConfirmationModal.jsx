@@ -2,8 +2,8 @@ import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
 // Ícone de Alerta
-const WarningIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+const WarningIcon = ({ className }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className || "h-6 w-6 text-red-600"} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
   </svg>
 );
@@ -16,8 +16,25 @@ function ConfirmationModal({
   message,
   confirmText,
   cancelText,
-  afterLeave
+  afterLeave,
+  confirmButtonClass, // Nova prop
+  variant = 'danger' // danger | warning
 }) {
+  const styles = {
+    danger: {
+      iconBg: 'bg-red-100 dark:bg-red-900/30',
+      iconText: 'text-red-600',
+      defaultButton: 'bg-red-600 hover:bg-red-700'
+    },
+    warning: {
+      iconBg: 'bg-yellow-100 dark:bg-yellow-900/30',
+      iconText: 'text-yellow-600',
+      defaultButton: 'bg-yellow-600 hover:bg-yellow-700'
+    }
+  };
+
+  const currentStyle = styles[variant] || styles.danger;
+
   return (
     <Transition appear show={isOpen} as={Fragment} afterLeave={afterLeave}>
       <Dialog as="div" className="relative z-10" onClose={onClose}>
@@ -47,8 +64,8 @@ function ConfirmationModal({
             >
               <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
                 <div className="flex items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
-                    <WarningIcon />
+                  <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full sm:mx-0 sm:h-10 sm:w-10 ${currentStyle.iconBg}`}>
+                    <WarningIcon className={`h-6 w-6 ${currentStyle.iconText}`} />
                   </div>
                   <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
                     <Dialog.Title
@@ -69,7 +86,7 @@ function ConfirmationModal({
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
                   <button
                     type="button"
-                    className="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 sm:w-auto sm:text-sm"
+                    className={`inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:w-auto sm:text-sm ${confirmButtonClass || currentStyle.defaultButton}`}
                     onClick={() => {
                       onConfirm();
                       onClose();

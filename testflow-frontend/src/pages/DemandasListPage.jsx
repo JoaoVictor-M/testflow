@@ -103,7 +103,6 @@ function DemandasListPage() {
   // Funções do Modal (Formulário)
   const closeModal = () => {
     setIsModalOpen(false);
-    setDemandaToEdit(null);
   };
   const openCreateModal = () => {
     setDemandaToEdit(null);
@@ -120,7 +119,6 @@ function DemandasListPage() {
     setIsDeleteModalOpen(true);
   };
   const closeDeleteModal = () => {
-    setDemandaToDelete(null);
     setIsDeleteModalOpen(false);
   };
   const handleConfirmDelete = async () => {
@@ -376,7 +374,7 @@ function DemandasListPage() {
                       <div className="flex justify-end gap-2">
                         {demanda.linkDemanda && (
                           <a href={demanda.linkDemanda} target="_blank" rel="noopener noreferrer" title="Abrir link da demanda"
-                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100"
+                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <LinkIcon />
@@ -385,11 +383,11 @@ function DemandasListPage() {
                         {(user?.role === 'admin' || user?.role === 'qa') && (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(demanda); }} title="Editar Demanda"
-                              className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100">
+                              className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                               <EditIcon />
                             </button>
                             <button onClick={(e) => { e.stopPropagation(); openDeleteModal(demanda); }} title="Deletar Demanda"
-                              className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100">
+                              className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                               <TrashIcon />
                             </button>
                           </>
@@ -443,7 +441,7 @@ function DemandasListPage() {
       </div>
 
       {/* --- MODAL DA DEMANDA --- */}
-      <Transition appear show={isModalOpen} as={Fragment}>
+      <Transition appear show={isModalOpen} as={Fragment} afterLeave={() => setDemandaToEdit(null)}>
         <Dialog as="div" className="relative z-10" onClose={closeModal}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
@@ -476,6 +474,7 @@ function DemandasListPage() {
         onConfirm={handleConfirmDelete}
         title="Deletar Demanda"
         message={`Tem certeza que deseja deletar a demanda "${demandaToDelete?.nome}"? TODOS os seus cenários serão apagados permanentemente.`}
+        afterLeave={() => setDemandaToDelete(null)}
       />
     </div>
   );

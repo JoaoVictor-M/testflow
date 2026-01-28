@@ -280,24 +280,24 @@ const UsersManager = () => {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-3">
+                                                    <div className="flex justify-end gap-2">
                                                         <button
                                                             onClick={() => openEditModal(u)}
-                                                            className="text-gray-400 hover:text-blue-600 transition-colors"
+                                                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
                                                             title="Editar"
                                                         >
                                                             <EditIcon />
                                                         </button>
                                                         <button
                                                             onClick={() => openResetModal(u)}
-                                                            className="text-gray-400 hover:text-red-600 transition-colors"
+                                                            className="p-1.5 rounded-full text-gray-400 hover:text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
                                                             title="Resetar Senha"
                                                         >
                                                             <ResetIcon />
                                                         </button>
                                                         <button
                                                             onClick={() => openDeleteModal(u)}
-                                                            className="text-gray-400 hover:text-red-600 transition-colors"
+                                                            className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
                                                             title="Excluir"
                                                         >
                                                             <TrashIcon />
@@ -388,6 +388,8 @@ const UsersManager = () => {
                 message={`Tem certeza que deseja enviar um email de redefinição de senha para o usuário "${userToReset?.username}"?`}
                 confirmText="Resetar"
                 cancelText="Cancelar"
+                confirmButtonClass="bg-yellow-600 hover:bg-yellow-700"
+                variant="warning"
                 afterLeave={() => setUserToReset(null)}
             />
         </div >

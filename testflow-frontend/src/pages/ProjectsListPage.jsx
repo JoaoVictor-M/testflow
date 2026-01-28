@@ -99,7 +99,6 @@ function ProjectsListPage() {
   // Funções do Modal (Formulário)
   const closeModal = () => {
     setIsModalOpen(false);
-    setProjectToEdit(null);
   };
   const openCreateModal = () => {
     setProjectToEdit(null);
@@ -116,7 +115,6 @@ function ProjectsListPage() {
     setIsDeleteModalOpen(true);
   };
   const closeDeleteModal = () => {
-    setProjectToDelete(null);
     setIsDeleteModalOpen(false);
   };
   const handleConfirmDelete = async () => {
@@ -334,11 +332,11 @@ function ProjectsListPage() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} title="Editar Projeto"
-                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100">
+                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
                             <EditIcon />
                           </button>
                           <button onClick={(e) => { e.stopPropagation(); openDeleteModal(project); }} title="Deletar Projeto"
-                            className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100">
+                            className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                             <TrashIcon />
                           </button>
                         </div>
@@ -380,7 +378,7 @@ function ProjectsListPage() {
       )}
 
       {/* --- MODAL DO PROJETO --- */}
-      <Transition appear show={isModalOpen} as={Fragment}>
+      <Transition appear show={isModalOpen} as={Fragment} afterLeave={() => setProjectToEdit(null)}>
         <Dialog as="div" className="relative z-10" onClose={closeModal}>
           <Transition.Child as={Fragment} enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100" leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0">
             <div className="fixed inset-0 bg-black/30" />
@@ -413,6 +411,7 @@ function ProjectsListPage() {
         onConfirm={handleConfirmDelete}
         title="Deletar Projeto"
         message={`Tem certeza que deseja deletar o projeto "${projectToDelete?.title}"? TODAS as suas demandas e cenários serão apagados permanentemente.`}
+        afterLeave={() => setProjectToDelete(null)}
       />
     </div>
   );
