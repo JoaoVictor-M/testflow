@@ -14,10 +14,9 @@ Para instalar o TestFlow em um servidor de produção **sem precisar do código-
 
 ### Passo a Passo
 
-1.  **Crie uma pasta para o sistema** no seu servidor (ex: `C:\TestFlow` ou `/opt/testflow`).
-2.  **Baixe os arquivos de configuração**:
-    *   Baixe o arquivo `docker-compose.prod.yml` (renomeie para `docker-compose.yml`).
-    *   Baixe o script `mongo-init.js` (necessário para o banco de dados).
+1.  **Acesse a pasta `install`** deste repositório (está tudo pronto lá).
+2.  **Copie os arquivos para seu servidor**:
+    *   Copie a pasta `install` inteira ou apenas os arquivos `docker-compose.yml` e `mongo-init.js`.
 3.  **Execute o sistema**:
     Abra o terminal na pasta onde salvou os arquivos e rode:
     ```bash
