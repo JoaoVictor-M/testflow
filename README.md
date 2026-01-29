@@ -4,27 +4,38 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 ---
 
-## 📦 Instalação (Servidores Linux/Windows)
+## 📦 Instalação
 
-Para instalar o TestFlow em um servidor de produção **sem precisar do código-fonte**, siga os passos abaixo. O sistema roda inteiramente sobre Docker.
+### Linux (Servidores Debian/Ubuntu/CentOS)
+A instalação é feita via **Make**, garantindo configuração correta do serviço systemd.
 
-### Pré-requisitos
-*   [Docker](https://www.docker.com/) instalado.
-*   [Docker Compose](https://docs.docker.com/compose/install/) instalado.
-
-### Passo a Passo
-
-1.  **Crie uma pasta para o sistema** no seu servidor (ex: `C:\TestFlow` ou `/opt/testflow`).
-2.  **Baixe os arquivos de configuração**:
-    *   Baixe o arquivo `docker-compose.prod.yml` (renomeie para `docker-compose.yml`).
-    *   Baixe o script `mongo-init.js` (necessário para o banco de dados).
-3.  **Execute o sistema**:
-    Abra o terminal na pasta onde salvou os arquivos e rode:
+1.  Clone o repositório (ou baixe o código):
     ```bash
-    docker compose up -d
+    git clone git@github.com:JoaoVictor-M/testflow.git
+    cd testflow
     ```
+2.  Execute a instalação como root:
+    ```bash
+    sudo make install
+    ```
+    Isso irá:
+    *   Verificar o Docker.
+    *   Instalar arquivos em `/opt/testflow`.
+    *   Configurar o serviço `testflow` para iniciar com o sistema.
 
-Isso irá baixar as imagens oficiais do sistema (Frontend e Backend) e iniciar o banco de dados MongoDB automaticamente.
+Para remover: `sudo make uninstall`
+
+### Windows (Server ou Desktop)
+Para Windows, fornecemos um script para geração de instalador nativo (`.exe`).
+
+1.  **Requisito de Construção**: Instale o [Inno Setup](https://jrsoftware.org/isinfo.php).
+2.  **Gerar Instalador**:
+    *   Abra o arquivo `windows-installer/setup.iss`.
+    *   Clique em "Compile".
+    *   O arquivo `TestFlow_Setup_v1.0.0.exe` será gerado na pasta `windows-installer/Output`.
+3.  **Para o Cliente Final**:
+    *   Basta entregar o `.exe` e executar. O instalador cuida de tudo.
+
 
 ### Acesso
 Após iniciar, o sistema estará disponível em:
