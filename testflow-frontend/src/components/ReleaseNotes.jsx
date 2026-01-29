@@ -1,4 +1,4 @@
-import { X, Sparkles, Zap, ShieldCheck } from 'lucide-react';
+import { Sparkles, ShieldCheck, Link, Mail } from 'lucide-react';
 
 const ReleaseNotes = ({ isOpen, onClose, version }) => {
     if (!isOpen) return null;
@@ -16,69 +16,78 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                         <div className="flex justify-between items-start">
                             <div>
                                 <h2 className="text-3xl font-bold tracking-tight">O que há de novo?</h2>
-                                <p className="text-blue-100 mt-2 font-medium">Confira as melhorias da versão <span className="bg-white/20 px-2 py-0.5 rounded text-white">{version}</span></p>
+                                <p className="text-blue-100 mt-2 font-medium">Confira as novidades da versão <span className="bg-white/20 px-2 py-0.5 rounded text-white">{version}</span></p>
                             </div>
-                            <button
-                                onClick={onClose}
-                                className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-colors"
-                            >
-                                <X size={24} />
-                            </button>
                         </div>
                     </div>
                 </div>
 
                 <div className="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                    <div className="space-y-10">
+                    <div className="space-y-12">
 
-                        {/* Destaque Principal */}
+                        {/* Configurações de Sistema */}
                         <section>
-                            <div className="flex items-start gap-4">
+                            <div className="flex items-start gap-5">
                                 <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
-                                    <ShieldCheck size={28} />
+                                    <Sparkles size={28} />
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Segurança e Identidade</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                                        Melhorias na identificação do usuário em fluxos críticos.
-                                    </p>
-                                    <ul className="mt-3 space-y-2">
-                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                                            <strong>Redefinição de Senha Personalizada:</strong> A tela de nova senha agora saúda o usuário pelo nome ("Olá, [Nome]"), garantindo que você está alterando a senha da conta correta.
-                                        </li>
-                                    </ul>
+                                <div className="space-y-6 w-full">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Melhorias Gerais</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 mt-1">
+                                            Aprimoramentos na estabilidade e navegação do sistema.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="pl-4 border-l-2 border-blue-500/30 dark:border-blue-400/30">
+                                            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">Atualização de URL</h4>
+                                            <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-0.5">Endereço simplificado</p>
+                                            <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm leading-relaxed">
+                                                Agora você acessa o TestFlow de forma mais limpa e direta em <strong>/testflow</strong>, sem números de porta visíveis ou caminhos complicados.
+                                            </p>
+                                        </div>
+
+                                        <div className="pl-4 border-l-2 border-blue-500/30 dark:border-blue-400/30">
+                                            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">Navegação Visual</h4>
+                                            <p className="text-sm font-medium text-blue-600 dark:text-blue-400 mt-0.5">Barra de endereços mais limpa</p>
+                                            <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm leading-relaxed">
+                                                Ao navegar pelo sistema, o endereço no navegador permanece fixo, proporcionando uma experiência de uso mais focada e profissional.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
 
                         <hr className="border-gray-100 dark:border-neutral-700" />
 
-                        {/* Visual */}
+                        {/* Configurações de Email */}
                         <section>
-                            <div className="flex items-start gap-4">
-                                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-xl shrink-0">
-                                    <Sparkles size={28} />
+                            <div className="flex items-start gap-5">
+                                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl shrink-0">
+                                    <Mail size={28} />
                                 </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">Melhorias de Visual e Usabilidade</h3>
-                                    <p className="text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-                                        Refinamentos visuais para uma experiência mais fluida.
-                                    </p>
-                                    <ul className="mt-3 space-y-2">
-                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            <strong>Correção Visual (Flicker):</strong> Eliminamos o efeito de "piscar" indesejado ao interagir com alguns modais do sistema.
-                                        </li>
-                                        <li className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
-                                            <strong>Estabilidade do Tema:</strong> Revertemos a implementação experimental do Modo Escuro para garantir consistência visual enquanto trabalhamos em um design Premium para a versão 1.4.
-                                        </li>
-                                    </ul>
+                                <div className="space-y-6 w-full">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Interface de Email</h3>
+                                        <p className="text-gray-600 dark:text-gray-300 mt-1">
+                                            Pequenos detalhes que fazem a diferença na usabilidade.
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="pl-4 border-l-2 border-indigo-500/30 dark:border-indigo-400/30">
+                                            <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">Visualização de Senha Inteligente</h4>
+                                            <p className="text-sm font-medium text-indigo-600 dark:text-indigo-400 mt-0.5">Interface mais limpa</p>
+                                            <p className="text-gray-600 dark:text-gray-400 mt-2 text-sm leading-relaxed">
+                                                O ícone de "visualizar senha" agora só aparece quando você está digitando uma nova senha, mantendo a tela mais organizada quando não é necessário.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </section>
-
                     </div>
                 </div>
 

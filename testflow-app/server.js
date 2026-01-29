@@ -141,7 +141,7 @@ app.post('/auth/forgot-password', async (req, res) => {
 
     // Send email with unhashed token
     // In production, this should be the frontend URL
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost/testflow';
     const resetLink = `${frontendUrl}/reset-password/${token}`;
 
     sendResetPasswordEmail(email, user.name, resetLink)

@@ -66,7 +66,8 @@ function ResetPassword() {
                 newPassword: password
             });
             toast.success('Senha definida com sucesso!');
-            navigate('/login');
+            // Force reload to clear URL and memory history
+            window.location.href = '/testflow';
         } catch (error) {
             toast.error(error.response?.data?.message || 'Erro ao redefinir a senha.');
         } finally {
