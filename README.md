@@ -20,7 +20,7 @@ A instalação é feita via **Make**, garantindo configuração correta do servi
     ```
     Isso irá:
     *   Verificar o Docker.
-    *   Instalar arquivos em `/opt/testflow`.
+    *   Instalar arquivos no **diretório atual**.
     *   Configurar o serviço `testflow` para iniciar com o sistema.
 
 Para remover: `sudo make uninstall`
@@ -32,12 +32,12 @@ Para remover: `sudo make uninstall`
     *   O instalador irá configurar o ambiente em `C:\TestFlow` e iniciar o sistema automaticamente.
 
 2.  **Acesso**:
-    *   Aguarde alguns instantes e acesse: `http://localhost`
+    *   Aguarde alguns instantes e acesse: `http://localhost/testflow`
 
 
 ### Acesso
 Após iniciar, o sistema estará disponível em:
-*   **URL**: `http://localhost` (ou o IP do seu servidor)
+*   **URL**: `http://localhost/testflow` (ou o IP do seu servidor)
 *   **Login Padrão**: (Consulte o administrador para credenciais iniciais ou script de seed)
 
 ---
