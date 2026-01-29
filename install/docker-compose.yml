@@ -10,9 +10,8 @@ services:
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
   backend-service:
-    # IMAGEM PRÉ-COMPILADA (Exemplo: Docker Hub ou GHCR)
-    # Você precisará alterar isso para o seu registry real, ex: ghcr.io/joaovictor-m/testflow-backend:v1.0.0
-    image: testflow-backend:v1.0.0
+    # IMAGEM DO GHCR (GitHub Container Registry)
+    image: ghcr.io/joaovictor-m/testflow-backend:v1.0.0
     container_name: backend_testflow
     restart: always
     ports:
@@ -25,9 +24,8 @@ services:
       - MONGODB_URI=mongodb://mongodb-service:27017/testflow
 
   frontend-service:
-    # IMAGEM PRÉ-COMPILADA
-    # Você precisará alterar isso para o seu registry real, ex: ghcr.io/joaovictor-m/testflow-frontend:v1.0.0
-    image: testflow-frontend:v1.0.0
+    # IMAGEM DO GHCR
+    image: ghcr.io/joaovictor-m/testflow-frontend:v1.0.0
     container_name: frontend_testflow
     restart: always
     ports:
