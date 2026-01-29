@@ -27,7 +27,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
 const app = express();
 const PORT = 3000;
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(cors());
 
 const MONGO_URI = 'mongodb://mongodb-service:27017/testflow-db';
@@ -1159,6 +1160,9 @@ const storage = multer.diskStorage({
     cb(null, dir);
   },
   filename: (req, file, cb) => {
+    // Fix encoding: UTF-8 bytes viewed as Latin-1 -> Restore UTF-8
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
+
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     cb(null, uniqueSuffix + '-' + file.originalname);
   }
@@ -1166,7 +1170,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
 
@@ -1196,7 +1200,8 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
     demanda.evidences.push(newEvidence);
     await demanda.save();
 
-    res.status(201).json(demanda);
+    const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
+    res.status(201).json(populatedDemanda);
   } catch (error) {
     console.error('Erro no upload:', error);
     res.status(500).json({ message: error.message });
@@ -1264,7 +1269,8 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
 
     await demanda.save();
 
-    res.status(200).json(demanda);
+    const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
+    res.status(200).json(populatedDemanda);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });

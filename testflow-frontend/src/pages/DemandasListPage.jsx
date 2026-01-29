@@ -167,6 +167,11 @@ function DemandasListPage() {
     // Update local state when evidence changes
     setDemandas(prev => prev.map(d => d._id === updatedDemanda._id ? updatedDemanda : d));
     setDemandaForEvidence(updatedDemanda);
+
+    // [FIX] Update demandaToEdit if it matches, so DemandaForm sees the new evidence immediately
+    if (demandaToEdit && demandaToEdit._id === updatedDemanda._id) {
+      setDemandaToEdit(updatedDemanda);
+    }
   };
 
   // Função para buscar dados
