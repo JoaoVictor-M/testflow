@@ -7,14 +7,16 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 ## 📦 Instalação
 
 ### Linux (Servidores Debian/Ubuntu/CentOS)
-A instalação é feita via **Make**, garantindo configuração correta do serviço systemd.
+A instalação é feita através do pacote de distribuição (sem código fonte exposto).
 
-1.  Clone o repositório (ou baixe o código):
+1.  **Baixe e Extraia o Pacote**:
+    *   Transfira o arquivo `testflow-linux-v1.0.0.tar.gz` para o servidor.
+    *   Extraia:
     ```bash
-    git clone git@github.com:JoaoVictor-M/testflow.git
-    cd testflow
+    tar -xzvf testflow-linux-v1.0.0.tar.gz
+    cd testflow-dist
     ```
-2.  Execute a instalação como root:
+2.  **Execute a instalação**:
     ```bash
     sudo make install
     ```
