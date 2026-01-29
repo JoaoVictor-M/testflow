@@ -7,11 +7,11 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 ## 📦 Instalação
 
 ### Linux (Servidores Debian/Ubuntu/CentOS)
-A instalação é feita através do pacote de distribuição (sem código fonte exposto).
+A instalação é realizada através do pacote oficial de distribuição.
 
 1.  **Baixe e Extraia o Pacote**:
     *   Transfira o arquivo `testflow-linux-v1.0.0.tar.gz` para o servidor.
-    *   Extraia:
+    *   Extraia o conteúdo:
     ```bash
     tar -xzvf testflow-linux-v1.0.0.tar.gz
     cd testflow-dist
