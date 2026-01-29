@@ -4,42 +4,31 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 ---
 
-## 📦 Instalação
+## 📦 Instalação (Servidores Linux/Windows)
 
-### Linux (Servidores Debian/Ubuntu/CentOS)
-A instalação é realizada através do pacote oficial de distribuição.
+Para instalar o TestFlow em um servidor de produção **sem precisar do código-fonte**, siga os passos abaixo. O sistema roda inteiramente sobre Docker.
 
-1.  **Baixe e Extraia o Pacote**:
-    *   Transfira o arquivo `testflow-linux-v1.0.0.tar.gz` para o servidor.
-    *   Extraia o conteúdo:
+### Pré-requisitos
+*   [Docker](https://www.docker.com/) instalado.
+*   [Docker Compose](https://docs.docker.com/compose/install/) instalado.
+
+### Passo a Passo
+
+1.  **Crie uma pasta para o sistema** no seu servidor (ex: `C:\TestFlow` ou `/opt/testflow`).
+2.  **Baixe os arquivos de configuração**:
+    *   Baixe o arquivo `docker-compose.prod.yml` (renomeie para `docker-compose.yml`).
+    *   Baixe o script `mongo-init.js` (necessário para o banco de dados).
+3.  **Execute o sistema**:
+    Abra o terminal na pasta onde salvou os arquivos e rode:
     ```bash
-    tar -xzvf testflow-linux-v1.0.0.tar.gz
-    cd testflow-dist
+    docker compose up -d
     ```
-2.  **Execute a instalação**:
-    ```bash
-    sudo make install
-    ```
-    Isso irá:
-    *   Verificar o Docker.
-    *   Instalar arquivos no **diretório atual**.
-    *   Configurar o serviço `testflow` para iniciar com o sistema.
 
-Para remover: `sudo make uninstall`
-
-### Windows (Server ou Desktop)
-
-1.  **Instalação**:
-    *   Execute o arquivo `TestFlowInstaller.exe` (fornecido junto com este pacote).
-    *   O instalador irá configurar o ambiente em `C:\TestFlow` e iniciar o sistema automaticamente.
-
-2.  **Acesso**:
-    *   Aguarde alguns instantes e acesse: `http://localhost/testflow`
-
+Isso irá baixar as imagens oficiais do sistema (Frontend e Backend) e iniciar o banco de dados MongoDB automaticamente.
 
 ### Acesso
 Após iniciar, o sistema estará disponível em:
-*   **URL**: `http://localhost/testflow` (ou o IP do seu servidor)
+*   **URL**: `http://localhost` (ou o IP do seu servidor)
 *   **Login Padrão**: (Consulte o administrador para credenciais iniciais ou script de seed)
 
 ---
