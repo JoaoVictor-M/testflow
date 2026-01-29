@@ -26,17 +26,13 @@ A instalação é feita via **Make**, garantindo configuração correta do servi
 Para remover: `sudo make uninstall`
 
 ### Windows (Server ou Desktop)
-Para Windows, fornecemos um instalador nativo (`.exe`).
 
-1.  **Gerar Instalador**:
-    *   Execute o script na raiz do projeto:
-    ```powershell
-    ./build_installer.ps1
-    ```
-    *   O arquivo `TestFlowInstaller.exe` será gerado na pasta `installers/`.
-    
-2.  **Para o Cliente Final**:
-    *   Basta entregar o `TestFlowInstaller.exe`. Ao executar, ele instalará o sistema em `C:\TestFlow` e iniciará os containers.
+1.  **Instalação**:
+    *   Execute o arquivo `TestFlowInstaller.exe` (fornecido junto com este pacote).
+    *   O instalador irá configurar o ambiente em `C:\TestFlow` e iniciar o sistema automaticamente.
+
+2.  **Acesso**:
+    *   Aguarde alguns instantes e acesse: `http://localhost`
 
 
 ### Acesso
