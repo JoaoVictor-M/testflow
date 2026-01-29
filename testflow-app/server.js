@@ -659,6 +659,15 @@ app.get('/api/servers', async (req, res) => {
   }
 });
 
+app.get('/api/system/version', async (req, res) => {
+  try {
+    const packageJson = require('./package.json');
+    res.json({ version: packageJson.version });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {

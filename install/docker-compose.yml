@@ -33,5 +33,16 @@ services:
     depends_on:
       - backend-service
 
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower_testflow
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=America/Sao_Paulo
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_SCHEDULE=0 0 3 * * *
+    restart: always
+
 volumes:
   mongo-data:

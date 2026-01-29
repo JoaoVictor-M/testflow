@@ -1,7 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
 import { Toaster } from 'react-hot-toast'
-import { useContext, Fragment } from 'react'
+import { useContext, Fragment, useEffect } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import { ThemeProvider, ThemeContext } from './context/ThemeContext'
@@ -211,6 +211,64 @@ function Navbar() {
 function AppContent() {
   const location = useLocation();
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
+  const { user } = useContext(AuthContext); // Get user context to check if logged in (optional, but good practice)
+
+  // --- CHECK FOR UPDATES ---
+  useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        const response = await fetch('/api/system/version');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const serverVersion = data.version;
+        const localVersion = localStorage.getItem('app_version');
+
+        if (serverVersion && localVersion && serverVersion !== localVersion) {
+          // Version changed! Show notification
+          toast((t) => (
+            <div className="flex flex-col gap-2">
+              <span className="font-semibold">
+                🚀 Sistema atualizado para v{serverVersion}!
+              </span>
+              <span className="text-sm">
+                Confira as novidades no Release Notes.
+              </span>
+              <Link
+                to="/release-notes"
+                className="text-blue-400 hover:underline text-sm font-bold"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Ver Mudanças
+              </Link>
+            </div>
+          ), {
+            duration: 8000,
+            icon: '🆕',
+            style: {
+              background: '#1f2937', // Dark gray
+              color: '#fff',
+              border: '1px solid #3b82f6'
+            }
+          });
+        }
+
+        // Always update local storage to current server version
+        if (serverVersion) {
+          localStorage.setItem('app_version', serverVersion);
+        }
+
+      } catch (error) {
+        console.error("Failed to check system version:", error);
+      }
+    };
+
+    // Only check if not on public pages (user is likely inside app)
+    if (!isPublicPage) {
+      checkVersion();
+    }
+  }, [isPublicPage]);
+
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-neutral-950">
