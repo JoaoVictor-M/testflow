@@ -1,38 +1,55 @@
-INSTALL_DIR = /opt/testflow
+# Instalação no diretório atual
+INSTALL_DIR = $(shell pwd)
 SERVICE_FILE = /etc/systemd/system/testflow.service
 
 .PHONY: install uninstall
 
 install:
-	@echo "🚀 Installing TestFlow..."
+	@echo "🚀 Configurando TestFlow em: $(INSTALL_DIR)"
 	
-	@# 1. Check prerequisites
-	@command -v docker >/dev/null 2>&1 || { echo >&2 "❌ Docker is required but not installed. Aborting."; exit 1; }
+	@# 1. Verifica Docker
+	@command -v docker >/dev/null 2>&1 || { echo >&2 "❌ Docker não encontrado."; exit 1; }
 	
-	@# 2. Prepare Directory
-	@mkdir -p $(INSTALL_DIR)
-	@cp docker-compose.prod.yml $(INSTALL_DIR)/docker-compose.yml
-	@cp mongo-init.js $(INSTALL_DIR)/mongo-init.js
+	@# 2. Gera docker-compose.yml de produção se não existir
+	@if [ ! -f docker-compose.yml ]; then \
+		cp docker-compose.prod.yml docker-compose.yml; \
+	fi
 	
-	@# 3. Create Volumes Directory
-	@mkdir -p $(INSTALL_DIR)/evidencias_testes
+	@# 3. Cria diretório de evidências
+	@mkdir -p evidencias_testes
 	
-	@# 4. Install Systemd Service
-	@echo "🔧 Configuring Systemd Service..."
-	@cp config/testflow.service $(SERVICE_FILE)
-	@systemctl daemon-reload
-	@systemctl enable testflow
-	@systemctl start testflow
+	@# 4. Gera e Instala Serviço Systemd Dinâmico
+	@echo "🔧 Configurando Serviço Systemd..."
+	@echo "[Unit]" > config/testflow.service
+	@echo "Description=TestFlow Application Service" >> config/testflow.service
+	@echo "Requires=docker.service" >> config/testflow.service
+	@echo "After=docker.service" >> config/testflow.service
+	@echo "" >> config/testflow.service
+	@echo "[Service]" >> config/testflow.service
+	@echo "Restart=always" >> config/testflow.service
+	@echo "WorkingDirectory=$(INSTALL_DIR)" >> config/testflow.service
+	@echo "ExecStartPre=/usr/bin/docker compose down" >> config/testflow.service
+	@echo "ExecStart=/usr/bin/docker compose up" >> config/testflow.service
+	@echo "ExecStop=/usr/bin/docker compose down" >> config/testflow.service
+	@echo "TimeoutStartSec=0" >> config/testflow.service
+	@echo "" >> config/testflow.service
+	@echo "[Install]" >> config/testflow.service
+	@echo "WantedBy=multi-user.target" >> config/testflow.service
+
+	@# Instala o serviço
+	@sudo cp config/testflow.service $(SERVICE_FILE)
+	@sudo systemctl daemon-reload
+	@sudo systemctl enable testflow
+	@sudo systemctl start testflow
 	
-	@echo "✅ TestFlow installed successfully!"
-	@echo "📍 URL: http://localhost"
-	@echo "📂 Location: $(INSTALL_DIR)"
+	@echo "✅ Instalação Concluída!"
+	@echo "📍 O serviço está rodando a partir de: $(INSTALL_DIR)"
+	@echo "   Use 'sudo make uninstall' para remover o serviço."
 
 uninstall:
-	@echo "🛑 Uninstalling TestFlow..."
-	@systemctl stop testflow || true
-	@systemctl disable testflow || true
-	@rm -f $(SERVICE_FILE)
-	@systemctl daemon-reload
-	@rm -rf $(INSTALL_DIR)
-	@echo "✅ Uninstalled."
+	@echo "🛑 Removendo Serviço TestFlow..."
+	@sudo systemctl stop testflow || true
+	@sudo systemctl disable testflow || true
+	@sudo rm -f $(SERVICE_FILE)
+	@sudo systemctl daemon-reload
+	@echo "✅ Serviço removido. (Arquivos mantidos em $(INSTALL_DIR))"
