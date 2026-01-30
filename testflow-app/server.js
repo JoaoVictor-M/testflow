@@ -14,7 +14,7 @@ const authMiddleware = require('./middleware/authMiddleware');
 const roleMiddleware = require('./middleware/roleMiddleware');
 const SystemConfig = require('./models/SystemConfig');
 const { sendInviteEmail, sendResetPasswordEmail, reloadConfig } = require('./services/emailService');
-const { generatePassword } = require('./utils/passwordUtils');
+// const { generatePassword } = require('./utils/passwordUtils'); // Unused
 const crypto = require('crypto');
 const multer = require('multer');
 const fs = require('fs');
@@ -33,8 +33,8 @@ app.use(cors());
 
 const MONGO_URI = 'mongodb://mongodb-service:27017/testflow-db';
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!'))
-  .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error));
+  .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!')) // eslint-disable-line no-console
+  .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error)); // eslint-disable-line no-console
 
 
 
@@ -145,7 +145,7 @@ app.post('/auth/forgot-password', async (req, res) => {
     const resetLink = `${frontendUrl}/reset-password/${token}`;
 
     sendResetPasswordEmail(email, user.name, resetLink)
-      .catch(err => console.error("Erro ao enviar email de reset:", err));
+      .catch(err => console.error("Erro ao enviar email de reset:", err)); // eslint-disable-line no-console
 
     res.status(200).json({ message: 'Se os dados estiverem corretos, um email de recuperação será enviado.' });
   } catch (error) {
@@ -369,7 +369,7 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
 
 app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   const { users } = req.body; // Array of { name, email, role }
-  console.log(`[DEBUG] Received import request for ${users ? users.length : 0} users.`);
+  console.log(`[DEBUG] Received import request for ${users ? users.length : 0} users.`); // eslint-disable-line no-console
 
   if (!users || !Array.isArray(users) || users.length === 0) {
     return res.status(400).json({ message: 'Nenhum usuário para importar.' });
@@ -454,9 +454,9 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), a
       const setupLink = `${frontendUrl}/reset-password/${token}`;
 
       // Use the queue-enabled send function
-      console.log(`[DEBUG] Sending invite email to ${userData.email} (User: ${username}, Name: ${userData.name})...`);
+      console.log(`[DEBUG] Sending invite email to ${userData.email} (User: ${username}, Name: ${userData.name})...`); // eslint-disable-line no-console
       sendInviteEmail(userData.email, username, userData.name, setupLink)
-        .catch(err => console.error(`Falha ao enviar convite para ${userData.email}:`, err));
+        .catch(err => console.error(`Falha ao enviar convite para ${userData.email}:`, err)); // eslint-disable-line no-console
 
       results.success++;
     } catch (err) {
@@ -502,7 +502,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
     // DEEP CLONE LOGIC
     if (req.body.sourceId) {
       const sourceId = req.body.sourceId;
-      console.log(`[CLONE] Duplicando demandas do projeto ${sourceId} para ${savedProject._id}`);
+      console.log(`[CLONE] Duplicando demandas do projeto ${sourceId} para ${savedProject._id}`); // eslint-disable-line no-console
 
       const demandas = await Demanda.find({ project: sourceId });
       for (const dem of demandas) {
@@ -557,7 +557,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
       .populate('servers');
     res.status(201).json(populatedProject);
   } catch (error) {
-    console.error(error); // Log error
+    console.error(error); // eslint-disable-line no-console
     res.status(400).json({ message: error.message });
   }
 });
@@ -686,7 +686,7 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async
     // DEEP CLONE LOGIC
     if (req.body.sourceId) {
       const sourceId = req.body.sourceId;
-      console.log(`[CLONE] Duplicando cenários da demanda ${sourceId} para ${savedDemanda._id}`);
+      console.log(`[CLONE] Duplicando cenários da demanda ${sourceId} para ${savedDemanda._id}`); // eslint-disable-line no-console
       const scenarios = await Scenario.find({ demanda: sourceId });
       for (const scen of scenarios) {
         const newScen = new Scenario({
@@ -783,7 +783,7 @@ app.get('/api/scenarios', authMiddleware, async (req, res) => {
     const scenarios = await Scenario.find({ demanda: demandaObjId });
     res.status(200).json(scenarios);
   } catch (error) {
-    console.error('Erro na rota GET /api/scenarios:', error);
+    console.error('Erro na rota GET /api/scenarios:', error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
   }
 });

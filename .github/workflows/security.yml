@@ -105,7 +105,7 @@ jobs:
           docker run --network host \
             -v $(pwd)/zap-work:/zap/wrk:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-full-scan.py -t http://localhost:3000 -r report_html.html
+            zap-full-scan.py -t http://localhost:3000 -r /zap/wrk/report_html.html
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
