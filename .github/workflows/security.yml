@@ -70,6 +70,19 @@ jobs:
           echo "JWT_SECRET=supersecret_test_key" >> ./testflow-app/.env
           echo "PORT=3000" >> ./testflow-app/.env
 
+      - name: Build Backend Image for Scanning
+        run: docker build -t testflow-backend:latest ./testflow-app
+
+      - name: Container Security Scan (Trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'testflow-backend:latest'
+          format: 'table'
+          exit-code: '1' # Fail pipeline if vulnerabilities found
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
       - name: Build and Start Application
         run: docker compose up -d --build
 
@@ -78,22 +91,21 @@ jobs:
           sleep 30
           curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000 || echo "Backend not ready yet"
 
-      - name: Run ZAP Baseline Scan
-        continue-on-error: true # Let the pipeline continue even if vulnerabilities are found
+      - name: Run ZAP Full Scan (Active Attack)
+        # continue-on-error removed to enforce strict passing
         run: |
           # Pull ZAP Image
           docker pull ghcr.io/zaproxy/zaproxy:stable
           # Ensure current directory is writable by Docker container
           chmod 777 .
-          # Run ZAP Scan
-          # --network host allows accessing localhost:3000
-          # -v maps current dir to /zap/wrk/ for report output
-          # -r specifies the report filename
-          # -I ignores warnings (optional, but good for baseline)
+          # Run ZAP Full Scan
+          # -t target URL
+          # -r report file
+          # -d show debug messages
           docker run --network host \
             -v $(pwd):/zap/wrk/:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-baseline.py -t http://localhost:3000 -r report_html.html -I
+            zap-full-scan.py -t http://localhost:3000 -r report_html.html
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
