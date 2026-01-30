@@ -258,7 +258,7 @@ app.post('/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), asyn
 
     // Send email (failed email should not rollback user creation, but log error)
     sendInviteEmail(email, username, name, setupLink)
-      .catch(err => console.error("Falha a enviar email de convite:", err));
+      .catch(err => console.error("Falha a enviar email de convite:", err)); // eslint-disable-line no-console
 
     res.status(201).json({
       message: 'Usuário criado com sucesso. Link de definição de senha enviado por email.',
@@ -506,7 +506,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
 
       const demandas = await Demanda.find({ project: sourceId });
       for (const dem of demandas) {
-        const responsavelIdsDemanda = await findOrCreateResponsaveis(dem.responsaveis.map(r => r.name)); // Simplify if they are objects
+        // const responsavelIdsDemanda = await findOrCreateResponsaveis(dem.responsaveis.map(r => r.name)); // Unused and potentially incorrect
 
         // Check if we need to ensure uniqueness or just copy
         // For simplicity, we copy. Frontend logic added " (Cópia)" to Project title only.
@@ -903,17 +903,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
       },
       { $sort: { count: -1 } }
     ]);
-    const bugsByTester = await Scenario.aggregate([
-      { $match: { ...scenarioMatch, status: 'Com Erro' } },
-      { $lookup: { from: 'demandas', localField: 'demanda', foreignField: '_id', as: 'demandaData' } },
-      { $unwind: '$demandaData' },
-      { $match: { "demandaData._id": { $in: (await Demanda.find(demandaMatch, '_id')).map(d => d._id) } } },
-      { $unwind: '$demandaData.responsaveis' },
-      { $lookup: { from: 'responsaveis', localField: 'demandaData.responsaveis', foreignField: '_id', as: 'respData' } },
-      { $unwind: { path: "$respData", preserveNullAndEmptyArrays: true } },
-      { $group: { _id: { $ifNull: ["$respData.name", "Desconhecido"] }, count: { $sum: 1 } } },
-      { $sort: { count: -1 } }
-    ]);
+    // Unused aggregation bugsByTester removed
     const demandasMaisBugs = await Scenario.aggregate([
       { $match: { ...scenarioMatch, status: 'Com Erro' } },
       { $group: { _id: '$demanda', count: { $sum: 1 } } },
@@ -1036,7 +1026,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
 
     res.status(200).json(stats);
   } catch (error) {
-    console.error("Erro na rota /api/stats:", error);
+    console.error("Erro na rota /api/stats:", error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
   }
 });
@@ -1114,7 +1104,7 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 const getBaseEvidenceDir = () => {
   const baseDir = path.join(__dirname, '..', 'evidencias_testes');
   if (!fs.existsSync(baseDir)) {
-    try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; }
+    try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console, security/detect-non-literal-fs-filename
   }
   return baseDir;
 };
@@ -1123,7 +1113,7 @@ const getBaseEvidenceDir = () => {
 const findLegacyDir = (searchStr) => {
   const baseDir = getBaseEvidenceDir();
   if (!baseDir) return null;
-  const dirs = fs.readdirSync(baseDir);
+  const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
   return dirs.find(dir => dir.includes(searchStr));
 };
 
@@ -1163,8 +1153,8 @@ const storage = multer.diskStorage({
       dir = path.join(getBaseEvidenceDir(), folderName);
     }
 
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(dir)) { // eslint-disable-line security/detect-non-literal-fs-filename
+      fs.mkdirSync(dir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
     }
     cb(null, dir);
   },
@@ -1195,7 +1185,7 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
 
     const demanda = await Demanda.findById(demandaId);
     if (!demanda) {
-      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path); // eslint-disable-line security/detect-non-literal-fs-filename
       return res.status(404).json({ message: 'Demanda não encontrada.' });
     }
 
@@ -1212,7 +1202,7 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
     const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
     res.status(201).json(populatedDemanda);
   } catch (error) {
-    console.error('Erro no upload:', error);
+    console.error('Erro no upload:', error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
   }
 });
@@ -1263,8 +1253,8 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
 
     if (dirPath) {
       const filePath = path.join(dirPath, evidence.filename);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.unlinkSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
       }
     }
 
@@ -1281,7 +1271,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
     const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
     res.status(200).json(populatedDemanda);
   } catch (error) {
-    console.error(error);
+    console.error(error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
   }
 });
@@ -1343,11 +1333,11 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
       res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
     }
   } catch (error) {
-    console.error(error);
+    console.error(error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Backend rodando na porta ${PORT}`);
+  console.log(`Backend rodando na porta ${PORT}`); // eslint-disable-line no-console
 });

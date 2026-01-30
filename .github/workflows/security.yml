@@ -93,23 +93,24 @@ jobs:
 
       - name: Run ZAP Full Scan (Active Attack)
         run: |
-          # Create a dedicated directory for ZAP results with write permissions
-          mkdir -p zap-work
-          chmod 777 zap-work
-          
-          # Pull ZAP Image
           docker pull ghcr.io/zaproxy/zaproxy:stable
           
-          # Run ZAP Full Scan w/ Volume Mapping for Report
-          # Maps ./zap-work to /zap/wrk inside container
-          docker run --network host \
-            -v $(pwd)/zap-work:/zap/wrk:rw \
+          # Run ZAP container in background or foreground? Foreground.
+          # We use --name to reference it for copying.
+          # No volume mapping to avoid permission issues.
+          docker run --name zap-scanner --network host \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py -t http://localhost:3000 -r /zap/wrk/report_html.html
+
+      - name: Extract ZAP Report
+        if: always()
+        run: |
+          # Copy report from container to host
+          docker cp zap-scanner:/zap/wrk/report_html.html ./report_html.html
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
         uses: actions/upload-artifact@v4
         with:
           name: ZAP-Security-Report
-          path: zap-work/report_html.html
+          path: report_html.html
