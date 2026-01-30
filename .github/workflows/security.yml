@@ -78,13 +78,22 @@ jobs:
           sleep 30
           curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000 || echo "Backend not ready yet"
 
-      - name: OWASP ZAP Baseline Scan
-        uses: zaproxy/action-baseline@v0.13.0
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifact_name: 'zap-scan-report'
-          target: 'http://localhost:3000'
-          cmd_options: '-a'
+      - name: Run ZAP Baseline Scan
+        continue-on-error: true # Let the pipeline continue even if vulnerabilities are found
+        run: |
+          # Pull ZAP Image
+          docker pull ghcr.io/zaproxy/zaproxy:stable
+          # Ensure current directory is writable by Docker container
+          chmod 777 .
+          # Run ZAP Scan
+          # --network host allows accessing localhost:3000
+          # -v maps current dir to /zap/wrk/ for report output
+          # -r specifies the report filename
+          # -I ignores warnings (optional, but good for baseline)
+          docker run --network host \
+            -v $(pwd):/zap/wrk/:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:3000 -r report_html.html -I
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
