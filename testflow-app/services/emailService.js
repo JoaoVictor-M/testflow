@@ -13,7 +13,7 @@ const logEmail = (status, details) => {
     const logMessage = `[${timestamp}] [${status}] ${details}\n`;
 
     fs.appendFile(logPath, logMessage, (err) => {
-        if (err) console.error("Failed to write to email.log:", err);
+        if (err) console.error("Failed to write to email.log:", err); // eslint-disable-line no-console
     });
 };
 
@@ -40,15 +40,15 @@ const createTransporter = async () => {
                 from: config?.value?.from || user // Default 'from' address
             });
             logEmail('INFO', `Transporter initialized. Source: ${config ? 'Database' : 'Environment'}`);
-            console.log("Email Service: Transporter Initialized");
+            console.log("Email Service: Transporter Initialized"); // eslint-disable-line no-console
         } else {
             logEmail('WARN', 'Missing configuration. Emails will not be sent.');
-            console.warn("Email Service: Missing configuration.");
+            console.warn("Email Service: Missing configuration."); // eslint-disable-line no-console
             transporter = null;
         }
     } catch (err) {
         logEmail('ERROR', `Failed to initialize transporter: ${err.message}`);
-        console.error("Email Service: Failed to initialize transporter", err);
+        console.error("Email Service: Failed to initialize transporter", err); // eslint-disable-line no-console
     }
 };
 
@@ -77,10 +77,10 @@ const sendEmail = async (to, subject, html, type = 'generic') => {
     try {
         await attemptSend();
         logEmail('SENT', `${type} email sent to ${to}`);
-        console.log(`Email (${type}) enviado para ${to}`);
+        console.log(`Email (${type}) enviado para ${to}`); // eslint-disable-line no-console
     } catch (error) {
         logEmail('ERROR', `Failed to send ${type} email to ${to}: ${error.message}. Queuing...`);
-        console.error(`Erro ao enviar email (${type}). Salvando na fila:`, error.message);
+        console.error(`Erro ao enviar email (${type}). Salvando na fila:`, error.message); // eslint-disable-line no-console
 
         // Queue the email
         await PendingEmail.create({
@@ -95,7 +95,7 @@ const sendEmail = async (to, subject, html, type = 'generic') => {
 };
 
 const sendInviteEmail = async (to, username, name, setupLink) => {
-    console.log(`[DEBUG_SERVICE] sendInviteEmail called for ${to}`);
+    console.log(`[DEBUG_SERVICE] sendInviteEmail called for ${to}`); // eslint-disable-line no-console
     const subject = 'Bem-vindo ao TestFlow - Ative sua conta';
     const firstName = name.split(' ')[0];
 
@@ -257,7 +257,7 @@ const processQueue = async () => {
 
     if (!transport) {
         logEmail('WARN', 'Cannot process queue: Transporter not ready');
-        console.log('Fila de email não processada: Transporter não pronto.');
+        console.log('Fila de email não processada: Transporter não pronto.'); // eslint-disable-line no-console
         return;
     }
 
@@ -268,7 +268,7 @@ const processQueue = async () => {
         return;
     }
 
-    console.log(`Processando ${pendingEmails.length} emails pendentes...`);
+    console.log(`Processando ${pendingEmails.length} emails pendentes...`); // eslint-disable-line no-console
     const from = await getFromEmail();
 
     for (const email of pendingEmails) {

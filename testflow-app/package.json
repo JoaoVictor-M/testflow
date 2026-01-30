@@ -25,5 +25,8 @@
     "eslint": "^9.39.2",
     "eslint-plugin-security": "^3.0.1",
     "globals": "^17.2.0"
+  },
+  "overrides": {
+    "cross-spawn": "7.0.6"
   }
 }
