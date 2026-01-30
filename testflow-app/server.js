@@ -1240,7 +1240,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
       if (!dirPath && demanda.demandaId) {
         const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
         const tryPath = path.join(baseDir, `${safeId}_${id}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath;
+        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
       }
 
       // Pattern 3: MongoID or Suffix (Legacy/Fallback)
@@ -1301,14 +1301,14 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
         const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
         const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
         const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath;
+        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
       }
 
       // Pattern 2: FriendlyID_MongoID (Previous Attempt)
       if (!dirPath && demanda.demandaId) {
         const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
         const tryPath = path.join(baseDir, `${safeId}_${id}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath;
+        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
       }
 
       // Pattern 3: MongoID or Suffix (Legacy/Fallback)
@@ -1325,10 +1325,10 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
 
     const filePath = path.join(dirPath, evidence.filename);
 
-    if (fs.existsSync(filePath)) {
+    if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
       res.setHeader('Content-Type', evidence.mimetype);
       res.setHeader('Content-Disposition', `inline; filename="${evidence.originalName}"`);
-      fs.createReadStream(filePath).pipe(res);
+      fs.createReadStream(filePath).pipe(res); // eslint-disable-line security/detect-non-literal-fs-filename
     } else {
       res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
     }

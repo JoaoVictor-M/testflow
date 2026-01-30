@@ -95,18 +95,17 @@ jobs:
         run: |
           docker pull ghcr.io/zaproxy/zaproxy:stable
           
-          # Run ZAP container in background or foreground? Foreground.
-          # We use --name to reference it for copying.
-          # No volume mapping to avoid permission issues.
+          # Run ZAP in foreground with name for cp
+          # Output to /zap/report_html.html (home dir of zap user) to avoid perm issues
           docker run --name zap-scanner --network host \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-full-scan.py -t http://localhost:3000 -r /zap/wrk/report_html.html
+            zap-full-scan.py -t http://localhost:3000 -r /zap/report_html.html
 
       - name: Extract ZAP Report
         if: always()
         run: |
           # Copy report from container to host
-          docker cp zap-scanner:/zap/wrk/report_html.html ./report_html.html
+          docker cp zap-scanner:/zap/report_html.html ./report_html.html
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
