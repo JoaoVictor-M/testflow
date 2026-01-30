@@ -51,7 +51,7 @@ jobs:
 
   # 3. Dynamic Application Security Testing (DAST)
   dast-zap:
-  dast-zap:
+
     name: DAST - OWASP ZAP Scan
     runs-on: ubuntu-latest
     needs: [dependency-scan, sast-eslint] # Run after static checks
