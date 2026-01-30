@@ -66,7 +66,7 @@ jobs:
           echo "PORT=3000" >> ./testflow-app/.env
 
       - name: Build and Start Application
-        run: docker-compose up -d --build
+        run: docker compose up -d --build
 
       - name: Wait for Application to be Ready
         run: |
