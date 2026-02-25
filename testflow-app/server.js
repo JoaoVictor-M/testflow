@@ -1202,7 +1202,7 @@ const isValidMongoId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
 
 const getBaseEvidenceDir = () => {
   const baseDir = path.resolve(path.join(__dirname, '..', 'evidencias_testes'));
-  if (!fs.existsSync(baseDir)) {  
+  if (!fs.existsSync(baseDir)) {
     try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console
   }
   return baseDir;
@@ -1338,15 +1338,21 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
 
       // Ensure the resolved path is inside the specific evidence directory for this particular ID
       if (filePath.startsWith(dirPath)) {
-        if (fs.existsSync(filePath)) {
-          return res.sendFile(filePath);
-        }
+        return res.sendFile(filePath, (err) => {
+          if (err) {
+            if (!res.headersSent) res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
+          }
+        });
       }
     }
-    return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
+
+    // Se não entrou no return acima:
+    if (!res.headersSent) {
+      return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
+    }
   } catch (error) {
     console.error(error); // eslint-disable-line no-console
-    res.status(500).json({ message: error.message });
+    if (!res.headersSent) res.status(500).json({ message: error.message });
   }
 });
 
