@@ -44,18 +44,21 @@ const helmet = require('helmet');
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'"],
+      defaultSrc: ["'none'"],          // Strict fallback default
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "blob:"],
-      connectSrc: ["'self'", "*"], // allow APIs
+      connectSrc: ["'self'", "*"],     // allow APIs
       fontSrc: ["'self'", "data:"],
       objectSrc: ["'none'"],
       mediaSrc: ["'self'"],
       frameSrc: ["'none'"],
-      baseUri: ["'self'"],
-      formAction: ["'self'"],
-      frameAncestors: ["'none'"]
+      baseUri: ["'none'"],
+      formAction: ["'none'"],
+      frameAncestors: ["'none'"],
+      workerSrc: ["'none'"],           // Explicit to satiate ZAP
+      manifestSrc: ["'none'"],         // Explicit to satiate ZAP
+      prefetchSrc: ["'none'"]          // Explicit to satiate ZAP
     }
   },
   crossOriginResourcePolicy: { policy: "cross-origin" },
