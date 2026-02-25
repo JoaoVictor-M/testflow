@@ -1485,7 +1485,7 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
 
 // Fallback Global 404 Handler para garantir que o express sirva cabeçalhos Helmet (ZAP-10055)
 // mesmo em chamadas raiz ("/", "/robots.txt", "/sitemap.xml")
-app.use('*', (req, res) => {
+app.use((req, res) => {
     res.status(404).json({ message: 'Rota não encontrada ou não implementada na API.' });
 });
 
