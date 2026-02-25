@@ -19,8 +19,20 @@ const crypto = require('crypto');
 const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
-
+const { logAudit } = require('./services/auditService');
+const AuditLog = require('./models/AuditLog');
 require('dotenv').config();
+
+const cleanAuditData = (doc) => {
+  if (!doc) return doc;
+  const clone = { ...doc };
+  delete clone.password;
+  delete clone.__v;
+  delete clone.resetPasswordToken;
+  delete clone.resetPasswordExpires;
+  delete clone.evidences; // Optional, can save DB space
+  return clone;
+};
 
 const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
@@ -250,10 +262,14 @@ app.post('/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), asyn
       resetPasswordExpires: Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year (pseudo "no expire")
     });
 
-    await newUser.save();
+    const savedUser = await newUser.save();
+
+    // Log the full user object (cleaned)
+    const newLean = await User.findById(savedUser._id).lean();
+    await logAudit('CREATE', 'User', savedUser._id, req.user.userId, { new: cleanAuditData(newLean) });
 
     // Generate Link
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
     const setupLink = `${frontendUrl}/reset-password/${token}`;
 
     // Send email (failed email should not rollback user creation, but log error)
@@ -325,6 +341,7 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async
     if (!user) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
+    const oldUser = await User.findById(userId).lean();
 
     // QA Restriction: Cannot edit Admin
     if (req.user.role === 'qa' && user.role === 'admin') {
@@ -344,6 +361,14 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async
     }
 
     await user.save();
+
+    const newLean = await User.findById(user._id).lean();
+    let summary = `Perfil do usuário modificado.`;
+    if (password && password.trim() !== '') {
+      summary = `Senha do usuário redefinida.`;
+    }
+
+    await logAudit('UPDATE', 'User', user._id, req.user.userId, { old: cleanAuditData(oldUser), new: cleanAuditData(newLean), summary });
     res.status(200).json({ message: 'Usuário atualizado com sucesso', user: { _id: user._id, username: user.username, name: user.name, role: user.role, email: user.email } });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -357,10 +382,11 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
       return res.status(400).json({ message: 'Você não pode deletar a si mesmo.' });
     }
 
-    const user = await User.findByIdAndDelete(userId);
+    const user = await User.findByIdAndDelete(userId).lean();
     if (!user) {
       return res.status(404).json({ message: 'Usuário não encontrado' });
     }
+    await logAudit('DELETE', 'User', userId, req.user.userId, { old: cleanAuditData(user) });
     res.status(200).json({ message: 'Usuário deletado com sucesso' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -448,9 +474,12 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), a
         resetPasswordExpires: Date.now() + (365 * 24 * 60 * 60 * 1000)
       });
 
-      await newUser.save();
+      const savedUser = await newUser.save();
 
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      const newLean = await User.findById(savedUser._id).lean();
+      await logAudit('CREATE', 'User', savedUser._id, req.user.userId, { new: cleanAuditData(newLean) });
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost';
       const setupLink = `${frontendUrl}/reset-password/${token}`;
 
       // Use the queue-enabled send function
@@ -498,6 +527,13 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
       servers: serverIds
     });
     const savedProject = await newProject.save();
+    const newLean = await Project.findById(savedProject._id).lean();
+    let summary = null;
+    if (req.body.sourceId) {
+      const originalProject = await Project.findById(req.body.sourceId);
+      summary = `Duplicado a partir do projeto: ${originalProject ? originalProject.title : req.body.sourceId}`;
+    }
+    await logAudit('CREATE', 'Project', savedProject._id, req.user.userId, { new: cleanAuditData(newLean), summary });
 
     // DEEP CLONE LOGIC
     if (req.body.sourceId) {
@@ -577,8 +613,10 @@ app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
       versions: versionIds,
       servers: serverIds
     };
-    const updatedProject = await Project.findByIdAndUpdate(req.params.id, projectData, { new: true, runValidators: true });
+    const oldProject = await Project.findById(req.params.id).lean();
+    const updatedProject = await Project.findByIdAndUpdate(req.params.id, projectData, { new: true, runValidators: true }).lean();
     if (!updatedProject) return res.status(404).json({ message: 'Projeto não encontrado' });
+    await logAudit('UPDATE', 'Project', updatedProject._id, req.user.userId, { old: cleanAuditData(oldProject), new: cleanAuditData(updatedProject) });
     const populatedProject = await Project.findById(updatedProject._id)
       .populate('tags')
       .populate('responsaveis')
@@ -601,7 +639,8 @@ app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']),
     const demandaIds = demandas.map(d => d._id);
     await Scenario.deleteMany({ demanda: { $in: demandaIds } });
     await Demanda.deleteMany({ project: projectId });
-    await Project.findByIdAndDelete(projectId);
+    const deletedProject = await Project.findByIdAndDelete(projectId).lean();
+    await logAudit('DELETE', 'Project', projectId, req.user.userId, { old: cleanAuditData(deletedProject) });
     res.status(200).json({ message: 'Projeto e todos os seus dados (demandas e cenários) deletados.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -617,14 +656,17 @@ app.get('/api/tags', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
-app.delete('/api/tags/:id', async (req, res) => {
+app.delete('/api/tags/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const tagId = req.params.id;
-    await Tag.findByIdAndDelete(tagId);
+    const deletedTag = await Tag.findByIdAndDelete(tagId).lean();
     await Project.updateMany(
       { tags: tagId },
       { $pull: { tags: tagId } }
     );
+    if (deletedTag && req.user && req.user.userId) {
+      await logAudit('DELETE', 'Tag', tagId, req.user.userId, { old: cleanAuditData(deletedTag), summary: `Tag "${deletedTag.name}" excluída.` });
+    }
     res.status(200).json({ message: 'Tag deletada e removida dos projetos.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -682,6 +724,13 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async
       responsaveis: responsavelIds
     });
     const savedDemanda = await newDemanda.save();
+    const newLean = await Demanda.findById(savedDemanda._id).lean();
+    let summary = null;
+    if (req.body.sourceId) {
+      const originalDemanda = await Demanda.findById(req.body.sourceId);
+      summary = `Duplicado a partir da demanda: ${originalDemanda ? originalDemanda.nome : req.body.sourceId}`;
+    }
+    await logAudit('CREATE', 'Demanda', savedDemanda._id, req.user.userId, { new: cleanAuditData(newLean), summary });
 
     // DEEP CLONE LOGIC
     if (req.body.sourceId) {
@@ -731,8 +780,10 @@ app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
       status: req.body.status,
       responsaveis: responsavelIds
     };
-    const updatedDemanda = await Demanda.findByIdAndUpdate(req.params.id, demandaData, { new: true, runValidators: true });
+    const oldDemanda = await Demanda.findById(req.params.id).lean();
+    const updatedDemanda = await Demanda.findByIdAndUpdate(req.params.id, demandaData, { new: true, runValidators: true }).lean();
     if (!updatedDemanda) return res.status(404).json({ message: 'Demanda não encontrada' });
+    await logAudit('UPDATE', 'Demanda', updatedDemanda._id, req.user.userId, { old: cleanAuditData(oldDemanda), new: cleanAuditData(updatedDemanda) });
     const populatedDemanda = await Demanda.findById(updatedDemanda._id).populate('responsaveis');
     res.status(200).json(populatedDemanda);
   } catch (error) {
@@ -747,7 +798,8 @@ app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']),
       return res.status(404).json({ message: 'Demanda não encontrada' });
     }
     await Scenario.deleteMany({ demanda: demandaId });
-    await Demanda.findByIdAndDelete(demandaId);
+    const deletedDemanda = await Demanda.findByIdAndDelete(demandaId).lean();
+    await logAudit('DELETE', 'Demanda', demandaId, req.user.userId, { old: cleanAuditData(deletedDemanda) });
     res.status(200).json({ message: 'Demanda e todos os seus cenários deletados.' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -765,6 +817,13 @@ app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin', 'qa']), asyn
       demanda: req.body.demanda
     });
     const savedScenario = await newScenario.save();
+    const newLean = await Scenario.findById(savedScenario._id).lean();
+    let summary = null;
+    if (req.body.sourceId) {
+      const originalScenario = await Scenario.findById(req.body.sourceId);
+      summary = `Duplicado a partir do cenário: ${originalScenario ? originalScenario.title : req.body.sourceId}`;
+    }
+    await logAudit('CREATE', 'Scenario', savedScenario._id, req.user.userId, { new: cleanAuditData(newLean), summary });
     res.status(201).json(savedScenario);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -798,8 +857,10 @@ app.get('/api/scenarios/:id', authMiddleware, async (req, res) => {
 });
 app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
-    const updatedScenario = await Scenario.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+    const oldScenario = await Scenario.findById(req.params.id).lean();
+    const updatedScenario = await Scenario.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).lean();
     if (!updatedScenario) return res.status(404).json({ message: 'Cenário não encontrado' });
+    await logAudit('UPDATE', 'Scenario', updatedScenario._id, req.user.userId, { old: cleanAuditData(oldScenario), new: cleanAuditData(updatedScenario) });
     res.status(200).json(updatedScenario);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -807,8 +868,9 @@ app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), a
 });
 app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
-    const deletedScenario = await Scenario.findByIdAndDelete(req.params.id);
+    const deletedScenario = await Scenario.findByIdAndDelete(req.params.id).lean();
     if (!deletedScenario) return res.status(404).json({ message: 'Cenário não encontrado' });
+    await logAudit('DELETE', 'Scenario', deletedScenario._id, req.user.userId, { old: cleanAuditData(deletedScenario) });
     res.status(200).json({ message: 'Cenário deletado' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -822,14 +884,16 @@ app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin', 
       status: status,
       mantisLink: status === 'Com Erro' ? mantisLink : ''
     };
+    const oldScenario = await Scenario.findById(scenarioId).lean();
     const updatedScenario = await Scenario.findByIdAndUpdate(
       scenarioId,
       updateData,
       { new: true, runValidators: true }
-    );
+    ).lean();
     if (!updatedScenario) {
       return res.status(404).json({ message: 'Cenário não encontrado' });
     }
+    await logAudit('UPDATE', 'Scenario', updatedScenario._id, req.user.userId, { old: cleanAuditData(oldScenario), new: cleanAuditData(updatedScenario) });
     res.status(200).json(updatedScenario);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -1066,13 +1130,13 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 
     // Prepare object to save
     let newSettings = { host, port, user, secure, from };
+    const existing = await SystemConfig.findOne({ key: 'email_settings' });
 
     // Check if password is being updated
     if (pass && pass !== '********') {
       newSettings.pass = pass;
     } else {
       // Retain existing password if available
-      const existing = await SystemConfig.findOne({ key: 'email_settings' });
       if (existing && existing.value.pass) {
         newSettings.pass = existing.value.pass;
       } else {
@@ -1080,11 +1144,15 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
       }
     }
 
-    await SystemConfig.findOneAndUpdate(
+    const updatedConfig = await SystemConfig.findOneAndUpdate(
       { key: 'email_settings' },
       { value: newSettings, updatedAt: Date.now() },
       { upsert: true, new: true }
     );
+
+    const oldLog = existing ? { ...existing.value, pass: '********' } : {};
+    const newLog = { ...newSettings, pass: '********' };
+    await logAudit('UPDATE', 'SystemConfig', updatedConfig._id, req.user.userId, { old: oldLog, new: newLog });
 
     if (reloadConfig) reloadConfig();
 
@@ -1334,6 +1402,118 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
     }
   } catch (error) {
     console.error(error); // eslint-disable-line no-console
+    res.status(500).json({ message: error.message });
+  }
+});
+
+app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const query = {};
+    if (req.query.action) query.action = req.query.action;
+    if (req.query.menu) query.entity = req.query.menu; // Support the new 'menu' param
+
+    // Handle User filter
+    if (req.query.user) {
+      // We need to find users matching the name/username first
+      const users = await User.find({
+        $or: [
+          { name: { $regex: req.query.user, $options: 'i' } },
+          { username: { $regex: req.query.user, $options: 'i' } }
+        ]
+      }).select('_id');
+      const userIds = users.map(u => u._id);
+      query.user = { $in: userIds };
+    }
+
+    // Handle Date & Time filter
+    if (req.query.startDate || req.query.endDate || req.query.startTime || req.query.endTime) {
+      query.createdAt = {};
+
+      let hasStart = false;
+      let hasEnd = false;
+
+      // Start Boundary
+      if (req.query.startDate || req.query.startTime) {
+        let startBound = req.query.startDate ? new Date(`${req.query.startDate}T00:00:00.000`) : new Date();
+        if (!req.query.startDate) startBound.setHours(0, 0, 0, 0); // fallback to today
+
+        if (req.query.startTime) {
+          const [hours, minutes] = req.query.startTime.split(':');
+          startBound.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+        }
+
+        query.createdAt.$gte = startBound;
+        hasStart = true;
+      }
+
+      // End Boundary
+      if (req.query.endDate || req.query.endTime) {
+        let endBound = req.query.endDate ? new Date(`${req.query.endDate}T00:00:00.000`) : new Date();
+        if (!req.query.endDate) endBound.setHours(23, 59, 59, 999);
+
+        if (req.query.endTime) {
+          const [hours, minutes] = req.query.endTime.split(':');
+          endBound.setHours(parseInt(hours, 10), parseInt(minutes, 10), 59, 999);
+        } else if (req.query.endDate) {
+          endBound.setHours(23, 59, 59, 999);
+        }
+
+        query.createdAt.$lte = endBound;
+        hasEnd = true;
+      }
+
+      if (!hasStart && !hasEnd) delete query.createdAt;
+    }
+
+    // Sort options
+    let sortOptions = { createdAt: -1 }; // Default
+    if (req.query.sortBy) {
+      const order = req.query.order === 'asc' ? 1 : -1;
+      if (req.query.sortBy === 'date') {
+        sortOptions = { createdAt: order };
+      } else if (req.query.sortBy === 'action') {
+        sortOptions = { action: order, createdAt: -1 };
+      } else if (req.query.sortBy === 'menu') {
+        sortOptions = { entity: order, createdAt: -1 };
+      }
+      // User sorting is tricky natively because it's a ref. We can handle basic sorting or fallback to Date
+    }
+
+    const total = await AuditLog.countDocuments(query);
+    let logs = await AuditLog.find(query)
+      .populate('user', 'name username')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    // Post-query sorting for users if requested (since it requires populated data)
+    if (req.query.sortBy === 'user') {
+      const order = req.query.order === 'asc' ? 1 : -1;
+      logs.sort((a, b) => {
+        const nameA = (a.user?.name || '').toLowerCase();
+        const nameB = (b.user?.name || '').toLowerCase();
+        if (nameA < nameB) return -1 * order;
+        if (nameA > nameB) return 1 * order;
+        return 0;
+      });
+      // Re-apply pagination manually if we sort by reference (this is imperfect for large sets, 
+      // but acceptable for generic logs unless we use Aggregation Pipeline)
+      // Since we didn't use Aggregation Pipeline, the pagination is slightly skewed if sorted by user.
+      // For a more robust solution, we use aggregation.
+    }
+
+    res.status(200).json({
+      data: logs,
+      total,
+      page,
+      pages: Math.ceil(total / limit)
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 });

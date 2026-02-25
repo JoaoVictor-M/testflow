@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, BookOpen, Layers, FileText, CheckSquare, Users, Settings, Hash } from 'lucide-react';
+import { X, BookOpen, Layers, FileText, CheckSquare, Users, Settings, Hash, Activity } from 'lucide-react';
 
 // Conteúdo da documentação mapeado por chaves
 const DOC_CONTENT = {
@@ -305,6 +305,41 @@ const DOC_CONTENT = {
                 </div>
             </div>
         )
+    },
+    audit: {
+        title: "Auditoria",
+        icon: <Activity size={24} />,
+        content: (
+            <div className="space-y-6">
+                <p className="text-gray-600 dark:text-gray-300 text-justify">
+                    A tela de <strong>Auditoria</strong> é um painel exclusivo para usuários com perfil Administrador, criado para oferecer total transparência e rastreabilidade sobre as ações realizadas no sistema.
+                </p>
+
+                <div className="bg-gray-50 dark:bg-neutral-800 p-6 rounded-xl border border-gray-100 dark:border-neutral-700">
+                    <h5 className="font-bold text-gray-800 dark:text-white mb-4">Recursos Disponíveis</h5>
+                    <ul className="space-y-3 pl-4 border-l-2 border-gray-100 dark:border-neutral-800">
+                        <li>
+                            <strong className="text-gray-800 dark:text-white block">Monitoramento Contínuo</strong>
+                            <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
+                                O sistema intercepta silenciosamente qualquer operação de <i>Criação</i>, <i>Edição</i>, <i>Exclusão</i> ou <i>Duplicação</i> (Clone) de recursos chaves do sistema.
+                            </span>
+                        </li>
+                        <li>
+                            <strong className="text-gray-800 dark:text-white block">Visualização de Diferenças (Diff)</strong>
+                            <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
+                                Ao investigar uma alteração, você pode clicar em <strong>"Ver Detalhes"</strong> para saber exatamente quais campos textuais ou configurações anteriores foram mudados e para o que foram mudados em formato amigável.
+                            </span>
+                        </li>
+                        <li>
+                            <strong className="text-gray-800 dark:text-white block">Filtros Avançados</strong>
+                            <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
+                                Para cenários com milhares de registros, utilize os botões superiores para filtrar os logs por uma janela específica de Data e Hora, por um Usuário específico, Menu ou Ação que você está procurando.
+                            </span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        )
     }
 };
 
@@ -341,6 +376,7 @@ const DocumentationModal = ({ isOpen, onClose }) => {
                         <MenuItem id="scenarios" label="Cenários" icon={<CheckSquare size={18} />} />
                         <MenuItem id="evidences" label="Evidências" icon={<Hash size={18} />} />
                         <MenuItem id="users" label="Usuários" icon={<Users size={18} />} />
+                        <MenuItem id="audit" label="Auditoria" icon={<Activity size={18} />} />
                         <MenuItem id="settings" label="Configurações" icon={<Settings size={18} />} />
                     </div>
                 </div>

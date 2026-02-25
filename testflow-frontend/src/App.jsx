@@ -17,6 +17,7 @@ import ManageTagsPage from './pages/ManageTagsPage'
 import Login from './pages/Login'
 import UsersManager from './pages/UsersManager'
 import EmailSettings from './pages/EmailSettings'
+import AuditLogsPage from './pages/AuditLogsPage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 
@@ -87,17 +88,19 @@ function Navbar() {
                         )}
                       </Menu.Item>
                       {user.role === 'admin' && (
-                        <Menu.Item>
-                          {({ active }) => (
-                            <Link
-                              to="/email-settings"
-                              className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-neutral-200'
-                                } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
-                            >
-                              Configurações de Email
-                            </Link>
-                          )}
-                        </Menu.Item>
+                        <>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <Link
+                                to="/email-settings"
+                                className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-neutral-200'
+                                  } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                              >
+                                Configurações de Email
+                              </Link>
+                            )}
+                          </Menu.Item>
+                        </>
                       )}
                     </>
                   )}
@@ -135,6 +138,19 @@ function Navbar() {
                       </Link>
                     )}
                   </Menu.Item>
+                  {user.role === 'admin' && (
+                    <Menu.Item>
+                      {({ active }) => (
+                        <Link
+                          to="/audit-logs"
+                          className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-neutral-200'
+                            } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
+                        >
+                          Auditoria
+                        </Link>
+                      )}
+                    </Menu.Item>
+                  )}
                 </div>
               </Menu.Items>
             </Transition>
@@ -297,6 +313,7 @@ function AppContent() {
 
             <Route element={<PrivateRoute requiredRole="admin" />}>
               <Route path="/email-settings" element={<EmailSettings />} />
+              <Route path="/audit-logs" element={<AuditLogsPage />} />
             </Route>
 
           </Routes>

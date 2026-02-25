@@ -56,6 +56,7 @@ function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose, isClo
       steps: formData.steps.split('\n'),
       // 2. ENVIA 'demandaId'
       demanda: demandaId,
+      ...(isClone && scenarioToEdit ? { sourceId: scenarioToEdit._id } : {})
     };
 
     try {

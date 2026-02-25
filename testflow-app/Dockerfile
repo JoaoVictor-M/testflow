@@ -10,5 +10,4 @@ RUN npm install -g npm@latest && \
     npm list tar || true
 COPY . .
 EXPOSE 3000
-USER node
 CMD [ "node", "index.js" ]

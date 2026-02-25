@@ -1,4 +1,4 @@
-import { X, Rocket, Shield, Layers, FileText, CheckSquare, Image, Settings, Server, Wrench } from 'lucide-react';
+import { X, Rocket, Shield, Layers, FileText, CheckSquare, Image, Settings, Server, Wrench, Activity } from 'lucide-react';
 
 const ReleaseNotes = ({ isOpen, onClose, version }) => {
     if (!isOpen) return null;
@@ -92,6 +92,17 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
                                         <li><strong>Galeria:</strong> Upload múltiplo e visualização integrada.</li>
                                         <li><strong>Centralização:</strong> Adeus pastas soltas na rede.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Audit */}
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
+                                        <Activity size={16} className="text-teal-500" /> Auditoria
+                                    </h4>
+                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
+                                        <li><strong>Rastreabilidade Total:</strong> Registro claro sobre qualquer mudança sensível na plataforma.</li>
+                                        <li><strong>Filtros Avançados:</strong> Identifique anomalias filtrando por Entidade, Usuário e Data.</li>
                                     </ul>
                                 </div>
                             </div>
