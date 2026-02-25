@@ -101,11 +101,11 @@ jobs:
           
           # Run ZAP Full Scan w/ Volume Mapping
           # Maps ./zap-work to /zap/wrk inside container
-          # ZAP actively writes report_html.html to /zap/wrk/
-          docker run --network host \
+          # Runs inside the compose network to access the backend directly
+          docker run --network testflow_default \
             -v $(pwd)/zap-work:/zap/wrk:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-full-scan.py -t http://localhost:3000 -r report_html.html
+            zap-full-scan.py -t http://backend_testflow:3000 -r report_html.html
 
       # No need for manual extraction; file is already in zap-work/report_html.html
 
