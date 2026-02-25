@@ -179,7 +179,6 @@ const sendInviteEmail = async (to, username, name, setupLink) => {
 
 const sendResetPasswordEmail = async (to, name, resetLink) => {
     const subject = 'Recuperação de Senha - TestFlow';
-    const firstName = name ? name.split(' ')[0] : 'Usuário';
 
     const html = `
     <!DOCTYPE html>

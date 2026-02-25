@@ -11,7 +11,7 @@ const logAudit = async (action, entity, entityId, userId, details = {}) => {
         });
         await audit.save();
     } catch (error) {
-        console.error('Falha ao registrar log de auditoria:', error);
+        console.error('Falha ao registrar log de auditoria:', error); // eslint-disable-line no-console
     }
 };
 

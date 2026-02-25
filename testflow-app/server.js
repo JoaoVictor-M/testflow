@@ -1171,8 +1171,8 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 // A lógica robusta de verificação será movida para dentro das rotas que possuem o objeto Demanda.
 const getBaseEvidenceDir = () => {
   const baseDir = path.join(__dirname, '..', 'evidencias_testes');
-  if (!fs.existsSync(baseDir)) {
-    try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console, security/detect-non-literal-fs-filename
+  if (!fs.existsSync(baseDir)) {  
+    try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console
   }
   return baseDir;
 };
@@ -1301,7 +1301,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
         const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
         const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
         const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath;
+        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
       }
 
       // Pattern 2: FriendlyID_MongoID (Previous Attempt)
@@ -1313,7 +1313,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
 
       // Pattern 3: MongoID or Suffix (Legacy/Fallback)
       if (!dirPath) {
-        const dirs = fs.readdirSync(baseDir);
+        const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
         const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
         if (targetDir) dirPath = path.join(baseDir, targetDir);
       }
@@ -1381,7 +1381,7 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
 
       // Pattern 3: MongoID or Suffix (Legacy/Fallback)
       if (!dirPath) {
-        const dirs = fs.readdirSync(baseDir);
+        const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
         const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
         if (targetDir) dirPath = path.join(baseDir, targetDir);
       }
