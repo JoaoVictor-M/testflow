@@ -99,10 +99,13 @@ jobs:
           
           docker pull ghcr.io/zaproxy/zaproxy:stable
           
+          # Extract the explicit IP address of the backend container
+          BACKEND_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' backend_testflow)
+          
           # Run ZAP Full Scan w/ Volume Mapping
           # Maps ./zap-work to /zap/wrk inside container
-          # Runs inside the compose network to access the backend directly
-          docker run --network testflow_default \
+          # Maps the extracted IP directly to backend_testflow within the container
+          docker run --network testflow_default --add-host=backend_testflow:$BACKEND_IP \
             -v $(pwd)/zap-work:/zap/wrk:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-full-scan.py -t http://backend_testflow:3000 -r report_html.html
