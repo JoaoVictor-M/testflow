@@ -22,11 +22,21 @@ jobs:
 
       - name: Audit Backend Dependencies
         working-directory: ./testflow-app
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high > backend-audit-report.txt || true
 
       - name: Audit Frontend Dependencies
         working-directory: ./testflow-frontend
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=high > frontend-audit-report.txt || true
+
+      - name: Upload NPM Audit Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: NPM-Audit-Reports
+          path: |
+            ./testflow-app/backend-audit-report.txt
+            ./testflow-frontend/frontend-audit-report.txt
+
 
   # 2. Static Application Security Testing (SAST)
   sast-eslint:
@@ -47,7 +57,14 @@ jobs:
 
       - name: Run ESLint Security Check
         working-directory: ./testflow-app
-        run: npm run lint
+        run: npm run lint > eslint-report.txt || true
+
+      - name: Upload ESLint Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ESLint-Security-Report
+          path: ./testflow-app/eslint-report.txt
 
   # 3. Dynamic Application Security Testing (DAST)
   dast-zap:
@@ -78,10 +95,18 @@ jobs:
         with:
           image-ref: 'testflow-backend:latest'
           format: 'table'
+          output: 'trivy-results.txt'
           exit-code: '1' # Fail pipeline if vulnerabilities found
           ignore-unfixed: true
           vuln-type: 'os,library'
           severity: 'CRITICAL,HIGH'
+
+      - name: Upload Trivy Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Trivy-Container-Report
+          path: trivy-results.txt
 
       - name: Build and Start Application
         run: docker compose up -d --build
