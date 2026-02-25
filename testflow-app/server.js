@@ -39,9 +39,41 @@ const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
 const app = express();
 const PORT = 3000;
+const helmet = require('helmet');
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "*"], // allow APIs
+      fontSrc: ["'self'", "data:"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginEmbedderPolicy: false,
+}));
+app.disable('x-powered-by');
+
+app.use((req, res, next) => {
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(cors());
+
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204
+}));
 
 const MONGO_URI = 'mongodb://mongodb-service:27017/testflow-db';
 mongoose.connect(MONGO_URI)
@@ -1171,7 +1203,7 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 // A lógica robusta de verificação será movida para dentro das rotas que possuem o objeto Demanda.
 const getBaseEvidenceDir = () => {
   const baseDir = path.join(__dirname, '..', 'evidencias_testes');
-  if (!fs.existsSync(baseDir)) {  
+  if (!fs.existsSync(baseDir)) {
     try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console
   }
   return baseDir;
