@@ -25,7 +25,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             Production Ready
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
-                            29/01/2026
+                            25/02/2026
                         </p>
                     </div>
                 </div>
