@@ -88,8 +88,9 @@ jobs:
 
       - name: Wait for Application to be Ready
         run: |
-          sleep 30
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:3000 || echo "Backend not ready yet"
+          echo "Waiting for Application..."
+          timeout 60 bash -c 'while ! curl -s http://localhost:3000 > /dev/null; do sleep 5; done' || (docker logs backend_testflow && exit 1)
+          echo "Backend is responding!"
 
       - name: Run ZAP Full Scan (Active Attack)
         run: |
@@ -99,16 +100,13 @@ jobs:
           
           docker pull ghcr.io/zaproxy/zaproxy:stable
           
-          # Extract the explicit IP address of the backend container
-          BACKEND_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' backend_testflow)
-          
           # Run ZAP Full Scan w/ Volume Mapping
           # Maps ./zap-work to /zap/wrk inside container
-          # Maps the extracted IP directly to backend_testflow within the container
-          docker run --network testflow_default --add-host=backend_testflow:$BACKEND_IP \
+          # Uses host.docker.internal to bridge cleanly to the runner's exposed 3000 port
+          docker run --add-host=host.docker.internal:host-gateway \
             -v $(pwd)/zap-work:/zap/wrk:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-full-scan.py -t http://backend_testflow:3000 -r report_html.html
+            zap-full-scan.py -t http://host.docker.internal:3000 -r report_html.html
 
       # No need for manual extraction; file is already in zap-work/report_html.html
 
