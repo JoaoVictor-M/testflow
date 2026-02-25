@@ -22,11 +22,11 @@ jobs:
 
       - name: Audit Backend Dependencies
         working-directory: ./testflow-app
-        run: npm audit --audit-level=high
+        run: npm audit
 
       - name: Audit Frontend Dependencies
         working-directory: ./testflow-frontend
-        run: npm audit --audit-level=high
+        run: npm audit
 
   # 2. Static Application Security Testing (SAST)
   sast-eslint:
@@ -79,9 +79,9 @@ jobs:
           image-ref: 'testflow-backend:latest'
           format: 'table'
           exit-code: '1' # Fail pipeline if vulnerabilities found
-          ignore-unfixed: true
+          ignore-unfixed: false
           vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
       - name: Build and Start Application
         run: docker compose up -d --build

@@ -1197,73 +1197,42 @@ app.put('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (r
 
 // --- EVIDENCE ROUTES (ADAPTED FOR DEMANDAS) ---
 
-// Helper para encontrar pasta da demanda
-// Nota: A lógica de busca exata agora depende dos dados da demanda (ID e Nome)
-// Por isso, este helper agora apenas retorna o caminho BASE ou tenta um match simples.
-// A lógica robusta de verificação será movida para dentro das rotas que possuem o objeto Demanda.
+// Helper para validar e sanitizar IDs do Mongo (24 caracteres hex)
+const isValidMongoId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
+
 const getBaseEvidenceDir = () => {
-  const baseDir = path.join(__dirname, '..', 'evidencias_testes');
-  if (!fs.existsSync(baseDir)) {
+  const baseDir = path.resolve(path.join(__dirname, '..', 'evidencias_testes'));
+  if (!fs.existsSync(baseDir)) {  
     try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console
   }
   return baseDir;
 };
 
-// Helper legado para compatibilidade ou buscas simples por string
-const findLegacyDir = (searchStr) => {
+// Obter diretório seguro baseado no ID exato
+const getSecureEvidenceDir = (demandaId) => {
+  if (!isValidMongoId(demandaId)) return null;
   const baseDir = getBaseEvidenceDir();
   if (!baseDir) return null;
-  const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
-  return dirs.find(dir => dir.includes(searchStr));
+  return path.resolve(path.join(baseDir, demandaId));
 };
 
-// Configuração do Multer
+// Configuração do Multer (Extremamente Restrita)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Tenta usar nome enviado via header para criar pasta mais amigável
-    let folderName = req.params.id; // Default: apenas ID (Mongo)
+    const demandaId = req.params.id;
+    if (!isValidMongoId(demandaId)) return cb(new Error('ID de demanda inválido'), null);
 
-    // Updated naming convention: FriendlyID_DemandaName (e.g. WEB-123_BugNoLogin)
-
-    const friendlyId = req.headers['x-demanda-id'];
-    const friendlyName = req.headers['x-demanda-nome'];
-
-    if (friendlyId && friendlyName) {
-      const safeId = friendlyId.replace(/[^a-z0-9-]/gi, '_');
-      const safeName = friendlyName
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]/gi, '_')
-        .replace(/_+/g, '_')
-        .toLowerCase();
-
-      folderName = `${safeId}_${safeName}`;
-    } else {
-      // Fallback to params ID if headers missing
-      folderName = req.params.id;
-    }
-
-    // Se já existe uma pasta com este ID (mesmo que com outro nome base), devemos usar a existente?
-    // Usamos findLegacyDir para procurar qualquer pasta que contenha o MongoID
-    let dir;
-    const existingFolderName = findLegacyDir(req.params.id);
-
-    if (existingFolderName) {
-      dir = path.join(getBaseEvidenceDir(), existingFolderName);
-    } else {
-      dir = path.join(getBaseEvidenceDir(), folderName);
-    }
-
+    const dir = getSecureEvidenceDir(demandaId);
     if (!fs.existsSync(dir)) { // eslint-disable-line security/detect-non-literal-fs-filename
       fs.mkdirSync(dir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
     }
     cb(null, dir);
   },
   filename: (req, file, cb) => {
-    // Fix encoding: UTF-8 bytes viewed as Latin-1 -> Restore UTF-8
-    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
-
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + '-' + file.originalname);
+    // Sanitização de nome de arquivo contra path traversal e null bytes
+    const cleanOriginalName = file.originalname.replace(/\0/g, '').replace(/[^a-zA-Z0-9.\-_]/g, '');
+    const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
+    cb(null, uniqueSuffix + '-' + cleanOriginalName);
   }
 });
 
@@ -1272,16 +1241,14 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024 } // 50MB
 });
 
-
 // Upload Evidence
 app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'qa']), upload.single('file'), async (req, res) => {
   try {
-    const demandaId = req.params.id; // Now Demanda ID
-    const file = req.file;
+    const demandaId = req.params.id;
+    if (!isValidMongoId(demandaId)) return res.status(400).json({ message: 'ID Inválido' });
 
-    if (!file) {
-      return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
-    }
+    const file = req.file;
+    if (!file) return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
 
     const demanda = await Demanda.findById(demandaId);
     if (!demanda) {
@@ -1312,49 +1279,25 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
 app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
   try {
     const { id, evidenceId } = req.params;
+    if (!isValidMongoId(id) || !isValidMongoId(evidenceId)) return res.status(400).json({ message: 'ID Inválido' });
 
     const demanda = await Demanda.findById(id);
-    if (!demanda) {
-      return res.status(404).json({ message: 'Demanda não encontrada.' });
-    }
+    if (!demanda) return res.status(404).json({ message: 'Demanda não encontrada.' });
 
     const evidence = demanda.evidences.id(evidenceId);
-    if (!evidence) {
-      return res.status(404).json({ message: 'Evidência não encontrada.' });
-    }
+    if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
-    // Resolve directory dynamically
-    const baseDir = getBaseEvidenceDir();
-    let dirPath = null;
-
-    if (baseDir) {
-      // Pattern 1: FriendlyID_Name (New)
-      if (demanda.demandaId && demanda.nome) {
-        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
-        const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
-        const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
-      }
-
-      // Pattern 2: FriendlyID_MongoID (Previous Attempt)
-      if (!dirPath && demanda.demandaId) {
-        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
-        const tryPath = path.join(baseDir, `${safeId}_${id}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
-      }
-
-      // Pattern 3: MongoID or Suffix (Legacy/Fallback)
-      if (!dirPath) {
-        const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
-        const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
-        if (targetDir) dirPath = path.join(baseDir, targetDir);
-      }
-    }
-
+    const dirPath = getSecureEvidenceDir(id);
     if (dirPath) {
-      const filePath = path.join(dirPath, evidence.filename);
-      if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
-        fs.unlinkSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
+      // Validate filename before accessing
+      const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const filePath = path.resolve(path.join(dirPath, safeFilename));
+
+      // Ensure the resolved path is inside the specific evidence directory for this particular ID
+      if (filePath.startsWith(dirPath)) {
+        if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
+          fs.unlinkSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
+        }
       }
     }
 
@@ -1380,58 +1323,27 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
 app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
   try {
     const { id, evidenceId } = req.params;
+    if (!isValidMongoId(id) || !isValidMongoId(evidenceId)) return res.status(400).json({ message: 'ID Inválido' });
 
     const demanda = await Demanda.findById(id);
-    if (!demanda) {
-      return res.status(404).json({ message: 'Demanda não encontrada.' });
-    }
+    if (!demanda) return res.status(404).json({ message: 'Demanda não encontrada.' });
 
     const evidence = demanda.evidences.id(evidenceId);
-    if (!evidence) {
-      return res.status(404).json({ message: 'Evidência não encontrada.' });
-    }
+    if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
-    // Resolve directory dynamically
-    const baseDir = getBaseEvidenceDir();
-    let dirPath = null;
+    const dirPath = getSecureEvidenceDir(id);
+    if (dirPath) {
+      const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const filePath = path.resolve(path.join(dirPath, safeFilename));
 
-    if (baseDir) {
-      // Pattern 1: FriendlyID_Name (New)
-      if (demanda.demandaId && demanda.nome) {
-        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
-        const safeName = demanda.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_').toLowerCase();
-        const tryPath = path.join(baseDir, `${safeId}_${safeName}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
-      }
-
-      // Pattern 2: FriendlyID_MongoID (Previous Attempt)
-      if (!dirPath && demanda.demandaId) {
-        const safeId = demanda.demandaId.replace(/[^a-z0-9-]/gi, '_');
-        const tryPath = path.join(baseDir, `${safeId}_${id}`);
-        if (fs.existsSync(tryPath)) dirPath = tryPath; // eslint-disable-line security/detect-non-literal-fs-filename
-      }
-
-      // Pattern 3: MongoID or Suffix (Legacy/Fallback)
-      if (!dirPath) {
-        const dirs = fs.readdirSync(baseDir); // eslint-disable-line security/detect-non-literal-fs-filename
-        const targetDir = dirs.find(dir => dir === id || dir.endsWith(`_${id}`));
-        if (targetDir) dirPath = path.join(baseDir, targetDir);
+      // Ensure the resolved path is inside the specific evidence directory for this particular ID
+      if (filePath.startsWith(dirPath)) {
+        if (fs.existsSync(filePath)) {
+          return res.sendFile(filePath);
+        }
       }
     }
-
-    if (!dirPath) {
-      return res.status(404).json({ message: 'Pasta de evidências não encontrada.' });
-    }
-
-    const filePath = path.join(dirPath, evidence.filename);
-
-    if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
-      res.setHeader('Content-Type', evidence.mimetype);
-      res.setHeader('Content-Disposition', `inline; filename="${evidence.originalName}"`);
-      fs.createReadStream(filePath).pipe(res); // eslint-disable-line security/detect-non-literal-fs-filename
-    } else {
-      res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
-    }
+    return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
   } catch (error) {
     console.error(error); // eslint-disable-line no-console
     res.status(500).json({ message: error.message });
