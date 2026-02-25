@@ -22,11 +22,11 @@ jobs:
 
       - name: Audit Backend Dependencies
         working-directory: ./testflow-app
-        run: npm audit --audit-level=high > backend-audit-report.txt || true
+        run: npm audit --audit-level=high > backend-audit-report.txt
 
       - name: Audit Frontend Dependencies
         working-directory: ./testflow-frontend
-        run: npm audit --audit-level=high > frontend-audit-report.txt || true
+        run: npm audit --audit-level=high > frontend-audit-report.txt
 
       - name: Upload NPM Audit Reports
         if: always()
@@ -57,7 +57,7 @@ jobs:
 
       - name: Run ESLint Security Check
         working-directory: ./testflow-app
-        run: npm run lint > eslint-report.txt || true
+        run: npm run lint > eslint-report.txt
 
       - name: Upload ESLint Report
         if: always()
