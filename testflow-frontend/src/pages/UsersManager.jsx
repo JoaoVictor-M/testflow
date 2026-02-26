@@ -63,7 +63,7 @@ const UsersManager = () => {
         try {
             setIsLoading(true);
             const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:3000/api/users', {
+            const response = await api.get('/users', {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(response.data);
@@ -116,7 +116,7 @@ const UsersManager = () => {
         if (!userToDelete) return;
         try {
             const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:3000/api/users/${userToDelete._id}`, {
+            await api.delete(`/users/${userToDelete._id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setUsers(prev => prev.filter(u => u._id !== userToDelete._id));
@@ -132,7 +132,7 @@ const UsersManager = () => {
         try {
             // Since we removed the direct backend call in handleTriggerReset, we do it here.
             // We use public forgot-password endpoint for now as discussed.
-            await axios.post('http://localhost:3000/auth/forgot-password', { username: userToReset.username, email: userToReset.email });
+            await api.post('/auth/forgot-password', { username: userToReset.username, email: userToReset.email });
             toast.success(`Email de redefinição enviado para ${userToReset.username}`);
             closeResetModal();
         } catch (error) {

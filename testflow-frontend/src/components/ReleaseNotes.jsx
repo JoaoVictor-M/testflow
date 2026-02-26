@@ -25,7 +25,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             Production Ready
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
-                            25/02/2026
+                            26/02/2026
                         </p>
                     </div>
                 </div>
@@ -118,6 +118,8 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                 <div>
                                     <strong className="text-gray-900 dark:text-white block mb-1">Frontend</strong>
                                     <ul className="list-disc pl-4 space-y-1">
+                                        <li>[FIX] Refatoração completa das requisições para suporte a Proxy Reverso (Nginx).</li>
+                                        <li>[FIX] Corrigido bug na paginação e filtros dinâmicos de data na Auditoria.</li>
                                         <li>[NEW] DocumentationModal e AboutModal responsivos e detalhados.</li>
                                         <li>[FIX] Correção do fluxo de ResetPassword e limpeza de URLs.</li>
                                         <li>[UPDATE] Refinamento visual com TailwindCSS.</li>
@@ -126,6 +128,9 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                 <div>
                                     <strong className="text-gray-900 dark:text-white block mb-1">Backend & Infra</strong>
                                     <ul className="list-disc pl-4 space-y-1">
+                                        <li>[NEW] Implementação de HTTPS via Nginx Reverse Proxy.</li>
+                                        <li>[NEW] Geração automática de certificados autoassinados para desenvolvimento local.</li>
+                                        <li>[FIX] Configuração de CORS dinâmica e inteligente baseada na origem HTTPS.</li>
                                         <li>[NEW] Serviço de Email dinâmico com suporte a Gmail/Outlook.</li>
                                         <li>[FIX] Configuração Nginx otimizada para SPA e Deep Linking.</li>
                                         <li>[NEW] Proteção de rotas sensíveis e sanitização de dados.</li>

@@ -79,7 +79,17 @@ const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (like internal curl/ZAP checks) or if valid
-        if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        if (!origin || allowedOrigins.includes('*')) {
+            return callback(null, true);
+        }
+
+        // Permite se a origem exata bater, ou se a origem disparadora (ex: https://localhost)
+        // for o começo da URL do FRONTEND_URL (ex: https://localhost/testflow)
+        const isAllowed = allowedOrigins.some(allowed =>
+            origin === allowed || allowed.startsWith(origin)
+        );
+
+        if (isAllowed) {
             callback(null, true);
         } else {
             callback(null, false); // Blocks CORS injection for unverified origins
@@ -153,7 +163,7 @@ const findOrCreateServers = async (serverNames) => {
 
 
 
-app.post('/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
         const user = await User.findOne({ username });
@@ -179,7 +189,7 @@ app.post('/auth/login', async (req, res) => {
     }
 });
 
-app.post('/auth/forgot-password', async (req, res) => {
+app.post('/api/auth/forgot-password', async (req, res) => {
     try {
         const { username, email } = req.body;
         const user = await User.findOne({ username, email });
@@ -212,7 +222,7 @@ app.post('/auth/forgot-password', async (req, res) => {
     }
 });
 
-app.get('/auth/validate-reset-token/:token', async (req, res) => {
+app.get('/api/auth/validate-reset-token/:token', async (req, res) => {
     try {
         const { token } = req.params;
 
@@ -239,7 +249,7 @@ app.get('/auth/validate-reset-token/:token', async (req, res) => {
     }
 });
 
-app.post('/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', async (req, res) => {
     try {
         const { token, newPassword } = req.body;
 
@@ -268,7 +278,7 @@ app.post('/auth/reset-password', async (req, res) => {
 });
 
 
-app.post('/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
     try {
         const { username, email, role, name } = req.body;
 
@@ -1379,11 +1389,10 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
 
         const query = {};
         if (req.query.action) query.action = req.query.action;
-        if (req.query.menu) query.entity = req.query.menu; // Support the new 'menu' param
+        if (req.query.menu) query.entity = req.query.menu;
 
         // Handle User filter
         if (req.query.user) {
-            // We need to find users matching the name/username first
             const users = await User.find({
                 $or: [
                     { name: { $regex: req.query.user, $options: 'i' } },
@@ -1394,58 +1403,42 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
             query.user = { $in: userIds };
         }
 
-        // Handle Date & Time filter
+        // Handle Date & Time filter (Safe Assignment avoiding undefined loops)
         if (req.query.startDate || req.query.endDate || req.query.startTime || req.query.endTime) {
             query.createdAt = {};
 
-            let hasStart = false;
-            let hasEnd = false;
-
-            // Start Boundary
-            if (req.query.startDate || req.query.startTime) {
-                let startBound = req.query.startDate ? new Date(`${req.query.startDate}T00:00:00.000`) : new Date();
-                if (!req.query.startDate) startBound.setHours(0, 0, 0, 0); // fallback to today
-
+            if (req.query.startDate) {
+                let startBound = new Date(`${req.query.startDate}T00:00:00.000`);
                 if (req.query.startTime) {
                     const [hours, minutes] = req.query.startTime.split(':');
                     startBound.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
                 }
-
                 query.createdAt.$gte = startBound;
-                hasStart = true;
             }
 
-            // End Boundary
-            if (req.query.endDate || req.query.endTime) {
-                let endBound = req.query.endDate ? new Date(`${req.query.endDate}T00:00:00.000`) : new Date();
-                if (!req.query.endDate) endBound.setHours(23, 59, 59, 999);
-
+            if (req.query.endDate) {
+                let endBound = new Date(`${req.query.endDate}T23:59:59.999`);
                 if (req.query.endTime) {
                     const [hours, minutes] = req.query.endTime.split(':');
                     endBound.setHours(parseInt(hours, 10), parseInt(minutes, 10), 59, 999);
-                } else if (req.query.endDate) {
-                    endBound.setHours(23, 59, 59, 999);
                 }
-
                 query.createdAt.$lte = endBound;
-                hasEnd = true;
             }
 
-            if (!hasStart && !hasEnd) delete query.createdAt;
+            // Reverte se o objeto ficar vazio
+            if (Object.keys(query.createdAt).length === 0) {
+                delete query.createdAt;
+            }
         }
 
         // Sort options
         let sortOptions = { createdAt: -1 }; // Default
         if (req.query.sortBy) {
             const order = req.query.order === 'asc' ? 1 : -1;
-            if (req.query.sortBy === 'date') {
-                sortOptions = { createdAt: order };
-            } else if (req.query.sortBy === 'action') {
-                sortOptions = { action: order, createdAt: -1 };
-            } else if (req.query.sortBy === 'menu') {
-                sortOptions = { entity: order, createdAt: -1 };
-            }
-            // User sorting is tricky natively because it's a ref. We can handle basic sorting or fallback to Date
+            if (req.query.sortBy === 'date') sortOptions = { createdAt: order };
+            if (req.query.sortBy === 'action') sortOptions = { action: order, createdAt: -1 };
+            if (req.query.sortBy === 'menu') sortOptions = { entity: order, createdAt: -1 };
+            // Note: sortBy=user natively isn't supported purely here, so it falls back to date
         }
 
         const total = await AuditLog.countDocuments(query);
@@ -1456,7 +1449,7 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
             .limit(limit)
             .lean();
 
-        // Post-query sorting for users if requested (since it requires populated data)
+        // Safe User sorting (In-Memory for the current page only to prevent limit drops)
         if (req.query.sortBy === 'user') {
             const order = req.query.order === 'asc' ? 1 : -1;
             logs.sort((a, b) => {
@@ -1466,10 +1459,6 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
                 if (nameA > nameB) return 1 * order;
                 return 0;
             });
-            // Re-apply pagination manually if we sort by reference (this is imperfect for large sets, 
-            // but acceptable for generic logs unless we use Aggregation Pipeline)
-            // Since we didn't use Aggregation Pipeline, the pagination is slightly skewed if sorted by user.
-            // For a more robust solution, we use aggregation.
         }
 
         res.status(200).json({

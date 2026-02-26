@@ -40,6 +40,11 @@ services:
     depends_on:
       - frontend-service
       - backend-service
+    # DESCOMENTE AS LINHAS ABAIXO NO SERVIDOR DE PRODUÇÃO
+    # E COLOQUE OS SEUS CERTIFICADOS NA PASTA ./certificados
+    # volumes:
+    #   - ./certificados/testflow.crt:/etc/nginx/ssl/testflow.crt:ro
+    #   - ./certificados/testflow.key:/etc/nginx/ssl/testflow.key:ro
 
 volumes:
   mongo-data:

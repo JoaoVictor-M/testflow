@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 function ResetPassword() {
@@ -22,7 +22,7 @@ function ResetPassword() {
         const validateToken = async () => {
             if (!paramToken) return;
             try {
-                const response = await axios.get(`http://localhost:3000/auth/validate-reset-token/${paramToken}`);
+                const response = await api.get(`/auth/validate-reset-token/${paramToken}`);
                 if (response.data.valid) {
                     setUserData({ name: response.data.name, username: response.data.username });
                     // Only set token in state if valid
@@ -61,7 +61,7 @@ function ResetPassword() {
                 return;
             }
 
-            await axios.post('http://localhost:3000/auth/reset-password', {
+            await api.post('/auth/reset-password', {
                 token,
                 newPassword: password
             });

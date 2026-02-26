@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import { ArrowLeft, Mail } from 'lucide-react';
 
 const ForgotPassword = () => {
@@ -17,7 +17,7 @@ const ForgotPassword = () => {
         setError('');
 
         try {
-            await axios.post('http://localhost:3000/auth/forgot-password', { username, email });
+            await api.post('/auth/forgot-password', { username, email });
             setSubmitted(true);
         } catch (err) {
             setError(err.response?.data?.message || 'Erro ao processar solicitação.');

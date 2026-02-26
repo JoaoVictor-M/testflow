@@ -77,7 +77,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
         if (errors.length > 0) return;
         setImporting(true);
         try {
-            const response = await axios.post('http://localhost:3000/api/users/import', { users: previewData }, {
+            const response = await axios.post('/api/users/import', { users: previewData }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
 

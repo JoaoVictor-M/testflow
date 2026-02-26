@@ -84,7 +84,7 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     const token = localStorage.getItem('token');
                     const config = { headers: { Authorization: `Bearer ${token}` } };
                     const response = await axios.post(
-                        'http://localhost:3000/api/users/generate-username',
+                        '/api/users/generate-username',
                         { name: newName },
                         config
                     );
@@ -115,11 +115,11 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
 
             let response;
             if (userToEdit) {
-                response = await axios.put(`http://localhost:3000/api/users/${userToEdit._id}`, formData, config);
+                response = await axios.put(`/api/users/${userToEdit._id}`, formData, config);
                 toast.success('Usuário atualizado com sucesso!');
                 onSaveSuccess(response.data.user, 'update');
             } else {
-                response = await axios.post('http://localhost:3000/auth/register', formData, config);
+                response = await axios.post('/api/auth/register', formData, config);
                 toast.success('Usuário criado com sucesso!');
                 onSaveSuccess(response.data.user, 'create');
             }
