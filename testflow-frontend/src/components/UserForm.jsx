@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
@@ -83,8 +83,8 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                 try {
                     const token = localStorage.getItem('token');
                     const config = { headers: { Authorization: `Bearer ${token}` } };
-                    const response = await axios.post(
-                        '/api/users/generate-username',
+                    const response = await api.post(
+                        '/users/generate-username',
                         { name: newName },
                         config
                     );
@@ -115,11 +115,11 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
 
             let response;
             if (userToEdit) {
-                response = await axios.put(`/api/users/${userToEdit._id}`, formData, config);
+                response = await api.put(`/users/${userToEdit._id}`, formData, config);
                 toast.success('Usuário atualizado com sucesso!');
                 onSaveSuccess(response.data.user, 'update');
             } else {
-                response = await axios.post('/api/auth/register', formData, config);
+                response = await api.post('/auth/register', formData, config);
                 toast.success('Usuário criado com sucesso!');
                 onSaveSuccess(response.data.user, 'create');
             }

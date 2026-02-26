@@ -1,5 +1,5 @@
 import { useState, useEffect, Fragment } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { toast } from 'react-hot-toast';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import UserForm from '../components/UserForm';

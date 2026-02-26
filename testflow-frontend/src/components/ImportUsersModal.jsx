@@ -1,6 +1,6 @@
 import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import axios from 'axios';
+import api from '../api';
 import toast from 'react-hot-toast';
 
 const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
@@ -77,7 +77,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
         if (errors.length > 0) return;
         setImporting(true);
         try {
-            const response = await axios.post('/api/users/import', { users: previewData }, {
+            const response = await api.post('/users/import', { users: previewData }, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
 
