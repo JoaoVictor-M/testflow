@@ -11,7 +11,7 @@ services:
 
   backend-service:
     # IMAGEM DO GHCR (GitHub Container Registry)
-    image: ghcr.io/joaovictor-m/testflow-backend:v1.0.0
+    image: ghcr.io/joaovictor-m/testflow-backend:development
     container_name: backend_testflow
     restart: always
     ports:
@@ -25,7 +25,7 @@ services:
 
   frontend-service:
     # IMAGEM DO GHCR
-    image: ghcr.io/joaovictor-m/testflow-frontend:v1.0.0
+    image: ghcr.io/joaovictor-m/testflow-frontend:development
     container_name: frontend_testflow
     restart: always
     ports:
