@@ -4,8 +4,10 @@ node_modules/
 # Ambiente
 .env
 
-# Evidencias
+# Pastas
 evidencias_testes/
+install/
+certificados/
 
 # IDE e Sistema
 .vscode/
