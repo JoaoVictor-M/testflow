@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import api from '../api';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -24,7 +24,7 @@ function EmailSettings() {
 
     const fetchSettings = async () => {
         try {
-            const response = await axios.get('http://localhost:3000/api/config/email', {
+            const response = await api.get('/config/email', {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             setFormData(response.data);
@@ -48,7 +48,7 @@ function EmailSettings() {
         e.preventDefault();
         setSaving(true);
         try {
-            await axios.put('http://localhost:3000/api/config/email', formData, {
+            await api.put('/config/email', formData, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             toast.success('Configurações salvas com sucesso!');

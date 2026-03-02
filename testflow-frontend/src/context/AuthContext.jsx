@@ -2,6 +2,7 @@ import { createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
+import api from '../api';
 
 export const AuthContext = createContext();
 
@@ -33,11 +34,10 @@ export const AuthProvider = ({ children }) => {
             // If api.js exports an axios instance, we should use it, but direct axios is fine for auth.
             // Adjust URL if needed. Assuming relative path if proxy is set or full path.
             // Let's check api.js content later, but standard is usually localhost:3000
-            const response = await axios.post('http://localhost:3000/auth/login', { username, password });
+            const response = await api.post('/auth/login', { username, password });
             const { token, user } = response.data;
 
             localStorage.setItem('token', token);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
             // Decodificar valida token
             const decoded = jwtDecode(token);
@@ -60,17 +60,13 @@ export const AuthProvider = ({ children }) => {
 
     const logout = () => {
         localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
         setUser(null);
         toast('Você saiu do sistema.', { icon: '👋' });
     };
 
     const registerUser = async (userData) => {
         try {
-            const token = localStorage.getItem('token');
-            await axios.post('http://localhost:3000/auth/register', userData, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.post('/auth/register', userData);
             toast.success('Usuário criado com sucesso!');
             return true;
         } catch (error) {
