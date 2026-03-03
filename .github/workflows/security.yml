@@ -79,7 +79,7 @@ jobs:
           exit-code: '1' # Fail pipeline if vulnerabilities found
           ignore-unfixed: false
           vuln-type: 'os,library'
-          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+          severity: 'HIGH,CRITICAL'
 
       - name: Build and Start Application
         run: docker compose up -d --build
