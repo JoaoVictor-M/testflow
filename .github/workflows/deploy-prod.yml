@@ -8,6 +8,8 @@ on:
 env:
   # Registry and Repo formatting to lowercase as Docker requires
   REGISTRY: ghcr.io
+  IMAGE_OWNER: ""
+  IMAGE_TAG: ""
 
 jobs:
   # 1. Dependency Scanning (SCA)
