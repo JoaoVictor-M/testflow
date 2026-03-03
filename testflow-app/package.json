@@ -30,7 +30,6 @@
     "globals": "^17.2.0"
   },
   "overrides": {
-    "cross-spawn": "7.0.6",
     "tar": "^7.5.9"
   }
 }
