@@ -82,7 +82,12 @@ jobs:
           severity: 'HIGH,CRITICAL'
 
       - name: Build and Start Application
-        run: docker compose up -d --build
+        run: |
+          echo "services:" > docker-compose.ci.yml
+          echo "  backend-service:" >> docker-compose.ci.yml
+          echo "    ports:" >> docker-compose.ci.yml
+          echo "      - \"3000:3000\"" >> docker-compose.ci.yml
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
 
       - name: Wait for Application to be Ready
         run: |
