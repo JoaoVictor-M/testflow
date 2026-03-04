@@ -223,8 +223,8 @@ jobs:
           # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
           sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
           
-          # Remove o bind de porta de desenvolvimento do banco
-          sed -i '/dev-only-mongo-port/d' prod/docker-compose.yml
+          # Remove o bind de porta de desenvolvimento do banco com awk para evitar bugs de sed do BSD/GNU com linhas vazias
+          awk '!/dev-only-mongo-port/' prod/docker-compose.yml > tmp.yml && mv tmp.yml prod/docker-compose.yml
 
           # Remove nomes fixos de containers para escalabilidade multi-instância no cliente
           sed -i '/container_name:/d' prod/docker-compose.yml
