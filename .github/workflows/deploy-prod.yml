@@ -203,8 +203,7 @@ jobs:
           cd ..
           
           # 2. Recria os diretórios e copia cirurgicamente APENAS o necessário
-          mkdir -p prod/install
-          cp source/install/mongo-init.js prod/install/mongo-init.js || echo "O arquivo mongo-init.js não foi encontrado"
+          cp source/install/mongo-init.js prod/mongo-init.js || echo "O arquivo mongo-init.js não foi encontrado"
           cp source/README.md prod/README.md || echo "O README.md não foi encontrado"
           
           # O arquivo Compose é copiado do seu código local e depois lapidado dinamicamente
@@ -215,6 +214,9 @@ jobs:
           sed -i "s|build: ./testflow-app|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-backend:latest|g" prod/docker-compose.yml
           sed -i "s|build: ./testflow-frontend|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-frontend:latest|g" prod/docker-compose.yml
           sed -i "s|build: ./nginx|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-nginx:latest|g" prod/docker-compose.yml
+          
+          # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
+          sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
           
           # Remove o bind de porta de desenvolvimento do banco
           sed -i '/dev-only-mongo-port/d' prod/docker-compose.yml
