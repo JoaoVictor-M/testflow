@@ -2,7 +2,7 @@
 
 ## Visão Geral
 
-TestFlow é uma ferramenta interna de gestão de cenários de teste, desenvolvida para substituir o uso de planilhas do Excel na área de QA. O objetivo é centralizar, organizar e facilitar a colaboração na criação e manutenção de casos de teste, fornecendo uma base sólida para a evolução dos processos de qualidade na empresa.
+TestFlow é uma ferramenta interna de gestão de cenários de teste, desenvolvida para substituir o uso de planilhas do Excel na área de Análise de Qualidade. O objetivo é centralizar, organizar e facilitar a colaboração na criação e manutenção de casos de teste, fornecendo uma base sólida para a evolução dos processos na empresa.
 
 ## Problema a ser Resolvido
 

@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import api from '../api';
 import toast from 'react-hot-toast';
 
 const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
+    const { user } = useContext(AuthContext);
+
     const [formData, setFormData] = useState({
         name: '',
         username: '',
@@ -188,7 +191,10 @@ const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
                     className="mt-1 w-full input-style"
                 >
                     <option value="viewer">Visualizador</option>
-                    <option value="qa">QA</option>
+                    <option value="analyst">Analista</option>
+                    {user?.role === 'admin' && (
+                        <option value="admin">Administrador</option>
+                    )}
                 </select>
             </div>
 

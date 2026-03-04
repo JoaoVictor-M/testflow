@@ -157,7 +157,7 @@ function AuditLogsPage() {
     const formatValue = (key, val) => {
         if (val === null || val === undefined) return 'vazio';
         if (key === 'role') {
-            const roles = { admin: 'Administrador', qa: 'QA/Analista', viewer: 'Visualizador' };
+            const roles = { admin: 'Administrador', analyst: 'Analista', viewer: 'Visualizador' };
             return roles[val] || val;
         }
         if (typeof val === 'boolean') return val ? 'Sim' : 'Não';

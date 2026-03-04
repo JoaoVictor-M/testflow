@@ -205,6 +205,7 @@ jobs:
           # 2. Recria os diretórios e copia cirurgicamente APENAS o necessário
           cp source/install/mongo-init.js prod/mongo-init.js || echo "O arquivo mongo-init.js não foi encontrado"
           cp source/README.md prod/README.md || echo "O README.md não foi encontrado"
+          echo '{"version": "${{ github.ref_name }}"}' > prod/version.json
           
           # O arquivo Compose é copiado do seu código local e depois lapidado dinamicamente
           cp source/docker-compose.yml prod/docker-compose.yml

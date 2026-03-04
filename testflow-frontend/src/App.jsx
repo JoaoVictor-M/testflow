@@ -1,7 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
-import { Toaster } from 'react-hot-toast'
-import { useContext, Fragment, useEffect } from 'react'
+import { Toaster, toast } from 'react-hot-toast'
+import { useContext, Fragment, useEffect, useState } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import { ThemeProvider, ThemeContext } from './context/ThemeContext'
@@ -20,8 +20,8 @@ import EmailSettings from './pages/EmailSettings'
 import AuditLogsPage from './pages/AuditLogsPage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
-
-
+import InstallUpdateModal from './components/InstallUpdateModal'
+import api from './api'
 
 // --- ÍCONES ---
 const ChevronDownIcon = () => (
@@ -74,7 +74,7 @@ function Navbar() {
                       </Link>
                     )}
                   </Menu.Item>
-                  {(user.role === 'admin' || user.role === 'qa') && (
+                  {(user.role === 'admin' || user.role === 'analyst') && (
                     <>
                       <Menu.Item>
                         {({ active }) => (
@@ -96,7 +96,7 @@ function Navbar() {
                                 className={`${active ? 'bg-blue-600 text-white' : 'text-gray-900 dark:text-neutral-200'
                                   } group flex w-full items-center rounded-md px-2 py-2 text-sm`}
                               >
-                                Configurações de Email
+                                Configurações Globais
                               </Link>
                             )}
                           </Menu.Item>
@@ -220,7 +220,7 @@ function Navbar() {
           </Menu>
         </div>
       </div>
-    </nav>
+    </nav >
   );
 }
 
@@ -229,23 +229,35 @@ function AppContent() {
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
   const { user } = useContext(AuthContext); // Get user context to check if logged in (optional, but good practice)
 
-  // --- CHECK FOR UPDATES ---
+  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
+  const [pendingUpdateVersion, setPendingUpdateVersion] = useState(null);
+
+  // --- CHECK FOR UPDATES (10 MIN LOOP) ---
   useEffect(() => {
+    let intervalId;
+
     const checkVersion = async () => {
       try {
-        const response = await fetch('/api/system/version');
-        if (!response.ok) return;
+        // First check if Update Checker is Enabled globally by Admin
+        const configRes = await api.get('/config/system');
+        if (!configRes.data.check_updates_enabled) {
+          return; // Se o admin desligou, pare aqui.
+        }
 
-        const data = await response.json();
-        const serverVersion = data.version;
-        const localVersion = localStorage.getItem('app_version');
+        // Obtém a versão local atual rodando
+        const localResponse = await api.get('/system/version');
+        if (!localResponse.data) return;
 
-        if (serverVersion && localVersion && serverVersion !== localVersion) {
-          // Version changed! Show notification
+        const localVersion = localResponse.data.version;
+        const previousVersion = localStorage.getItem('app_version');
+
+        // Se local_version mudou do localStorage, significa que o sistema CABOU de atualizar de fato (Watchtower finish ou pull fresh)
+        if (previousVersion && localVersion !== previousVersion) {
+          // Avisa Todo Mundo (Admins, QAs e Viewers) que rolou uma atualização nova
           toast((t) => (
             <div className="flex flex-col gap-2">
               <span className="font-semibold">
-                🚀 Sistema atualizado para v{serverVersion}!
+                🚀 Sistema atualizado para v{localVersion}!
               </span>
               <span className="text-sm">
                 Confira as novidades no Release Notes.
@@ -258,32 +270,64 @@ function AppContent() {
                 Ver Mudanças
               </Link>
             </div>
-          ), {
-            duration: 8000,
-            icon: '🆕',
-            style: {
-              background: '#1f2937', // Dark gray
-              color: '#fff',
-              border: '1px solid #3b82f6'
-            }
-          });
+          ), { duration: 8000, icon: '🆕', style: { background: '#1f2937', color: '#fff', border: '1px solid #3b82f6' } });
         }
 
-        // Always update local storage to current server version
-        if (serverVersion) {
-          localStorage.setItem('app_version', serverVersion);
-        }
+        // Atualiza a memoria local pra rodar limpo:
+        localStorage.setItem('app_version', localVersion);
 
+        // AGORA CHECA SE NO GITHUB TEM VERSÃO MAIOR PENDENTE
+        const remoteRes = await api.get('/system/check-update');
+        if (remoteRes.status === 200 && remoteRes.data) {
+          const remoteVersion = remoteRes.data.version;
+
+          // Só lança o Toast de PENDÊNCIA se for Administrador e se a versão for diferente (Normalmente vRemote > vLocal)
+          if (remoteVersion !== localVersion && user?.role === 'admin') {
+            toast((t) => (
+              <div className="flex flex-col gap-3">
+                <span className="font-semibold text-amber-400">
+                  ⚡ Atualização Pendente (v{remoteVersion}) disponível!
+                </span>
+                <span className="text-sm">
+                  É recomendado atualizar o sistema.
+                </span>
+                <div className="flex items-center gap-3 mt-1">
+                  <Link
+                    to="/release-notes"
+                    className="bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200 px-3 py-1.5 rounded-md text-xs font-bold hover:bg-gray-200 dark:hover:bg-neutral-700 transition"
+                    onClick={() => toast.dismiss(t.id)}
+                  >
+                    Ver Notas
+                  </Link>
+                  <button
+                    onClick={() => {
+                      toast.dismiss(t.id);
+                      setPendingUpdateVersion(remoteVersion);
+                      setIsInstallModalOpen(true);
+                    }}
+                    className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-blue-700 transition shadow-sm"
+                  >
+                    Instalar
+                  </button>
+                </div>
+              </div>
+            ), { duration: 15000, style: { background: '#1f2937', color: '#fff', border: '1px solid #f59e0b' } });
+          }
+        }
       } catch (error) {
         console.error("Failed to check system version:", error);
       }
     };
 
-    // Only check if not on public pages (user is likely inside app)
-    if (!isPublicPage) {
-      checkVersion();
+    if (!isPublicPage && user) {
+      checkVersion(); // Run once immediately on open/login
+      intervalId = setInterval(checkVersion, 10 * 60 * 1000); // And every 10 min
     }
-  }, [isPublicPage]);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isPublicPage, user]);
 
 
   return (
@@ -307,7 +351,7 @@ function AppContent() {
               <Route path="/tags" element={<ManageTagsPage />} />
             </Route>
 
-            <Route element={<PrivateRoute requiredRole={['admin', 'qa']} />}>
+            <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>
               <Route path="/users" element={<UsersManager />} />
             </Route>
 
@@ -331,6 +375,11 @@ function AppContent() {
             color: '#fff',
           },
         }}
+      />
+      <InstallUpdateModal
+        isOpen={isInstallModalOpen}
+        onClose={() => setIsInstallModalOpen(false)}
+        version={pendingUpdateVersion}
       />
     </div>
   );

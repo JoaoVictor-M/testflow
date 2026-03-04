@@ -117,7 +117,7 @@ const DOC_CONTENT = {
                 </div>
 
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700/50">
-                    <h5 className="font-bold text-yellow-800 dark:text-yellow-400 mb-1">Regra de Ouro do QA</h5>
+                    <h5 className="font-bold text-yellow-800 dark:text-yellow-400 mb-1">Regra de Ouro do Analista</h5>
                     <p className="text-sm text-yellow-800/80 dark:text-yellow-500/80 text-justify">
                         Uma demanda <strong>NUNCA</strong> deve ser movida para o status <strong>"Testado"</strong> sem que existam evidências (prints ou vídeos) anexadas. O sistema emite alertas, mas a disciplina do time é fundamental.
                     </p>
@@ -212,7 +212,7 @@ const DOC_CONTENT = {
 
                     <div className="border border-gray-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                         <div className="bg-gray-100 dark:bg-neutral-800 p-3 border-b border-gray-200 dark:border-neutral-700 font-bold text-center text-gray-800 dark:text-white">
-                            QA / USUÁRIO
+                            ANALISTA / USUÁRIO
                         </div>
                         <div className="p-4 bg-white dark:bg-neutral-900 h-full">
                             <p className="text-xs text-gray-500 pb-3 text-center uppercase tracking-wide">O usuário operacional</p>

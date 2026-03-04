@@ -37,7 +37,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
                 let role = 'viewer';
                 if (perfil) {
                     const p = perfil.trim().toLowerCase();
-                    if (p === 'qa') role = 'qa';
+                    if (p === 'analyst') role = 'analyst';
                     else if (p === 'admin') role = 'admin'; // Will be blocked by validator/backend
                     // default viewer
                 }
@@ -101,7 +101,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
     };
 
     const downloadTemplate = () => {
-        const content = "nome;email;perfil\nMaria Silva;maria@empresa.com;Visualizador\nJoão Souza;joao@empresa.com;QA";
+        const content = "nome;email;perfil\nMaria Silva;maria@empresa.com;Visualizador\nJoão Souza;joao@empresa.com;Analista";
         const blob = new Blob([content], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');

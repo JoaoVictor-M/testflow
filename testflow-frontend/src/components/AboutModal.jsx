@@ -35,7 +35,7 @@ const AboutModal = ({ isOpen, onClose }) => {
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 text-center md:text-left">Transforme Caos em Controle</h3>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-base text-justify">
                                 O desenvolvimento de software moderno exige velocidade, mas a velocidade sem controle resulta em bugs e retrabalho.
-                                O <strong>TestFlow</strong> não é apenas uma ferramenta de registro; é o centro de comando da sua equipe de QA.
+                                O <strong>TestFlow</strong> não é apenas uma ferramenta de registro; é o centro de comando da sua equipe de Análise.
                                 Ele elimina planilhas descentralizadas, comunicações perdidas e evidências espalhadas, trazendo tudo para um fluxo único e coeso.
                             </p>
                         </div>

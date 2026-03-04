@@ -25,7 +25,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             Production Ready
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
-                            02/03/2026
+                            04/03/2026
                         </p>
                     </div>
                 </div>
@@ -57,8 +57,9 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                     </h4>
                                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
                                         <li><strong>Login Seguro (JWT):</strong> Proteção completa de rotas.</li>
-                                        <li><strong>RBAC:</strong> Perfis de Admin (Gestão Total) e QA (Execução).</li>
+                                        <li><strong>RBAC:</strong> Perfis de Admin (Gestão Total) e Analista (Execução).</li>
                                         <li><strong>Recuperação de Senha:</strong> Fluxo seguro com token via e-mail.</li>
+                                        <li><strong>Restrição Administrativa:</strong> Apenas Administradores podem criar ou editar perfis de outros Administradores.</li>
                                     </ul>
                                 </div>
 
@@ -103,6 +104,17 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                     <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
                                         <li><strong>Rastreabilidade Total:</strong> Registro claro sobre qualquer mudança sensível na plataforma.</li>
                                         <li><strong>Filtros Avançados:</strong> Identifique anomalias filtrando por Entidade, Usuário e Data.</li>
+                                    </ul>
+                                </div>
+
+                                {/* Updates */}
+                                <div className="space-y-3">
+                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
+                                        <Server size={16} className="text-cyan-500" /> Infra. e Atualizações
+                                    </h4>
+                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
+                                        <li><strong>Atualização Automática (OTA):</strong> Busca online de novas versões (ativável/desativável).</li>
+                                        <li><strong>Watchtower App:</strong> Pull automatizado de imagens no servidor com 1 clique.</li>
                                     </ul>
                                 </div>
                             </div>

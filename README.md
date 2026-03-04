@@ -4,52 +4,66 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 ---
 
-## 📦 Instalação (Servidores Linux/Windows)
-
-Para instalar o TestFlow em um servidor de produção **sem precisar do código-fonte**, siga os passos abaixo. O sistema roda inteiramente sobre Docker.
-
-### Pré-requisitos
-*   [Docker](https://www.docker.com/) instalado.
-*   [Docker Compose](https://docs.docker.com/compose/install/) instalado.
-
-### Passo a Passo
-
-1.  **Acesse a pasta `install`** deste repositório (está tudo pronto lá).
-2.  **Copie os arquivos para seu servidor**:
-    *   Copie a pasta `install` inteira ou apenas os arquivos `docker-compose.yml` e `mongo-init.js`.
-3.  **Execute o sistema**:
-    Abra o terminal na pasta onde salvou os arquivos e rode:
-    ```bash
-    docker compose up -d
-    ```
-
-Isso irá baixar as imagens oficiais do sistema (Frontend e Backend) e iniciar o banco de dados MongoDB automaticamente.
-
-### Acesso
-Após iniciar, o sistema estará disponível em:
-*   **URL**: `http://localhost` (ou o IP do seu servidor)
-*   **Login Padrão**: (Consulte o administrador para credenciais iniciais ou script de seed)
+## 🚀 Funcionalidades da Versão 1.0.0
+*   **Gestão de Projetos e Demandas**: Controle total do ciclo de vida, agrupando funcionalidades em níveis lógicos e organizados.
+*   **Evidências Inteligentes**: Upload múltiplo simultâneo, visualização em galeria integrada e separação sistêmica entre testes.
+*   **Deep Clone**: Duplicação imediata e profunda de projetos para cenários de teste de regressão versão-a-versão.
+*   **Segurança e RBAC**: Autenticação restrita JWT. Diferenciação lógica estrita entre Administradores (Gestor Total) e Analistas (Executores operacionais). *Admins só podem ser criados por admins.*
+*   **Auditoria Transparente**: Painel silencioso interativo para administradores rastrearem quem criou, apagou ou editou cada campo do software em tempo real (Comparação de Diff).
+*   **Atualização On-Air Segura**: Sistema nativo que verifica e sinaliza pacotes de updates e possibilita que os administradores forcem pull/reinicialização via *Watchtower* com 1 clique (Sendo plenamente configurável via painel).
+*   **Infraestrutura Otimizada**: Reversa por Nginx estritamente tipado e MongoDB persistindo relatórios locais e artefatos de mídia.
 
 ---
 
-## 🛠️ Desenvolvimento (Para mantenedores)
+## 📦 Instalação do Deploy para Produção
 
-Se você tem acesso ao código-fonte e deseja contribuir:
+Para instalar o TestFlow em um servidor de produção **sem precisar de código-fonte nem Node.js**, preparamos um repositório satélite apenas com a imagem compilada, focado 100% em ser prático:
 
-1.  Clone o repositório:
+1. Clone o repositório de produção em seu ambiente de nuvem ou servidor físico:
+   ```bash
+   git clone https://github.com/JoaoVictor-M/testflow-prod.git
+   ```
+2. Acesse a pasta do projeto:
+   ```bash
+   cd testflow-prod
+   ```
+3. Garanta que você possui `docker` e `docker-compose` instalados no Host. Então suba a aplicação desvinculada (Detached):
+   ```bash
+   docker compose up -d
+   ```
+
+A partir desse momento, as imagens mais recentes do Github Container Registry (`ghcr.io`) serão orquestradas para rodarem via porta `80` (HTTP web).
+
+---
+
+## 🗑️ Como Desinstalar / Zerar o Sistema
+
+Caso precise limpar completamente o banco de dados do TestFlow (voltar ao estado zero, formato de fábrica) ou excluí-lo por completo de sua máquina/servidor, o procedimento é extremamente simples por conta de sua natureza *containerizada*.
+
+**Para apenas derrubar a aplicação (mantendo os dados salvos):**
+```bash
+docker compose down
+```
+
+**Para desinstalar e EXCLUIR TODOS OS DADOS (Atenção: Ação Irreversível):**
+Incluindo todos os uploads de evidências e o diretório interno do banco de dados, rode o comando com a flag `-v` (volumes):
+```bash
+docker compose down -v
+```
+
+Em seguida, simplesmente exclua a pasta do repositório onde instanciou o projeto.
+
+---
+
+## 🛠️ Desenvolvimento (Para Code Maintainers)
+
+Se você tem acesso a este código-fonte (origin/development) e deseja contribuir ou iterar nas rotas locais:
+
+1.  Clone este repositório matricial:
     ```bash
     git clone git@github.com:JoaoVictor-M/testflow.git
     ```
-2.  Inicie em modo de desenvolvimento (build local):
+2.  Inicie forçando a compilação local das camadas lógicas NodeJS e Vite:
     ```bash
     docker compose up -d --build
     ```
-
----
-
-## 🚀 Funcionalidades da Versão 1.0.0
-*   **Gestão de Projetos e Demandas**: Controle total do ciclo de vida.
-*   **Evidências**: Upload múltiplo e galeria integrada.
-*   **Deep Clone**: Duplicação inteligente de projetos para regressão.
-*   **Segurança**: Autenticação JWT e RBAC (Admin/QA).
-*   **Infraestrutura**: Nginx otimizado e MongoDB persistente.

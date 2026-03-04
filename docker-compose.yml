@@ -4,7 +4,8 @@ services:
     container_name: mongodb_testflow
     restart: always
 
-    ports: # dev-only-mongo-port
+    ports:
+      # dev-only-mongo-port
       - "27017:27017" # dev-only-mongo-port
 
     volumes:
@@ -45,6 +46,17 @@ services:
       - backend-service
     volumes:
       - ./certificados:/etc/nginx/ssl:ro
+
+  watchtower-service:
+    image: containrrr/watchtower
+    container_name: watchtower_testflow
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_HTTP_API=true
+      - WATCHTOWER_HTTP_API_TOKEN=${WATCHTOWER_TOKEN:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook}
+      - WATCHTOWER_CLEANUP=true
 
 volumes:
   mongo-data:

@@ -299,7 +299,7 @@ function ProjectsListPage() {
           )}
         </Popover>
 
-        {(user?.role === 'admin' || user?.role === 'qa') && (
+        {(user?.role === 'admin' || user?.role === 'analyst') && (
           <button onClick={openCreateModal} className="w-full md:w-auto md:ml-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700">
             + Novo Projeto
           </button>
@@ -311,7 +311,7 @@ function ProjectsListPage() {
       {isLoading && <p>Carregando...</p>}
       {!isLoading && projects.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">
-          {(user?.role === 'admin' || user?.role === 'qa')
+          {(user?.role === 'admin' || user?.role === 'analyst')
             ? 'Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.'
             : 'Nenhum Projeto Encontrado.'}
         </p>
@@ -333,7 +333,7 @@ function ProjectsListPage() {
                   <th className="px-6 py-3 font-semibold text-sm text-center">Versão</th>
                   <th className="px-6 py-3 font-semibold text-sm text-center">Servidor</th>
                   <th className="px-6 py-3 font-semibold text-sm text-right pr-12">Tags</th>
-                  {(user?.role === 'admin' || user?.role === 'qa') && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
+                  {(user?.role === 'admin' || user?.role === 'analyst') && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-neutral-700">
@@ -395,7 +395,7 @@ function ProjectsListPage() {
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-                    {(user?.role === 'admin' || user?.role === 'qa') && (
+                    {(user?.role === 'admin' || user?.role === 'analyst') && (
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
                           <button onClick={(e) => { e.stopPropagation(); openEditModal(project); }} title="Editar Projeto"

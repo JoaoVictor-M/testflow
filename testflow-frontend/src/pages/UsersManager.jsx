@@ -208,7 +208,7 @@ const UsersManager = () => {
                                         className="w-full input-style"
                                     >
                                         <option value="Todos">Todos</option>
-                                        <option value="qa">QA</option>
+                                        <option value="analyst">Analista</option>
                                         <option value="viewer">Visualizador</option>
                                     </select>
                                 </Popover.Panel>
@@ -275,8 +275,8 @@ const UsersManager = () => {
                                             <tr key={u._id} className="hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors">
                                                 <td className="px-6 py-4 font-medium text-gray-900 dark:text-gray-100">{u.username}</td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : (u.role === 'qa' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')}`}>
-                                                        {u.role === 'admin' ? 'ADMINISTRADOR' : (u.role === 'qa' ? 'QA' : 'VISUALIZADOR')}
+                                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${u.role === 'admin' ? 'bg-purple-100 text-purple-800' : (u.role === 'analyst' ? 'bg-orange-100 text-orange-800' : 'bg-blue-100 text-blue-800')}`}>
+                                                        {u.role === 'admin' ? 'ADMINISTRADOR' : (u.role === 'analyst' ? 'ANALISTA' : 'VISUALIZADOR')}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">

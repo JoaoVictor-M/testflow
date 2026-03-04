@@ -337,7 +337,7 @@ function DemandasListPage() {
         </Popover>
 
         {/* Botão + Nova Demanda */}
-        {(user?.role === 'admin' || user?.role === 'qa') && (
+        {(user?.role === 'admin' || user?.role === 'analyst') && (
           <button
             onClick={openCreateModal}
             className="w-full md:w-auto md:ml-auto px-3 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
@@ -352,7 +352,7 @@ function DemandasListPage() {
       {isLoading && <p>Carregando...</p>}
       {!isLoading && demandas.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">
-          {(user?.role === 'admin' || user?.role === 'qa')
+          {(user?.role === 'admin' || user?.role === 'analyst')
             ? 'Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.'
             : 'Nenhuma Demanda Encontrada.'}
         </p>
@@ -425,7 +425,7 @@ function DemandasListPage() {
                           className="p-1.5 rounded-full text-gray-400 hover:text-green-600 hover:bg-green-100 dark:text-gray-500 dark:hover:bg-green-900/30 dark:hover:text-green-400 transition-colors">
                           <PaperClipIcon />
                         </button>
-                        {(user?.role === 'admin' || user?.role === 'qa') && (
+                        {(user?.role === 'admin' || user?.role === 'analyst') && (
                           <>
                             <button onClick={(e) => { e.stopPropagation(); openEditModal(demanda); }} title="Editar Demanda"
                               className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">

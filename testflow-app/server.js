@@ -278,7 +278,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
 });
 
 
-app.post('/api/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/auth/register', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const { username, email, role, name } = req.body;
 
@@ -288,7 +288,7 @@ app.post('/api/auth/register', authMiddleware, roleMiddleware(['admin', 'qa']), 
 
 
         // QA Restriction: Cannot create Admin
-        if (req.user.role === 'qa' && role === 'admin') {
+        if (req.user.role === 'analyst' && role === 'admin') {
             return res.status(403).json({ message: 'QAs não têm permissão para criar Administradores.' });
         }
 
@@ -380,7 +380,7 @@ app.post('/api/users/generate-username', authMiddleware, async (req, res) => {
 });
 
 
-app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const users = await User.find({ username: { $ne: 'admin' } }, '-password').sort({ username: 1 });
         res.json(users);
@@ -389,7 +389,7 @@ app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'qa']), async (re
     }
 });
 
-app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const { username, password, role, name } = req.body;
         const userId = req.params.id;
@@ -401,12 +401,12 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async
         const oldUser = await User.findById(userId).lean();
 
         // QA Restriction: Cannot edit Admin
-        if (req.user.role === 'qa' && user.role === 'admin') {
+        if (req.user.role === 'analyst' && user.role === 'admin') {
             return res.status(403).json({ message: 'QAs não podem editar Administradores.' });
         }
 
         // QA Restriction: Cannot promote to Admin
-        if (req.user.role === 'qa' && role === 'admin') {
+        if (req.user.role === 'analyst' && role === 'admin') {
             return res.status(403).json({ message: 'QAs não podem promover usuários a Administrador.' });
         }
 
@@ -432,7 +432,7 @@ app.put('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async
     }
 });
 
-app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const userId = req.params.id;
         if (req.user.userId === userId) {
@@ -450,7 +450,7 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
     }
 });
 
-app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     const { users } = req.body; // Array of { name, email, role }
     console.log(`[DEBUG] Received import request for ${users ? users.length : 0} users.`); // eslint-disable-line no-console
 
@@ -473,7 +473,7 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'qa']), a
         }
 
         // QA Restriction: Cannot import admins (redundant check but safe)
-        if (req.user.role === 'qa' && userData.role === 'admin') {
+        if (req.user.role === 'analyst' && userData.role === 'admin') {
             results.failed++;
             results.details.push({ ...userData, error: 'QAs não podem importar Admins.' });
             continue;
@@ -568,7 +568,7 @@ app.get('/api/projects', authMiddleware, async (req, res) => {
     }
 });
 
-app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const tagIds = await findOrCreateTags(req.body.tags);
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
@@ -655,7 +655,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'qa']), async
     }
 });
 
-app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const tagIds = await findOrCreateTags(req.body.tags);
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
@@ -685,7 +685,7 @@ app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
     }
 });
 
-app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const projectId = req.params.id;
         const project = await Project.findById(projectId);
@@ -713,7 +713,7 @@ app.get('/api/tags', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-app.delete('/api/tags/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/tags/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const tagId = req.params.id;
         const deletedTag = await Tag.findByIdAndDelete(tagId).lean();
@@ -767,8 +767,50 @@ app.get('/api/system/version', async (req, res) => {
     }
 });
 
+app.get('/api/system/check-update', authMiddleware, async (req, res) => {
+    try {
+        // Obter a versão remota do testflow-prod
+        // O node nativo v20 possui suporte nativo ao fetch
+        const response = await fetch('https://raw.githubusercontent.com/JoaoVictor-M/testflow-prod/main/version.json');
+        if (!response.ok) {
+            return res.status(response.status).json({ message: 'Falha ao buscar atualização remota' });
+        }
+        const remoteData = await response.json();
+        res.json({ version: remoteData.version });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
 
-app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/system/trigger-update', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+    try {
+        // Envio interno (na rede do Docker) para a porta oculta 8080 do Watchtower
+        const WATCHTOWER_TOKEN = process.env.WATCHTOWER_TOKEN || 'uma-senha-padrao-super-segura-e-exclusiva-para-webhook';
+
+        // Timeout baixo de 5 segundos porque se funcionar, o Watchtower começa imediatamente a desligar e baixar imagens
+        const watchtowerResponse = await fetch('http://watchtower-service:8080/v1/update', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${WATCHTOWER_TOKEN}`
+            },
+            signal: AbortSignal.timeout(5000)
+        });
+
+        if (!watchtowerResponse.ok) {
+            return res.status(watchtowerResponse.status).json({ message: 'Falha ao acionar o provedor de atualizações' });
+        }
+
+        // Sucesso 
+        res.status(200).json({ message: 'Atualização solicitada com sucesso. O Servidor desligará para manutenção de imagens em instante.' });
+
+    } catch (error) {
+        // Se der abort error (timeout) é porque demorou para responder mas possivelmente está baixando a imagem.
+        res.status(500).json({ message: 'Acionamento enviado. Aviso: ' + error.message });
+    }
+});
+
+
+app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
         const newDemanda = new Demanda({
@@ -826,7 +868,7 @@ app.get('/api/demandas', authMiddleware, async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
         const demandaData = {
@@ -847,7 +889,7 @@ app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), as
         res.status(400).json({ message: error.message });
     }
 });
-app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const demandaId = req.params.id;
         const demanda = await Demanda.findById(demandaId);
@@ -864,7 +906,7 @@ app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'qa']),
 });
 
 
-app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.post('/api/scenarios', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const newScenario = new Scenario({
             title: req.body.title,
@@ -912,7 +954,7 @@ app.get('/api/scenarios/:id', authMiddleware, async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const oldScenario = await Scenario.findById(req.params.id).lean();
         const updatedScenario = await Scenario.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true }).lean();
@@ -923,7 +965,7 @@ app.put('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), a
         res.status(400).json({ message: error.message });
     }
 });
-app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const deletedScenario = await Scenario.findByIdAndDelete(req.params.id).lean();
         if (!deletedScenario) return res.status(404).json({ message: 'Cenário não encontrado' });
@@ -933,7 +975,7 @@ app.delete('/api/scenarios/:id', authMiddleware, roleMiddleware(['admin', 'qa'])
         res.status(500).json({ message: error.message });
     }
 });
-app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.patch('/api/scenarios/:id/status', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const { status, mantisLink } = req.body;
         const scenarioId = req.params.id;
@@ -1153,6 +1195,43 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
 });
 
 
+app.get('/api/config/system', authMiddleware, async (req, res) => {
+    try {
+        const config = await SystemConfig.findOne({ key: 'system_settings' });
+        // By default, updates are enabled true unless explicitly set to false
+        let check_updates_enabled = true;
+
+        if (config && config.value && typeof config.value.check_updates_enabled !== 'undefined') {
+            check_updates_enabled = config.value.check_updates_enabled;
+        }
+
+        res.json({ check_updates_enabled });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
+app.put('/api/config/system', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
+    try {
+        const { check_updates_enabled } = req.body;
+        const newSettings = { check_updates_enabled: !!check_updates_enabled };
+
+        const updatedConfig = await SystemConfig.findOneAndUpdate(
+            { key: 'system_settings' },
+            { value: newSettings, updatedAt: Date.now() },
+            { upsert: true, new: true }
+        );
+
+        let newLog = updatedConfig.value;
+        const oldLog = null; // Simplicidade pro audit
+
+        await logAudit('UPDATE', 'SystemConfig', updatedConfig._id, req.user.userId, { old: oldLog, new: newLog });
+        res.json({ message: 'Configuração do sistema atualizada.', settings: newSettings });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 app.get('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
     try {
         const config = await SystemConfig.findOne({ key: 'email_settings' });
@@ -1267,7 +1346,7 @@ const upload = multer({
 });
 
 // Upload Evidence
-app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'qa']), upload.single('file'), async (req, res) => {
+app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'analyst']), upload.single('file'), async (req, res) => {
     try {
         const demandaId = req.params.id;
         if (!isValidMongoId(demandaId)) return res.status(400).json({ message: 'ID Inválido' });
@@ -1301,7 +1380,7 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
 
 
 // Delete Evidence
-app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddleware(['admin', 'qa']), async (req, res) => {
+app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const { id, evidenceId } = req.params;
         if (!isValidMongoId(id) || !isValidMongoId(evidenceId)) return res.status(400).json({ message: 'ID Inválido' });
