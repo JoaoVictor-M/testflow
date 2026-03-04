@@ -19,17 +19,9 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 Para instalar o TestFlow em um servidor de produção **sem precisar de código-fonte nem Node.js**, preparamos um repositório satélite apenas com a imagem compilada, focado 100% em ser prático:
 
-1. Clone o repositório de produção em seu ambiente de nuvem ou servidor físico:
+1. Execute o comando abaixo no terminal do seu servidor ou nuvem, ele já irá baixar os arquivos na pasta correta e instanciar os containers silenciosamente:
    ```bash
-   git clone https://github.com/JoaoVictor-M/testflow-prod.git
-   ```
-2. Acesse a pasta do projeto:
-   ```bash
-   cd testflow-prod
-   ```
-3. Garanta que você possui `docker` e `docker-compose` instalados no Host. Então suba a aplicação desvinculada (Detached):
-   ```bash
-   docker compose up -d
+   git clone https://github.com/JoaoVictor-M/testflow-prod.git testflow && cd testflow && docker compose up -d
    ```
 
 A partir desse momento, as imagens mais recentes do Github Container Registry (`ghcr.io`) serão orquestradas para rodarem via porta `80` (HTTP web).
@@ -45,13 +37,16 @@ Caso precise limpar completamente o banco de dados do TestFlow (voltar ao estado
 docker compose down
 ```
 
-**Para desinstalar e EXCLUIR TODOS OS DADOS (Atenção: Ação Irreversível):**
-Incluindo todos os uploads de evidências e o diretório interno do banco de dados, rode o comando com a flag `-v` (volumes):
+**Para desinstalar e EXCLUIR TODOS OS DADOS E A PASTA (Atenção: Ação Irreversível):**
+Isso inclui todos os uploads de evidências e os dados salvos internamente. No mesmo diretório execute:
+*No Linux/Mac:*
 ```bash
-docker compose down -v
+docker compose down -v && cd .. && rm -rf testflow
 ```
-
-Em seguida, simplesmente exclua a pasta do repositório onde instanciou o projeto.
+*No Windows (PowerShell):*
+```powershell
+docker compose down -v ; cd .. ; Remove-Item -Recurse -Force testflow
+```
 
 ---
 
