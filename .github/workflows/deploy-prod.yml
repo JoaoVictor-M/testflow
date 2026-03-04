@@ -218,7 +218,8 @@ jobs:
           sed -i '/dev-only-mongo-port/d' prod/docker-compose.yml
 
           # We also remove the explicit "container_name" parameter from production docker-compose
-          # so users can run multiple copies without collision if they want, but it's optional
+          # so users can run multiple copies without collision if they want
+          sed -i '/container_name:/d' prod/docker-compose.yml
 
       - name: Push release files to Github Prod
         run: |
