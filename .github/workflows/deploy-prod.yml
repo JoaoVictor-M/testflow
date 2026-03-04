@@ -197,12 +197,6 @@ jobs:
 
       - name: Format Prod Files
         run: |
-          # Ensure install dir exists
-          mkdir -p prod/install
-          
-          # Copy install files like mongo-init.js
-          cp -r source/install/* prod/install/ || echo "No internal install files found"
-          
           # Copy README
           cp source/README.md prod/README.md || echo "No README found"
 
