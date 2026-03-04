@@ -229,6 +229,9 @@ jobs:
           # Remove nomes fixos de containers para escalabilidade multi-instância no cliente
           sed -i '/container_name:/d' prod/docker-compose.yml
 
+          # Remove o fallback da senha do Watchtower para evitar o uso de credenciais engessadas publicamente
+          sed -i 's|:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook||g' prod/docker-compose.yml
+
       - name: Push release files to Github Prod
         run: |
           cd prod

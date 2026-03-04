@@ -6,7 +6,8 @@ services:
 
     ports:
       # dev-only-mongo-port
-      - "27017:27017" # dev-only-mongo-port
+      # dev-only-mongo-port
+      - "27017:27017"
 
     volumes:
       - mongo-data:/data/db
