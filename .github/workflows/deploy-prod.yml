@@ -197,22 +197,29 @@ jobs:
 
       - name: Format Prod Files
         run: |
-          # Copy README
-          cp source/README.md prod/README.md || echo "No README found"
-
-          # Copy main docker-compose.yml
+          # 1. Limpeza Profunda: Remove absolutamente todos os arquivos da árvore do git na branch destino
+          cd prod
+          git rm -rf . || true
+          cd ..
+          
+          # 2. Recria os diretórios e copia cirurgicamente APENAS o necessário
+          mkdir -p prod/install
+          cp source/install/mongo-init.js prod/install/mongo-init.js || echo "O arquivo mongo-init.js não foi encontrado"
+          cp source/README.md prod/README.md || echo "O README.md não foi encontrado"
+          
+          # O arquivo Compose é copiado do seu código local e depois lapidado dinamicamente
           cp source/docker-compose.yml prod/docker-compose.yml
 
-          # Swap "build: ./" lines with proper GHCR image paths
+          # 3. Lapidação do docker-compose para Produção
+          # Troca os builds pelas imagens na nuvem
           sed -i "s|build: ./testflow-app|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-backend:latest|g" prod/docker-compose.yml
           sed -i "s|build: ./testflow-frontend|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-frontend:latest|g" prod/docker-compose.yml
           sed -i "s|build: ./nginx|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-nginx:latest|g" prod/docker-compose.yml
           
-          # Remove Mongo dev port mappings for production security
+          # Remove o bind de porta de desenvolvimento do banco
           sed -i '/dev-only-mongo-port/d' prod/docker-compose.yml
 
-          # We also remove the explicit "container_name" parameter from production docker-compose
-          # so users can run multiple copies without collision if they want
+          # Remove nomes fixos de containers para escalabilidade multi-instância no cliente
           sed -i '/container_name:/d' prod/docker-compose.yml
 
       - name: Push release files to Github Prod
