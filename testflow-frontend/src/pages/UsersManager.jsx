@@ -208,6 +208,7 @@ const UsersManager = () => {
                                         className="w-full input-style"
                                     >
                                         <option value="Todos">Todos</option>
+                                        <option value="admin">Administrador</option>
                                         <option value="analyst">Analista</option>
                                         <option value="viewer">Visualizador</option>
                                     </select>

@@ -379,6 +379,15 @@ app.post('/api/users/generate-username', authMiddleware, async (req, res) => {
     }
 });
 
+app.get('/api/users/all', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
+    try {
+        const users = await User.find({}, '-password').sort({ username: 1 });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 
 app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {

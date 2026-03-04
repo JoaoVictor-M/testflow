@@ -71,7 +71,7 @@ function AuditLogsPage() {
     useEffect(() => {
         const fetchUsersList = async () => {
             try {
-                const response = await api.get('/users');
+                const response = await api.get('/users/all');
                 setUsersList(response.data);
             } catch (err) {
                 console.error("Erro ao buscar usuários para filtro:", err);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 import toast from 'react-hot-toast';
-import CreatableSelect from 'react-select/creatable';
+import Select from 'react-select';
 
 // --- ESTILOS ---
 const customSelectStyles = {
@@ -35,11 +35,13 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
     const fetchResponsaveis = async () => {
       try {
         setIsLoading(true);
-        const response = await api.get('/responsaveis');
-        setOptions(response.data.map(r => ({
-          value: r.name,
-          label: r.name
-        })));
+        const response = await api.get('/users/all');
+        const validUsers = response.data.filter(u => u.role === 'admin' || u.role === 'analyst');
+        const fetchedOptions = validUsers.map(u => ({
+          value: u.name || u.username,
+          label: u.name || u.username
+        }));
+        setOptions(fetchedOptions);
       } catch (err) {
         console.error("Erro ao buscar responsáveis", err);
       } finally {
@@ -51,15 +53,25 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
     }
   }, [isModalOpen]);
 
+  // Merge currently selected values that might not be in the filtered list (e.g. viewers)
+  const combinedOptions = [...options];
+  if (value && Array.isArray(value)) {
+    value.forEach(selectedOption => {
+      if (!combinedOptions.some(opt => opt.value === selectedOption.value)) {
+        combinedOptions.push(selectedOption);
+      }
+    });
+  }
+
   return (
-    <CreatableSelect
+    <Select
       isMulti
       isLoading={isLoading}
-      options={options}
+      options={combinedOptions}
       value={value}
       onChange={onChange}
-      placeholder="Selecione ou crie analistas..."
-      formatCreateLabel={(inputValue) => `Criar novo analista: "${inputValue}"`}
+      placeholder="Selecione analistas ou administradores..."
+      noOptionsMessage={() => "Nenhum usuário encontrado"}
       classNamePrefix="react-select"
       styles={customSelectStyles}
       menuPortalTarget={document.body}
