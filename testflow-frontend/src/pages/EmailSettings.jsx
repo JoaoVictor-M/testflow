@@ -9,9 +9,7 @@ function EmailSettings() {
     const [saving, setSaving] = useState(false);
 
     const [showPassword, setShowPassword] = useState(false);
-    const [systemSettings, setSystemSettings] = useState({
-        check_updates_enabled: true
-    });
+
     const [formData, setFormData] = useState({
         host: '',
         port: '',
@@ -22,19 +20,8 @@ function EmailSettings() {
     });
 
     useEffect(() => {
-        Promise.all([fetchSettings(), fetchSystemSettings()]).finally(() => setLoading(false));
+        fetchSettings().finally(() => setLoading(false));
     }, []);
-
-    const fetchSystemSettings = async () => {
-        try {
-            const response = await api.get('/config/system', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            setSystemSettings(response.data);
-        } catch (error) {
-            console.error('Erro ao buscar sys config:', error);
-        }
-    };
 
     const fetchSettings = async () => {
         try {
@@ -63,12 +50,8 @@ function EmailSettings() {
             await api.put('/config/email', formData, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-            await api.put('/config/system', systemSettings, {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
             toast.success('Configurações salvas com sucesso!');
             fetchSettings();
-            fetchSystemSettings();
         } catch (error) {
             console.error('Erro ao salvar configurações:', error);
             toast.error(error.response?.data?.message || 'Erro ao salvar configurações.');
@@ -84,26 +67,6 @@ function EmailSettings() {
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-neutral-100">Configurações Globais</h1>
-
-            <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 transition-colors border border-gray-200 dark:border-neutral-800">
-                <h2 className="text-lg font-semibold mb-4 text-gray-800 dark:text-neutral-200 border-b pb-2 dark:border-neutral-800">Sistema de Atualização</h2>
-                <div className="flex items-center">
-                    <input
-                        type="checkbox"
-                        id="check_updates"
-                        checked={systemSettings.check_updates_enabled}
-                        onChange={(e) => setSystemSettings({ ...systemSettings, check_updates_enabled: e.target.checked })}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="check_updates" className="ml-2 block text-sm text-gray-900 dark:text-gray-200">
-                        Verificar atualizações online automaticamente
-                    </label>
-                </div>
-                <p className="mt-2 text-xs text-gray-500 dark:text-neutral-400">
-                    Se ativado, o sistema consultará o GitHub a cada 10 minutos em busca de novas versões.
-                    Somente Administradores serão notificados e poderão instalar.
-                </p>
-            </div>
 
             <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 transition-colors border border-gray-200 dark:border-neutral-800">
                 <h2 className="text-lg font-semibold mb-6 text-gray-800 dark:text-neutral-200 border-b pb-2 dark:border-neutral-800">Email (SMTP)</h2>

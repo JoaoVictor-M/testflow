@@ -1160,42 +1160,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
 });
 
 
-app.get('/api/config/system', authMiddleware, async (req, res) => {
-    try {
-        const config = await SystemConfig.findOne({ key: 'system_settings' });
-        // By default, updates are enabled true unless explicitly set to false
-        let check_updates_enabled = true;
 
-        if (config && config.value && typeof config.value.check_updates_enabled !== 'undefined') {
-            check_updates_enabled = config.value.check_updates_enabled;
-        }
-
-        res.json({ check_updates_enabled });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.put('/api/config/system', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
-    try {
-        const { check_updates_enabled } = req.body;
-        const newSettings = { check_updates_enabled: !!check_updates_enabled };
-
-        const updatedConfig = await SystemConfig.findOneAndUpdate(
-            { key: 'system_settings' },
-            { value: newSettings, updatedAt: Date.now() },
-            { upsert: true, new: true }
-        );
-
-        let newLog = updatedConfig.value;
-        const oldLog = null; // Simplicidade pro audit
-
-        await logAudit('UPDATE', 'SystemConfig', updatedConfig._id, req.user.userId, { old: oldLog, new: newLog });
-        res.json({ message: 'Configuração do sistema atualizada.', settings: newSettings });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
 
 app.get('/api/config/email', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
     try {
