@@ -223,13 +223,13 @@ jobs:
           # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
           sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
           
-          # Remove completamente a seção ports do mongodb em produção usando parser real de YAML do Github Actions runner
-          yq e 'del(.services.mongodb-service.ports)' -i prod/docker-compose.yml
-          yq e 'del(.services.mongodb-service.container_name)' -i prod/docker-compose.yml
-          yq e 'del(.services.backend-service.container_name)' -i prod/docker-compose.yml
-          yq e 'del(.services.frontend-service.container_name)' -i prod/docker-compose.yml
-          yq e 'del(.services.nginx-service.container_name)' -i prod/docker-compose.yml
-          yq e 'del(.services.watchtower-service.container_name)' -i prod/docker-compose.yml
+          # Remove completamente a seção ports do mongodb em produção usando parser real de YAML do Python (Mais nativo e seguro que sed/yq)
+          python3 -c "import yaml; 
+          with open('prod/docker-compose.yml', 'r') as f: doc = yaml.safe_load(f);
+          if 'ports' in doc['services']['mongodb-service']: del doc['services']['mongodb-service']['ports'];
+          for s in doc['services'].values():
+            if 'container_name' in s: del s['container_name'];
+          with open('prod/docker-compose.yml', 'w') as f: yaml.dump(doc, f, sort_keys=False, default_flow_style=False)"
 
           # Remove o fallback da senha do Watchtower para evitar o uso de credenciais engessadas publicamente
           sed -i 's|:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook||g' prod/docker-compose.yml
