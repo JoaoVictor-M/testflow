@@ -229,7 +229,7 @@ jobs:
           # Remove completamente as identidades dos containers em produção lendo objeto js-yaml
           # E gera um token aleatório forte, cravando-o estaticamente no compose público para facilitar o deploy single-file
           npx -y js-yaml prod/docker-compose.yml > compose.json
-          node -e "const fs = require('fs'); const crypto = require('crypto'); let newToken = crypto.randomUUID(); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; c.services['watchtower-service'].environment = c.services['watchtower-service'].environment.map(env => env.startsWith('WATCHTOWER_HTTP_API_TOKEN=') ? 'WATCHTOWER_HTTP_API_TOKEN=' + newToken : env); fs.writeFileSync('compose.json', JSON.stringify(c));"
+          node -e "const fs = require('fs'); const crypto = require('crypto'); let newToken = crypto.randomUUID(); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; c.services['watchtower-service'].environment = c.services['watchtower-service'].environment.map(env => env.includes('WATCHTOWER_HTTP_API_TOKEN') ? 'WATCHTOWER_HTTP_API_TOKEN=' + newToken : env); fs.writeFileSync('compose.json', JSON.stringify(c));"
           npx -y js-yaml compose.json > prod/docker-compose.yml
           rm compose.json
 
