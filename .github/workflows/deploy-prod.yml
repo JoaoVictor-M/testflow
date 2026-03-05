@@ -232,8 +232,10 @@ jobs:
           npx -y js-yaml compose.json > prod/docker-compose.yml
           rm compose.json
 
-          # Remove o fallback da senha do Watchtower para evitar o uso de credenciais engessadas publicamente
-          sed -i 's|:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook||g' prod/docker-compose.yml
+          # Ao invés de forçar o usuário a criar um .env manualmente, geramos um token aleatório forte
+          # exclusivo para este release e gravamos hardcoded no compose público para facilitar o deploy single-file
+          NEW_TOKEN=$(uuidgen)
+          sed -i "s|WATCHTOWER_HTTP_API_TOKEN=\${WATCHTOWER_TOKEN:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook}|WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}|g" prod/docker-compose.yml
 
       - name: Push release files to Github Prod
         run: |
