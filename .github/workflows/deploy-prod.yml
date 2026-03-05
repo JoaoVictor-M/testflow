@@ -227,7 +227,7 @@ jobs:
           sed -i '/mongodb-service:/,/volumes:/ { /ports:/d; /# dev-only-mongo-port/d }' prod/docker-compose.yml
           
           # Remove completamente as identidades dos containers em produção lendo objeto js-yaml
-          npx -y js-yaml -i prod/docker-compose.yml > compose.json
+          npx -y js-yaml prod/docker-compose.yml > compose.json
           node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; fs.writeFileSync('compose.json', JSON.stringify(c));"
           npx -y js-yaml compose.json > prod/docker-compose.yml
           rm compose.json
