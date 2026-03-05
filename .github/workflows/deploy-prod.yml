@@ -234,10 +234,10 @@ jobs:
           rm compose.json
           
           # Como o formato yaml injeta splits imprevisíveis, recriamos estaticamente 
+          # Como o formato yaml injeta splits imprevisíveis, recriamos estaticamente 
           # a variável Watchtower usando substituição de array na força bruta, matando o fallback
           NEW_TOKEN=$(uuidgen)
-          sed -i '/WATCHTOWER_HTTP_API_TOKEN/d' prod/docker-compose.yml
-          sed -i "s/- WATCHTOWER_CLEANUP=true/- WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}\n      - WATCHTOWER_CLEANUP=true/" prod/docker-compose.yml
+          sed -i "s|WATCHTOWER_HTTP_API_TOKEN=.*|WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}|g" prod/docker-compose.yml
 
       - name: Push release files to Github Prod
         run: |
