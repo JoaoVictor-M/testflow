@@ -226,16 +226,12 @@ jobs:
           # Remove completamente a seção ports e comentários dev-only do mongodb usando sed regex baseada em contexto
           sed -i '/mongodb-service:/,/volumes:/ { /ports:/d; /# dev-only-mongo-port/d }' prod/docker-compose.yml
           
-          # Remove completamente as identidades dos containers em produção lendo objeto js-yaml
-          # E gera um token aleatório forte, cravando-o estaticamente no compose público para facilitar o deploy single-file
-          npx -y js-yaml prod/docker-compose.yml > compose.json
-          node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; fs.writeFileSync('compose.json', JSON.stringify(c));"
-          npx -y js-yaml compose.json > prod/docker-compose.yml
-          rm compose.json
+          # Remove chaves de indentificadores engessados de containers de dev original
+          sed -i '/container_name:/d' prod/docker-compose.yml
           
-          # Como o formato yaml injeta splits imprevisíveis, recriamos estaticamente 
-          # Como o formato yaml injeta splits imprevisíveis, recriamos estaticamente 
-          # a variável Watchtower usando substituição de array na força bruta, matando o fallback
+          # Como parsers npm injetam splits imprevisíveis, recriamos estaticamente 
+          # a variável Watchtower usando substituição regex simples na força bruta, 
+          # matando a necessidade de arquivos .env no cliente
           NEW_TOKEN=$(uuidgen)
           sed -i "s|WATCHTOWER_HTTP_API_TOKEN=.*|WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}|g" prod/docker-compose.yml
 
