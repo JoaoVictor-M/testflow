@@ -27,11 +27,11 @@ jobs:
 
       - name: Audit Backend Dependencies
         working-directory: ./testflow-app
-        run: npm audit || echo "Audit Backend completed with warnings"
+        run: npm audit
 
       - name: Audit Frontend Dependencies
         working-directory: ./testflow-frontend
-        run: npm audit || echo "Audit Frontend completed with warnings"
+        run: npm audit
 
   # 2. Static Application Security Testing (SAST)
   sast-eslint:
@@ -82,7 +82,7 @@ jobs:
           exit-code: '1'
           ignore-unfixed: false
           vuln-type: 'os,library'
-          severity: 'HIGH,CRITICAL'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
 
       - name: Build and Start Application
         run: |
@@ -106,7 +106,7 @@ jobs:
           docker run --add-host=host.docker.internal:host-gateway \
             -v $(pwd)/zap-work:/zap/wrk:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
-            zap-full-scan.py -t http://host.docker.internal:3000 -r report_html.html || echo "ZAP Scan completed"
+            zap-full-scan.py -t http://host.docker.internal:3000 -r report_html.html
 
       - name: Upload ZAP Report
         if: always()
