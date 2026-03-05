@@ -775,49 +775,6 @@ app.get('/api/system/version', async (req, res) => {
     }
 });
 
-app.get('/api/system/check-update', authMiddleware, async (req, res) => {
-    try {
-        // Obter a versão remota do testflow-prod
-        // O node nativo v20 possui suporte nativo ao fetch
-        const response = await fetch('https://raw.githubusercontent.com/JoaoVictor-M/testflow-prod/main/version.json');
-        if (!response.ok) {
-            return res.status(response.status).json({ message: 'Falha ao buscar atualização remota' });
-        }
-        const remoteData = await response.json();
-        res.json({ version: remoteData.version });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
-
-app.post('/api/system/trigger-update', authMiddleware, roleMiddleware(['admin']), async (req, res) => {
-    try {
-        // Envio interno (na rede do Docker) para a porta oculta 8080 do Watchtower
-        const WATCHTOWER_TOKEN = process.env.WATCHTOWER_TOKEN || 'uma-senha-padrao-super-segura-e-exclusiva-para-webhook';
-
-        // Timeout baixo de 5 segundos porque se funcionar, o Watchtower começa imediatamente a desligar e baixar imagens
-        const watchtowerResponse = await fetch('http://watchtower-service:8080/v1/update', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${WATCHTOWER_TOKEN}`
-            },
-            signal: AbortSignal.timeout(5000)
-        });
-
-        if (!watchtowerResponse.ok) {
-            return res.status(watchtowerResponse.status).json({ message: 'Falha ao acionar o provedor de atualizações' });
-        }
-
-        // Sucesso 
-        res.status(200).json({ message: 'Atualização solicitada com sucesso. O Servidor desligará para manutenção de imagens em instante.' });
-
-    } catch (error) {
-        // Se der abort error (timeout) é porque demorou para responder mas possivelmente está baixando a imagem.
-        res.status(500).json({ message: 'Acionamento enviado. Aviso: ' + error.message });
-    }
-});
-
-
 app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);

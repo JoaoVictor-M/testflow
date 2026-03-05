@@ -25,7 +25,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             Production Ready
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
-                            04/03/2026
+                            05/03/2026
                         </p>
                     </div>
                 </div>
@@ -107,16 +107,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                     </ul>
                                 </div>
 
-                                {/* Updates */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <Server size={16} className="text-cyan-500" /> Infra. e Atualizações
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>Atualização Automática (OTA):</strong> Busca online de novas versões (ativável/desativável).</li>
-                                        <li><strong>Watchtower App:</strong> Pull automatizado de imagens no servidor com 1 clique.</li>
-                                    </ul>
-                                </div>
+
                             </div>
                         </div>
 

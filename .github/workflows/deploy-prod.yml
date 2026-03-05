@@ -229,11 +229,7 @@ jobs:
           # Remove chaves de indentificadores engessados de containers de dev original
           sed -i '/container_name:/d' prod/docker-compose.yml
           
-          # Como parsers npm injetam splits imprevisíveis, recriamos estaticamente 
-          # a variável Watchtower usando substituição regex simples na força bruta, 
-          # matando a necessidade de arquivos .env no cliente
-          NEW_TOKEN=$(uuidgen)
-          sed -i "s|WATCHTOWER_HTTP_API_TOKEN=.*|WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}|g" prod/docker-compose.yml
+
 
       - name: Push release files to Github Prod
         run: |

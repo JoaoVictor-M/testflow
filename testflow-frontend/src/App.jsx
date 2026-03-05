@@ -20,7 +20,6 @@ import EmailSettings from './pages/EmailSettings'
 import AuditLogsPage from './pages/AuditLogsPage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
-import InstallUpdateModal from './components/InstallUpdateModal'
 import api from './api'
 
 // --- ÍCONES ---
@@ -229,105 +228,6 @@ function AppContent() {
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
   const { user } = useContext(AuthContext); // Get user context to check if logged in (optional, but good practice)
 
-  const [isInstallModalOpen, setIsInstallModalOpen] = useState(false);
-  const [pendingUpdateVersion, setPendingUpdateVersion] = useState(null);
-
-  // --- CHECK FOR UPDATES (10 MIN LOOP) ---
-  useEffect(() => {
-    let intervalId;
-
-    const checkVersion = async () => {
-      try {
-        // First check if Update Checker is Enabled globally by Admin
-        const configRes = await api.get('/config/system');
-        if (!configRes.data.check_updates_enabled) {
-          return; // Se o admin desligou, pare aqui.
-        }
-
-        // Obtém a versão local atual rodando
-        const localResponse = await api.get('/system/version');
-        if (!localResponse.data) return;
-
-        const localVersion = localResponse.data.version;
-        const previousVersion = localStorage.getItem('app_version');
-
-        // Se local_version mudou do localStorage, significa que o sistema CABOU de atualizar de fato (Watchtower finish ou pull fresh)
-        if (previousVersion && localVersion !== previousVersion) {
-          // Avisa Todo Mundo (Admins, QAs e Viewers) que rolou uma atualização nova
-          toast((t) => (
-            <div className="flex flex-col gap-2">
-              <span className="font-semibold">
-                🚀 Sistema atualizado para v{localVersion}!
-              </span>
-              <span className="text-sm">
-                Confira as novidades no Release Notes.
-              </span>
-              <Link
-                to="/release-notes"
-                className="text-blue-400 hover:underline text-sm font-bold"
-                onClick={() => toast.dismiss(t.id)}
-              >
-                Ver Mudanças
-              </Link>
-            </div>
-          ), { duration: 8000, icon: '🆕', style: { background: '#1f2937', color: '#fff', border: '1px solid #3b82f6' } });
-        }
-
-        // Atualiza a memoria local pra rodar limpo:
-        localStorage.setItem('app_version', localVersion);
-
-        // AGORA CHECA SE NO GITHUB TEM VERSÃO MAIOR PENDENTE
-        const remoteRes = await api.get('/system/check-update');
-        if (remoteRes.status === 200 && remoteRes.data) {
-          const remoteVersion = remoteRes.data.version;
-
-          // Só lança o Toast de PENDÊNCIA se for Administrador e se a versão for diferente (Normalmente vRemote > vLocal)
-          if (remoteVersion !== localVersion && user?.role === 'admin') {
-            toast((t) => (
-              <div className="flex flex-col gap-3">
-                <span className="font-semibold text-amber-400">
-                  ⚡ Atualização Pendente (v{remoteVersion}) disponível!
-                </span>
-                <span className="text-sm">
-                  É recomendado atualizar o sistema.
-                </span>
-                <div className="flex items-center gap-3 mt-1">
-                  <Link
-                    to="/release-notes"
-                    className="bg-gray-100 text-gray-800 dark:bg-neutral-800 dark:text-gray-200 px-3 py-1.5 rounded-md text-xs font-bold hover:bg-gray-200 dark:hover:bg-neutral-700 transition"
-                    onClick={() => toast.dismiss(t.id)}
-                  >
-                    Ver Notas
-                  </Link>
-                  <button
-                    onClick={() => {
-                      toast.dismiss(t.id);
-                      setPendingUpdateVersion(remoteVersion);
-                      setIsInstallModalOpen(true);
-                    }}
-                    className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-xs font-bold hover:bg-blue-700 transition shadow-sm"
-                  >
-                    Instalar
-                  </button>
-                </div>
-              </div>
-            ), { duration: 15000, style: { background: '#1f2937', color: '#fff', border: '1px solid #f59e0b' } });
-          }
-        }
-      } catch (error) {
-        console.error("Failed to check system version:", error);
-      }
-    };
-
-    if (!isPublicPage && user) {
-      checkVersion(); // Run once immediately on open/login
-      intervalId = setInterval(checkVersion, 10 * 60 * 1000); // And every 10 min
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isPublicPage, user]);
 
 
   return (
@@ -376,11 +276,7 @@ function AppContent() {
           },
         }}
       />
-      <InstallUpdateModal
-        isOpen={isInstallModalOpen}
-        onClose={() => setIsInstallModalOpen(false)}
-        version={pendingUpdateVersion}
-      />
+
     </div>
   );
 }

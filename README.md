@@ -10,7 +10,6 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 *   **Deep Clone**: Duplicação imediata e profunda de projetos para cenários de teste de regressão versão-a-versão.
 *   **Segurança e RBAC**: Autenticação restrita JWT. Diferenciação lógica estrita entre Administradores (Gestor Total) e Analistas (Executores operacionais). *Admins só podem ser criados por admins.*
 *   **Auditoria Transparente**: Painel silencioso interativo para administradores rastrearem quem criou, apagou ou editou cada campo do software em tempo real (Comparação de Diff).
-*   **Atualização On-Air Segura**: Sistema nativo que verifica e sinaliza pacotes de updates e possibilita que os administradores forcem pull/reinicialização via *Watchtower* com 1 clique (Sendo plenamente configurável via painel).
 *   **Infraestrutura Otimizada**: Reversa por Nginx estritamente tipado e MongoDB persistindo relatórios locais e artefatos de mídia.
 
 ---
