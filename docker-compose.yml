@@ -6,8 +6,7 @@ services:
 
     ports:
       # dev-only-mongo-port
-      # dev-only-mongo-port
-      - "27017:27017"
+      - "27017:27017" # dev-only-mongo-port
 
     volumes:
       - mongo-data:/data/db
@@ -17,8 +16,6 @@ services:
     build: ./testflow-app
     container_name: backend_testflow
     restart: always
-    expose:
-      - "3000"
     environment:
       - FRONTEND_URL=${FRONTEND_URL:-https://localhost/testflow}
     volumes:
@@ -30,8 +27,6 @@ services:
     build: ./testflow-frontend
     container_name: frontend_testflow
     restart: always
-    expose:
-      - "80"
     depends_on:
       - backend-service
 
