@@ -25,24 +25,38 @@ A partir desse momento, as imagens mais recentes do Github Container Registry (`
 
 ---
 
+## 🔄 Como Atualizar o Sistema
+
+Quando uma nova versão estiver disponível, execute os comandos abaixo dentro da pasta do projeto:
+```bash
+docker compose down
+docker rmi ghcr.io/joaovictor-m/testflow-backend:latest ghcr.io/joaovictor-m/testflow-frontend:latest ghcr.io/joaovictor-m/testflow-nginx:latest 2>/dev/null
+docker compose up -d
+```
+
+Isso garante que as imagens antigas sejam removidas e as novas sejam baixadas do registro. Seus dados (banco e evidências) serão preservados.
+
+---
+
 ## 🗑️ Como Desinstalar / Zerar o Sistema
 
-Caso precise limpar completamente o banco de dados do TestFlow (voltar ao estado zero, formato de fábrica) ou excluí-lo por completo de sua máquina/servidor, o procedimento é extremamente simples por conta de sua natureza *containerizada*.
+Caso precise limpar completamente o banco de dados do TestFlow (voltar ao estado zero, formato de fábrica) ou excluí-lo por completo de sua máquina/servidor, o procedimento é extremamente simples por conta de sua natureza *containerizada*. Os comandos abaixo **removem apenas os recursos do TestFlow**, sem afetar outros containers ou projetos no mesmo servidor.
 
 **Para apenas derrubar a aplicação (mantendo os dados salvos):**
 ```bash
 docker compose down
 ```
 
-**Para desinstalar e EXCLUIR TODOS OS DADOS E A PASTA (Atenção: Ação Irreversível):**
-Isso inclui todos os uploads de evidências e os dados salvos internamente. No mesmo diretório execute:
+**Para desinstalar completamente (Atenção: Ação Irreversível):**
+Remove containers, volumes (banco de dados), imagens baixadas e a pasta do projeto.
+
 *No Linux/Mac:*
 ```bash
-docker compose down -v && cd .. && rm -rf testflow
+docker compose down -v --rmi all && cd .. && rm -rf testflow
 ```
 *No Windows (PowerShell):*
 ```powershell
-docker compose down -v ; cd .. ; Remove-Item -Recurse -Force testflow
+docker compose down -v --rmi all ; cd .. ; Remove-Item -Recurse -Force testflow
 ```
 
 ---
