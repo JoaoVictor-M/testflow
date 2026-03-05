@@ -227,15 +227,12 @@ jobs:
           sed -i '/mongodb-service:/,/volumes:/ { /ports:/d; /# dev-only-mongo-port/d }' prod/docker-compose.yml
           
           # Remove completamente as identidades dos containers em produção lendo objeto js-yaml
+          # E gera um token aleatório forte, cravando-o estaticamente no compose público para facilitar o deploy single-file
+          NEW_TOKEN=$(uuidgen)
           npx -y js-yaml prod/docker-compose.yml > compose.json
-          node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; fs.writeFileSync('compose.json', JSON.stringify(c));"
+          node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; c.services['watchtower-service'].environment = c.services['watchtower-service'].environment.map(env => env.startsWith('WATCHTOWER_HTTP_API_TOKEN=') ? 'WATCHTOWER_HTTP_API_TOKEN=' + process.env.NEW_TOKEN : env); fs.writeFileSync('compose.json', JSON.stringify(c));"
           npx -y js-yaml compose.json > prod/docker-compose.yml
           rm compose.json
-
-          # Ao invés de forçar o usuário a criar um .env manualmente, geramos um token aleatório forte
-          # exclusivo para este release e gravamos hardcoded no compose público para facilitar o deploy single-file
-          NEW_TOKEN=$(uuidgen)
-          sed -i "s|WATCHTOWER_HTTP_API_TOKEN=\${WATCHTOWER_TOKEN:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook}|WATCHTOWER_HTTP_API_TOKEN=${NEW_TOKEN}|g" prod/docker-compose.yml
 
       - name: Push release files to Github Prod
         run: |
