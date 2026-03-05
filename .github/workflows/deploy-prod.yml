@@ -223,9 +223,9 @@ jobs:
           # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
           sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
           
-          # Remove completamente a seção ports do mongodb em produção lendo todo o objeto e limpando via NodeJS/JS-Yaml
+          # Remove completamente as identidades dos containers em produção lendo todo o objeto e limpando via NodeJS/JS-Yaml
           npx -y js-yaml -i prod/docker-compose.yml > compose.json
-          node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); delete c.services['mongodb-service'].ports; for(let s in c.services) delete c.services[s].container_name; fs.writeFileSync('compose.json', JSON.stringify(c));"
+          node -e "const fs = require('fs'); let c = JSON.parse(fs.readFileSync('compose.json')); for(let s in c.services) delete c.services[s].container_name; fs.writeFileSync('compose.json', JSON.stringify(c));"
           npx -y js-yaml compose.json > prod/docker-compose.yml
           rm compose.json
 
