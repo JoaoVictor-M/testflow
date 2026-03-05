@@ -223,10 +223,13 @@ jobs:
           # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
           sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
           
-          # Remove completamente a seção ports do mongodb em produção
-          sed -i -e '/ports: # dev-only-mongo-port/d' -e '/- "27017:27017" # dev-only-mongo-port/d' prod/docker-compose.yml
-          # Remove nomes fixos de containers para escalabilidade multi-instância no cliente
-          sed -i '/container_name:/d' prod/docker-compose.yml
+          # Remove completamente a seção ports do mongodb em produção usando parser real de YAML do Github Actions runner
+          yq e 'del(.services.mongodb-service.ports)' -i prod/docker-compose.yml
+          yq e 'del(.services.mongodb-service.container_name)' -i prod/docker-compose.yml
+          yq e 'del(.services.backend-service.container_name)' -i prod/docker-compose.yml
+          yq e 'del(.services.frontend-service.container_name)' -i prod/docker-compose.yml
+          yq e 'del(.services.nginx-service.container_name)' -i prod/docker-compose.yml
+          yq e 'del(.services.watchtower-service.container_name)' -i prod/docker-compose.yml
 
           # Remove o fallback da senha do Watchtower para evitar o uso de credenciais engessadas publicamente
           sed -i 's|:-uma-senha-padrao-super-segura-e-exclusiva-para-webhook||g' prod/docker-compose.yml
