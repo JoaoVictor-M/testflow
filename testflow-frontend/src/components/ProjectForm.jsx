@@ -67,47 +67,6 @@ const TagSelector = ({ value, onChange, isModalOpen }) => {
   );
 };
 
-// --- COMPONENTE SELETOR DE RESPONSÁVEIS (REUTILIZADO) ---
-const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
-  const [options, setOptions] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useEffect(() => {
-    const fetchResponsaveis = async () => {
-      try {
-        setIsLoading(true);
-        const response = await api.get('/responsaveis');
-        setOptions(response.data.map(r => ({
-          value: r.name,
-          label: r.name
-        })));
-      } catch (err) {
-        console.error("Erro ao buscar responsáveis", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    if (isModalOpen) {
-      fetchResponsaveis();
-    }
-  }, [isModalOpen]);
-
-  return (
-    <CreatableSelect
-      isMulti
-      isLoading={isLoading}
-      options={options}
-      value={value}
-      onChange={onChange}
-      placeholder="Selecione ou crie responsáveis..."
-      formatCreateLabel={(inputValue) => `Criar novo responsável: "${inputValue}"`}
-      classNamePrefix="react-select"
-      styles={customSelectStyles}
-      menuPortalTarget={document.body}
-    />
-  );
-};
-
 // --- COMPONENTE SELETOR DE VERSÕES ---
 const VersionSelector = ({ value, onChange, isModalOpen }) => {
   const [options, setOptions] = useState([]);
