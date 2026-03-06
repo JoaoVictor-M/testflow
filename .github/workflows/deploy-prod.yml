@@ -205,6 +205,7 @@ jobs:
           # 2. Recria os diretórios e copia cirurgicamente APENAS o necessário
           cp source/install/mongo-init.js prod/mongo-init.js || echo "O arquivo mongo-init.js não foi encontrado"
           cp source/README.md prod/README.md || echo "O README.md não foi encontrado"
+          cp source/LICENSE prod/LICENSE || echo "A LICENSE não foi encontrada"
           
           # 2.1 Remove a seção de 'Desenvolvimento' inteira do README.md de produção usando sed delimitado
           sed -i '/## 🛠️ Desenvolvimento (Para Code Maintainers)/,/^---$/d' prod/README.md
