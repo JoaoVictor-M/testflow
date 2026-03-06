@@ -101,8 +101,8 @@ const AboutModal = ({ isOpen, onClose }) => {
                                 O TestFlow é mantido organicamente sob a licença <strong>GNU AGPLv3 + Commons Clause</strong>.
                                 Você é livre para fazer fork, modificar o código-fonte e utilizar a plataforma gratuitamente para equipes de QA corporativas.
                                 <br /><br />
-                                <strong className="text-red-500 dark:text-red-400">Atenção:</strong> É estritamente proibida a comercialização direta do software ou o seu fornecimento a terceiros
-                                na forma de Serviço (SaaS - Software as a Service) pago.
+                                <strong className="text-red-500 dark:text-red-400">Atenção:</strong> É estritamente proibida a comercialização do software sob qualquer pretexto, bem como o seu fornecimento a terceiros
+                                na forma de Serviço (SaaS), hospedagem paga ou embutido em serviços de consultoria comercial.
                             </p>
                         </div>
 
