@@ -1,4 +1,4 @@
-name: Master Deploy Pipeline
+name: Main Deploy Pipeline
 
 on:
   push:
