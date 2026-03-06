@@ -1,4 +1,4 @@
-# TestFlow - Gestão de Qualidade e Testes
+# TestFlow - Quality Management
 
 O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de testes de software, controle de evidências e métricas de qualidade.
 

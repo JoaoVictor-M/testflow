@@ -164,7 +164,7 @@ const sendInviteEmail = async (to, username, name, setupLink) => {
                         <!-- Footer -->
                         <tr>
                             <td style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                <p style="margin: 0; font-size: 12px; color: #94a3b8;">TestFlow - Gestão de Cenários de Teste</p>
+                                <p style="margin: 0; font-size: 12px; color: #94a3b8;">TestFlow - Quality Management</p>
                             </td>
                         </tr>
                     </table>
@@ -237,7 +237,7 @@ const sendResetPasswordEmail = async (to, name, resetLink) => {
                         <!-- Footer -->
                         <tr>
                             <td style="background-color: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
-                                <p style="margin: 0; font-size: 12px; color: #94a3b8;">TestFlow - Gestão de Cenários de Teste</p>
+                                <p style="margin: 0; font-size: 12px; color: #94a3b8;">TestFlow - Quality Management</p>
                             </td>
                         </tr>
                     </table>

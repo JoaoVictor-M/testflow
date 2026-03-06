@@ -48,7 +48,7 @@ function WelcomePage() {
             TestFlow
           </h1>
           <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 font-medium">
-            Gerenciamento inteligente de qualidade
+            Quality Management
           </p>
 
           {/* Botões de Ação */}

@@ -39,7 +39,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                 🎉 <strong>Temos o orgulho de apresentar a primeira versão oficial do TestFlow!</strong>
                             </p>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Uma plataforma completa, robusta e containerizada para gestão de qualidade de software.
+                                Uma plataforma completa, robusta e containerizada de Quality Management.
                             </p>
                         </div>
 
