@@ -2,6 +2,9 @@
 
 O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de testes de software, controle de evidências e métricas de qualidade.
 
+[![License: AGPL v3 + Commons Clause](https://img.shields.io/badge/License-AGPL_v3_%2B_Commons_Clause-blue.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
 ---
 
 ## 🚀 Funcionalidades da Versão 1.0.0
@@ -73,3 +76,14 @@ Se você tem acesso a este código-fonte (origin/development) e deseja contribui
     ```bash
     docker compose up -d --build
     ```
+
+---
+
+## 📜 Licença e Termos de Uso (Open Source)
+
+O TestFlow é distribuído organicamente sob a licença **GNU AGPLv3** acrescida da **Commons Clause**. 
+
+*   **O que você pode fazer:** Baixar, instalar em sua infraestrutura, modificar, fazer *fork* e utilizar gratuitamente para uso corporativo, equipe de QA pessoal ou fins educacionais.
+*   **O que você NÃO pode fazer:** Vender o TestFlow (original ou suas modificações) e oferecê-lo como software provido como serviço pago (SaaS / Cloud Hosting comercial) a terceiros.
+
+Por favor, se deseja ajudar o projeto a crescer, leia as regras em [CONTRIBUTING.md](CONTRIBUTING.md) e nosso [Código de Conduta](CODE_OF_CONDUCT.md).
