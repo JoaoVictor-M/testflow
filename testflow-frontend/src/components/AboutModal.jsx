@@ -95,6 +95,17 @@ const AboutModal = ({ isOpen, onClose }) => {
                             </ul>
                         </div>
 
+                        <div className="mt-8 pt-6 border-t border-gray-100 dark:border-neutral-700">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 text-center md:text-left">Licença Open Source</h3>
+                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm text-justify">
+                                O TestFlow é mantido organicamente sob a licença <strong>GNU AGPLv3 + Commons Clause</strong>.
+                                Você é livre para fazer fork, modificar o código-fonte e utilizar a plataforma gratuitamente para equipes de QA corporativas.
+                                <br /><br />
+                                <strong className="text-red-500 dark:text-red-400">Atenção:</strong> É estritamente proibida a comercialização direta do software ou o seu fornecimento a terceiros
+                                na forma de Serviço (SaaS - Software as a Service) pago.
+                            </p>
+                        </div>
+
                     </div>
                 </div>
 

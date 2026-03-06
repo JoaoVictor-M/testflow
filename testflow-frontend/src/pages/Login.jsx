@@ -102,7 +102,7 @@ const Login = () => {
                 </form>
 
                 <div className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
-                    <p>© 2026 TestFlow. All rights reserved.</p>
+                    <p>TestFlow Quality Management</p>
                 </div>
             </div>
         </div>
