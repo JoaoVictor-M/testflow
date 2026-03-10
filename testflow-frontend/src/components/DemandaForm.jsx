@@ -36,7 +36,7 @@ const ResponsavelSelector = ({ value, onChange, isModalOpen }) => {
       try {
         setIsLoading(true);
         const response = await api.get('/users/all');
-        const validUsers = response.data.filter(u => u.role === 'admin' || u.role === 'analyst');
+        const validUsers = response.data.filter(u => (u.role === 'admin' || u.role === 'analyst') && u.username !== 'admin');
         const fetchedOptions = validUsers.map(u => ({
           value: u.name || u.username,
           label: u.name || u.username
