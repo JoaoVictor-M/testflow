@@ -10,6 +10,10 @@ RUN npm run build
 FROM nginx:stable-alpine
 # Remove o config padrão
 RUN rm /etc/nginx/conf.d/default.conf
+
+# Atualiza pacote nativo vulnerável (CVE-2026-22184 / CVE-2026-27171)
+RUN apk add --upgrade --no-cache zlib
+
 # Copia os arquivos do React para subpasta testflow
 RUN mkdir -p /usr/share/nginx/html/testflow
 COPY --from=build /app/dist /usr/share/nginx/html/testflow
