@@ -28,22 +28,29 @@ const createTransporter = async () => {
         const user = config?.value?.user || process.env.SMTP_USER;
         const pass = config?.value?.pass || process.env.SMTP_PASS;
 
-        if (host && user && pass) {
-            transporter = nodemailer.createTransport({
+        if (host) {
+            const transportOptions = {
                 host,
                 port,
                 secure,
-                auth: { user, pass },
                 logger: true, // Log to console
                 debug: true   // Include SMTP traffic in logs
-            }, {
-                from: config?.value?.from || user // Default 'from' address
+            };
+
+            // Adiciona autenticação apenas se fornecida
+            if (user) {
+                transportOptions.auth = { user, pass };
+            }
+
+            transporter = nodemailer.createTransport(transportOptions, {
+                from: config?.value?.from || user || 'noreply@testflow.local' // Default 'from' address
             });
+
             logEmail('INFO', `Transporter initialized. Source: ${config ? 'Database' : 'Environment'}`);
             console.log("Email Service: Transporter Initialized"); // eslint-disable-line no-console
         } else {
-            logEmail('WARN', 'Missing configuration. Emails will not be sent.');
-            console.warn("Email Service: Missing configuration."); // eslint-disable-line no-console
+            logEmail('WARN', 'Missing host configuration. Emails will not be sent.');
+            console.warn("Email Service: Missing host configuration."); // eslint-disable-line no-console
             transporter = null;
         }
     } catch (err) {
