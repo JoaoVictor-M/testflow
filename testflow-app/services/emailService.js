@@ -33,6 +33,10 @@ const createTransporter = async () => {
                 host,
                 port,
                 secure,
+                tls: {
+                    // Previne que o NodeMailer recuse os certificados SSL do servidor interno (MUITO COMUM EMPRESARIAL)
+                    rejectUnauthorized: false
+                },
                 logger: true, // Log to console
                 debug: true   // Include SMTP traffic in logs
             };
