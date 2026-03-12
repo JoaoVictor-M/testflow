@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { ArrowLeft, Mail } from 'lucide-react';
+import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ const ForgotPassword = () => {
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState('');
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
@@ -43,7 +45,20 @@ const ForgotPassword = () => {
                     >
                         Voltar ao Login
                     </button>
+
+                    <div className="mt-6 pt-6 border-t border-gray-100 dark:border-neutral-800 text-center text-xs text-gray-400 dark:text-gray-500">
+                        <p>
+                            Developed by{' '}
+                            <button
+                                onClick={() => setShowCreditsModal(true)}
+                                className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
+                            >
+                                João Victor Melo
+                            </button>
+                        </p>
+                    </div>
                 </div>
+                <DeveloperCreditsModal isOpen={showCreditsModal} onClose={() => setShowCreditsModal(false)} />
             </div>
         );
     }
@@ -99,7 +114,20 @@ const ForgotPassword = () => {
                         {loading ? 'Enviando...' : 'Enviar Link de Recuperação'}
                     </button>
                 </form>
+
+                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-neutral-800 text-center text-xs text-gray-400 dark:text-gray-500">
+                    <p>
+                        Developed by{' '}
+                        <button
+                            onClick={() => setShowCreditsModal(true)}
+                            className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
+                        >
+                            João Victor Melo
+                        </button>
+                    </p>
+                </div>
             </div>
+            <DeveloperCreditsModal isOpen={showCreditsModal} onClose={() => setShowCreditsModal(false)} />
         </div>
     );
 };

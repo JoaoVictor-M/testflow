@@ -84,3 +84,4 @@ O TestFlow é distribuído organicamente sob a licença **GNU AGPLv3** acrescida
 
 *   **O que você pode fazer:** Baixar, instalar em sua infraestrutura, modificar, fazer *fork* e utilizar gratuitamente para uso corporativo, equipe de QA pessoal ou fins educacionais.
 *   **O que você NÃO pode fazer:** Vender o TestFlow (original ou suas modificações) e oferecê-lo como software provido como serviço pago (SaaS / Cloud Hosting comercial) a terceiros.
+*   **Obrigatório:** Qualquer uso, modificação ou redistribuição deve manter os créditos ao desenvolvedor original **João Victor Melo**. A atribuição deve ser preservada em todas as cópias, versões modificadas e trabalhos derivados.

@@ -1,12 +1,13 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
 import { Toaster } from 'react-hot-toast'
-import { useContext, Fragment, useEffect, useState } from 'react'
+import { useContext, Fragment, useState } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import { ThemeProvider, ThemeContext } from './context/ThemeContext'
 import ThemeToggle from './components/ThemeToggle'
 import PrivateRoute from './components/PrivateRoute'
+import DeveloperCreditsModal from './components/DeveloperCreditsModal'
 
 import WelcomePage from './pages/WelcomePage'
 import ProjectsListPage from './pages/ProjectsListPage'
@@ -225,7 +226,8 @@ function Navbar() {
 function AppContent() {
   const location = useLocation();
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
-  const { user } = useContext(AuthContext); // Get user context to check if logged in (optional, but good practice)
+  const { user } = useContext(AuthContext);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
 
 
 
@@ -234,33 +236,57 @@ function AppContent() {
       {!isPublicPage && <Navbar />}
 
       <main className={`w-[95%] mx-auto flex-grow ${isPublicPage ? '' : 'py-8 pt-24'}`}>
-        <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white dark:bg-neutral-900 shadow-lg rounded-lg border border-gray-200 dark:border-neutral-800 p-6 md:p-8 min-h-[calc(100vh-8rem)]'}`}>
+        <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white dark:bg-neutral-900 shadow-lg rounded-lg border border-gray-200 dark:border-neutral-800 p-6 md:p-8 min-h-[calc(100vh-8rem)] grid grid-rows-[1fr_auto]'}`}>
 
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/forgot-password" element={<ForgotPassword />} />
-            <Route path="/reset-password/:token" element={<ResetPassword />} />
+          <div className="w-full overflow-hidden">
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-            <Route element={<PrivateRoute />}>
-              <Route path="/" element={<WelcomePage />} />
-              <Route path="/projects" element={<ProjectsListPage />} />
-              <Route path="/project/:projectId/demandas" element={<DemandasListPage />} />
-              <Route path="/demanda/:demandaId/scenarios" element={<ScenariosListPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-            </Route>
+              <Route element={<PrivateRoute />}>
+                <Route path="/" element={<WelcomePage />} />
+                <Route path="/projects" element={<ProjectsListPage />} />
+                <Route path="/project/:projectId/demandas" element={<DemandasListPage />} />
+                <Route path="/demanda/:demandaId/scenarios" element={<ScenariosListPage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+              </Route>
 
-            <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>
-              <Route path="/users" element={<UsersManager />} />
-            </Route>
+              <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>
+                <Route path="/users" element={<UsersManager />} />
+              </Route>
 
-            <Route element={<PrivateRoute requiredRole="admin" />}>
-              <Route path="/email-settings" element={<EmailSettings />} />
-              <Route path="/audit-logs" element={<AuditLogsPage />} />
-            </Route>
+              <Route element={<PrivateRoute requiredRole="admin" />}>
+                <Route path="/email-settings" element={<EmailSettings />} />
+                <Route path="/audit-logs" element={<AuditLogsPage />} />
+              </Route>
 
-          </Routes>
+            </Routes>
+          </div>
+
+          {/* Rodapé Global para Páginas Logadas */}
+          {!isPublicPage && (
+            <div className="mt-auto pt-8">
+              <div className="pt-6 border-t border-gray-100 dark:border-neutral-800 text-center text-xs text-gray-400 dark:text-gray-500">
+                <p>
+                  Developed by{' '}
+                  <button
+                    onClick={() => setShowCreditsModal(true)}
+                    className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
+                  >
+                    João Victor Melo
+                  </button>
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      <DeveloperCreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+      />
 
 
 

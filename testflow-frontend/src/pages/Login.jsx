@@ -2,6 +2,7 @@ import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ReleaseNotes from '../components/ReleaseNotes';
+import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
 import { APP_VERSION } from '../version';
 
 const Login = () => {
@@ -9,10 +10,9 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showReleaseNotes, setShowReleaseNotes] = useState(false);
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
-
-
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -29,17 +29,15 @@ const Login = () => {
                 onClose={() => setShowReleaseNotes(false)}
                 version={APP_VERSION}
             />
+            <DeveloperCreditsModal
+                isOpen={showCreditsModal}
+                onClose={() => setShowCreditsModal(false)}
+            />
 
             <div className="w-full max-w-sm bg-white dark:bg-neutral-900 rounded-xl shadow-lg border border-gray-200 dark:border-neutral-800 p-8 transform transition-all">
                 <div className="mb-6 text-center">
                     <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-500">TestFlow</h1>
-                    <button
-                        onClick={() => setShowReleaseNotes(true)}
-                        className="text-xs text-gray-400 dark:text-gray-500 mt-1 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
-                    >
-                        {APP_VERSION}
-                    </button>
-                    {/* <p className="text-sm text-gray-500 mt-2">Faça login para continuar</p> Removido conforme solicitado */}
+                    <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Quality Management</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
@@ -102,7 +100,21 @@ const Login = () => {
                 </form>
 
                 <div className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
-                    <p>TestFlow Quality Management</p>
+                    <button
+                        onClick={() => setShowReleaseNotes(true)}
+                        className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                    >
+                        {APP_VERSION}
+                    </button>
+                    <p className="mt-1">
+                        Developed by{' '}
+                        <button
+                            onClick={() => setShowCreditsModal(true)}
+                            className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
+                        >
+                            João Victor Melo
+                        </button>
+                    </p>
                 </div>
             </div>
         </div>

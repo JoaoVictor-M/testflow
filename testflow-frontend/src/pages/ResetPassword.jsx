@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 import toast from 'react-hot-toast';
+import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
 
 function ResetPassword() {
     const { token: paramToken } = useParams();
@@ -15,6 +16,7 @@ function ResetPassword() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showTooltip, setShowTooltip] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showCreditsModal, setShowCreditsModal] = useState(false);
 
     const [userData, setUserData] = useState(null);
 
@@ -201,11 +203,24 @@ function ResetPassword() {
                         ) : 'Definir Senha e Entrar'}
                     </button>
                 </form>
+
+                <div className="mt-6 pt-6 border-t border-gray-100 dark:border-neutral-800 text-center text-xs text-gray-400 dark:text-gray-500">
+                    <p>
+                        Developed by{' '}
+                        <button
+                            onClick={() => setShowCreditsModal(true)}
+                            className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
+                        >
+                            João Victor Melo
+                        </button>
+                    </p>
+                </div>
             </div>
 
-            <p className="mt-8 text-center text-sm text-gray-500 dark:text-gray-500">
-                TestFlow Quality Management
-            </p>
+            <DeveloperCreditsModal
+                isOpen={showCreditsModal}
+                onClose={() => setShowCreditsModal(false)}
+            />
         </div >
     );
 }
