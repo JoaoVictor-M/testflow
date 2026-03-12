@@ -1,6 +1,6 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
-import { Toaster, toast } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast'
 import { useContext, Fragment, useEffect, useState } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
@@ -13,7 +13,6 @@ import ProjectsListPage from './pages/ProjectsListPage'
 import DemandasListPage from './pages/DemandasListPage'
 import ScenariosListPage from './pages/ScenariosListPage'
 import DashboardPage from './pages/DashboardPage'
-import ManageTagsPage from './pages/ManageTagsPage'
 import Login from './pages/Login'
 import UsersManager from './pages/UsersManager'
 import EmailSettings from './pages/EmailSettings'
@@ -248,7 +247,6 @@ function AppContent() {
               <Route path="/project/:projectId/demandas" element={<DemandasListPage />} />
               <Route path="/demanda/:demandaId/scenarios" element={<ScenariosListPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/tags" element={<ManageTagsPage />} />
             </Route>
 
             <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>

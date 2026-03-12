@@ -721,22 +721,6 @@ app.get('/api/tags', async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 });
-app.delete('/api/tags/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
-    try {
-        const tagId = req.params.id;
-        const deletedTag = await Tag.findByIdAndDelete(tagId).lean();
-        await Project.updateMany(
-            { tags: tagId },
-            { $pull: { tags: tagId } }
-        );
-        if (deletedTag && req.user && req.user.userId) {
-            await logAudit('DELETE', 'Tag', tagId, req.user.userId, { old: cleanAuditData(deletedTag), summary: `Tag "${deletedTag.name}" excluída.` });
-        }
-        res.status(200).json({ message: 'Tag deletada e removida dos projetos.' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-});
 
 
 app.get('/api/responsaveis', authMiddleware, async (req, res) => {
