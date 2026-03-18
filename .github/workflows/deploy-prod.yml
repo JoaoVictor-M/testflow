@@ -75,7 +75,7 @@ jobs:
         run: docker build -t testflow-backend:latest ./testflow-app
 
       - name: Container Security Scan (Trivy)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.35.0
         with:
           image-ref: 'testflow-backend:latest'
           format: 'table'
