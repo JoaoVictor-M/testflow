@@ -107,7 +107,7 @@ jobs:
 
       - name: Upload ZAP Report
         if: always() # Run even if vulnerabilities are found
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: ZAP-Security-Report
           path: zap-work/report_html.html
