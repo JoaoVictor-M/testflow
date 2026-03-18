@@ -6,7 +6,6 @@ on:
       - 'v*.*.*'
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   # Registry and Repo formatting to lowercase as Docker requires
   REGISTRY: ghcr.io
   IMAGE_OWNER: ""
@@ -19,10 +18,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -40,10 +39,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: '20'
 
@@ -64,7 +63,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Create .env for testing
         run: |
@@ -126,7 +125,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup downcases
         run: |
@@ -181,7 +180,7 @@ jobs:
     needs: [build-and-push-images]
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
 
@@ -190,7 +189,7 @@ jobs:
           echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
 
       - name: Checkout Prod Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: JoaoVictor-M/testflow-prod
           token: ${{ secrets.PROD_REPO_TOKEN }}
