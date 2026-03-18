@@ -72,14 +72,8 @@ jobs:
         run: docker build -t testflow-backend:latest ./testflow-app
 
       - name: Container Security Scan (Trivy)
-        uses: aquasecurity/trivy-action@0.35.0
-        with:
-          image-ref: 'testflow-backend:latest'
-          format: 'table'
-          exit-code: '1' # Fail pipeline if vulnerabilities found
-          ignore-unfixed: false
-          vuln-type: 'os,library'
-          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:latest image --format table --exit-code 1 --ignore-unfixed=false --vuln-type os,library --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL testflow-backend:latest
 
       - name: Build and Start Application
         run: |
