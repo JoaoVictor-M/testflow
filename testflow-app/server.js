@@ -39,16 +39,16 @@ const ALLOWLIST_PATH = path.join(__dirname, 'config', 'allowlist.json');
 
 const validateLinkDemanda = (link) => {
     if (!link) return true;
-    if (!fs.existsSync(ALLOWLIST_PATH)) return true; // eslint-disable-line security/detect-non-literal-fs-filename
+    if (!fs.existsSync(ALLOWLIST_PATH)) return true;  
     try {
-        const allowlist = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8')); // eslint-disable-line security/detect-non-literal-fs-filename
+        const allowlist = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8'));  
         for (const key in allowlist) {
             if (link.startsWith(allowlist[key])) {
                 return true;
             }
         }
         return false;
-    } catch (e) {
+    } catch {
         return false;
     }
 };
@@ -778,13 +778,13 @@ app.get('/api/system/version', async (req, res) => {
 
 app.get('/api/config/allowlist', authMiddleware, (req, res) => {
     try {
-        if (fs.existsSync(ALLOWLIST_PATH)) { // eslint-disable-line security/detect-non-literal-fs-filename
-            const data = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8')); // eslint-disable-line security/detect-non-literal-fs-filename
+        if (fs.existsSync(ALLOWLIST_PATH)) {  
+            const data = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8'));  
             res.json(data);
         } else {
             res.json({});
         }
-    } catch (error) {
+    } catch {
         res.status(500).json({ message: 'Erro ao carregar allowlist' });
     }
 });
@@ -796,7 +796,7 @@ app.post('/api/config/allowlist', authMiddleware, roleMiddleware(['admin']), (re
             return res.status(400).json({ message: 'Formato inválido. Esperado um objeto JSON.' });
         }
         // Write the file
-        fs.writeFileSync(ALLOWLIST_PATH, JSON.stringify(newData, null, 2), 'utf8'); // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.writeFileSync(ALLOWLIST_PATH, JSON.stringify(newData, null, 2), 'utf8');  
         res.json({ message: 'Allowlist atualizada com sucesso', data: newData });
     } catch (error) {
         console.error('Erro ao salvar allowlist:', error); // eslint-disable-line no-console
