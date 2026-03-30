@@ -23,12 +23,10 @@ const EvidenceModal = ({ isOpen, onClose, demanda, onUpdate }) => {
         if (files.length === 0) return;
 
         const validFiles = [];
-        let hasLargeFile = false;
 
         files.forEach(file => {
             if (file.size > 50 * 1024 * 1024) {
                 toast.error(`O arquivo "${file.name}" excede o limite de 50MB.`);
-                hasLargeFile = true;
             } else {
                 validFiles.push(file);
             }

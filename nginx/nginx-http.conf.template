@@ -8,6 +8,9 @@ http {
     include mime.types;
     default_type application/octet-stream;
     
+    # Oculta a versão do NGINX nos cabeçalhos e páginas de erro
+    server_tokens off;
+    
     sendfile on;
     keepalive_timeout 65;
 

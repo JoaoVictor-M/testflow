@@ -196,7 +196,7 @@ function ProjectForm({ projectToEdit, onSaveSuccess, onClose, isModalOpen, isClo
       setVersions([]);
       setServers([]);
     }
-  }, [projectToEdit, isEditing]);
+  }, [projectToEdit, isEditing, isClone]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

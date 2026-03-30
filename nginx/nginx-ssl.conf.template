@@ -8,6 +8,9 @@ http {
     include mime.types;
     default_type application/octet-stream;
     
+    # Oculta a versão do NGINX nos cabeçalhos e páginas de erro
+    server_tokens off;
+    
     sendfile on;
     keepalive_timeout 65;
 
@@ -41,10 +44,12 @@ http {
         # Otimização TLS e Protocolos
         ssl_protocols TLSv1.2 TLSv1.3;
         ssl_prefer_server_ciphers on;
-        ssl_ciphers HIGH:!aNULL:!MD5;
+        ssl_ciphers "HIGH:!aNULL:!MD5:!AES256-GCM-SHA384:!AES256-CCM:!ARIA256-GCM-SHA384:!AES128-GCM-SHA256:!AES128-CCM:!ARIA128-GCM-SHA256:!AES256-SHA256:!CAMELLIA256-SHA256:!AES128-SHA256:!CAMELLIA128-SHA256:!AES256-SHA:!CAMELLIA256-SHA:!AES128-SHA:!CAMELLIA128-SHA";
         
-        # Cabeçalhos de Segurança (HSTS)
+        # Cabeçalhos de Segurança (HSTS, CSP e Anti-Clickjacking)
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Frame-Options "SAMEORIGIN" always;
+        add_header Content-Security-Policy "default-src 'none'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' *; font-src 'self' data:; object-src 'none'; media-src 'self'; frame-src 'none'; frame-ancestors 'self';" always;
 
         client_max_body_size 50M;
 

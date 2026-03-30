@@ -35,6 +35,23 @@ const cleanAuditData = (doc) => {
 
 const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
+const ALLOWLIST_PATH = path.join(__dirname, 'config', 'allowlist.json');
+
+const validateLinkDemanda = (link) => {
+    if (!link) return true;
+    if (!fs.existsSync(ALLOWLIST_PATH)) return true; // eslint-disable-line security/detect-non-literal-fs-filename
+    try {
+        const allowlist = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8')); // eslint-disable-line security/detect-non-literal-fs-filename
+        for (const key in allowlist) {
+            if (link.startsWith(allowlist[key])) {
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        return false;
+    }
+};
 
 const app = express();
 const PORT = 3000;
@@ -759,8 +776,39 @@ app.get('/api/system/version', async (req, res) => {
     }
 });
 
+app.get('/api/config/allowlist', authMiddleware, (req, res) => {
+    try {
+        if (fs.existsSync(ALLOWLIST_PATH)) { // eslint-disable-line security/detect-non-literal-fs-filename
+            const data = JSON.parse(fs.readFileSync(ALLOWLIST_PATH, 'utf8')); // eslint-disable-line security/detect-non-literal-fs-filename
+            res.json(data);
+        } else {
+            res.json({});
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao carregar allowlist' });
+    }
+});
+
+app.post('/api/config/allowlist', authMiddleware, roleMiddleware(['admin']), (req, res) => {
+    try {
+        const newData = req.body;
+        if (!newData || typeof newData !== 'object') {
+            return res.status(400).json({ message: 'Formato inválido. Esperado um objeto JSON.' });
+        }
+        // Write the file
+        fs.writeFileSync(ALLOWLIST_PATH, JSON.stringify(newData, null, 2), 'utf8'); // eslint-disable-line security/detect-non-literal-fs-filename
+        res.json({ message: 'Allowlist atualizada com sucesso', data: newData });
+    } catch (error) {
+        console.error('Erro ao salvar allowlist:', error); // eslint-disable-line no-console
+        res.status(500).json({ message: 'Erro ao salvar allowlist' });
+    }
+});
+
 app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
+        if (!validateLinkDemanda(req.body.linkDemanda)) {
+            return res.status(400).json({ message: 'URL de demanda não permitida pela allowlist configurada.' });
+        }
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
         const newDemanda = new Demanda({
             demandaId: req.body.demandaId,
@@ -819,6 +867,9 @@ app.get('/api/demandas', authMiddleware, async (req, res) => {
 });
 app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
+        if (!validateLinkDemanda(req.body.linkDemanda)) {
+            return res.status(400).json({ message: 'URL de demanda não permitida pela allowlist configurada.' });
+        }
         const responsavelIds = await findOrCreateResponsaveis(req.body.responsaveis);
         const demandaData = {
             demandaId: req.body.demandaId,
@@ -1254,42 +1305,78 @@ const storage = multer.diskStorage({
     }
 });
 
+const allowedMimeTypes = [
+    'text/csv',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'image/png',
+    'image/jpeg',
+    'image/jpg',
+    'video/x-matroska',
+    'video/mp4'
+];
+const allowedExtensions = ['.csv', '.xlsx', '.png', '.jpg', '.jpeg', '.mkv', '.mp4'];
+
+const uploadFilter = (req, file, cb) => {
+    const parts = file.originalname.split('.');
+    if (parts.length > 2) {
+        return cb(new Error('Apenas arquivos com uma única extensão são permitidos.'));
+    }
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+        return cb(new Error(`Extensão não permitida. Permitidas: ${allowedExtensions.join(', ')}`));
+    }
+
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+        return cb(new Error(`MIME Type não permitido.`));
+    }
+    
+    cb(null, true);
+};
+
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    fileFilter: uploadFilter
 });
+const uploadEvidence = upload.single('file');
 
 // Upload Evidence
-app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'analyst']), upload.single('file'), async (req, res) => {
-    try {
-        const demandaId = req.params.id;
-        if (!isValidMongoId(demandaId)) return res.status(400).json({ message: 'ID Inválido' });
-
-        const file = req.file;
-        if (!file) return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
-
-        const demanda = await Demanda.findById(demandaId);
-        if (!demanda) {
-            if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path); // eslint-disable-line security/detect-non-literal-fs-filename
-            return res.status(404).json({ message: 'Demanda não encontrada.' });
+app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 'analyst']), (req, res) => {
+    uploadEvidence(req, res, async function (err) {
+        if (err) {
+            return res.status(400).json({ message: err.message });
         }
+        try {
+            const demandaId = req.params.id;
+            if (!isValidMongoId(demandaId)) return res.status(400).json({ message: 'ID Inválido' });
 
-        const newEvidence = {
-            filename: file.filename,
-            originalName: file.originalname,
-            mimetype: file.mimetype,
-            size: file.size
-        };
+            const file = req.file;
+            if (!file) return res.status(400).json({ message: 'Nenhum arquivo enviado.' });
 
-        demanda.evidences.push(newEvidence);
-        await demanda.save();
+            const demanda = await Demanda.findById(demandaId);
+            if (!demanda) {
+                if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path); // eslint-disable-line security/detect-non-literal-fs-filename
+                return res.status(404).json({ message: 'Demanda não encontrada.' });
+            }
 
-        const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
-        res.status(201).json(populatedDemanda);
-    } catch (error) {
-        console.error('Erro no upload:', error); // eslint-disable-line no-console
-        res.status(500).json({ message: error.message });
-    }
+            const newEvidence = {
+                filename: file.filename,
+                originalName: file.originalname,
+                mimetype: file.mimetype,
+                size: file.size
+            };
+
+            demanda.evidences.push(newEvidence);
+            await demanda.save();
+
+            const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
+            res.status(201).json(populatedDemanda);
+        } catch (error) {
+            console.error('Erro no upload:', error); // eslint-disable-line no-console
+            res.status(500).json({ message: error.message });
+        }
+    });
 });
 
 

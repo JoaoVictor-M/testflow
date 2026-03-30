@@ -86,42 +86,73 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
   const [nome, setNome] = useState('');
   // --- MUDANÇA: 'tempoEstimado' agora é um número ---
   const [tempoEstimado, setTempoEstimado] = useState(0);
-  const [linkDemanda, setLinkDemanda] = useState('');
   const [status, setStatus] = useState('Pendente');
   const [responsaveis, setResponsaveis] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [allowlist, setAllowlist] = useState({});
+  const [linkPlataforma, setLinkPlataforma] = useState('');
+  const [ticketId, setTicketId] = useState('');
+
   const isEditing = Boolean(demandaToEdit);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      api.get('/config/allowlist')
+        .then(res => setAllowlist(res.data))
+        .catch(err => console.error("Erro ao puxar allowlist", err));
+    }
+  }, [isModalOpen]);
 
   useEffect(() => {
     if (isEditing) {
       if (isClone) {
-        setDemandaId(`COPY-${demandaToEdit.demandaId}`); // Suggest a new ID or clear it? Keeping original might conflict if unique. I'll prepend COPY
+        setDemandaId(`COPY-${demandaToEdit.demandaId}`);
         setNome(`${demandaToEdit.nome} (Cópia)`);
         setTempoEstimado(demandaToEdit.tempoEstimado || 0);
-        setLinkDemanda(demandaToEdit.linkDemanda || '');
         setStatus(demandaToEdit.status);
       } else {
         setDemandaId(demandaToEdit.demandaId);
         setNome(demandaToEdit.nome);
         setTempoEstimado(demandaToEdit.tempoEstimado || 0);
-        setLinkDemanda(demandaToEdit.linkDemanda || '');
         setStatus(demandaToEdit.status);
       }
+      
       const safeResponsaveis = Array.isArray(demandaToEdit.responsaveis) ? demandaToEdit.responsaveis : [];
       setResponsaveis(safeResponsaveis.map(r => ({
         value: r.name,
         label: r.name
       })));
+
+      if (demandaToEdit.linkDemanda && Object.keys(allowlist).length > 0) {
+        let found = false;
+        for (const [key, baseUrl] of Object.entries(allowlist)) {
+          if (demandaToEdit.linkDemanda.startsWith(baseUrl)) {
+            setLinkPlataforma(key);
+            setTicketId(demandaToEdit.linkDemanda.substring(baseUrl.length));
+            found = true;
+            break;
+          }
+        }
+        if (!found) {
+            setLinkPlataforma('');
+            setTicketId('');
+        }
+      } else if (!demandaToEdit.linkDemanda) {
+          setLinkPlataforma('');
+          setTicketId('');
+      }
+
     } else {
       setDemandaId('');
       setNome('');
       setTempoEstimado(0);
-      setLinkDemanda('');
+      setLinkPlataforma('');
+      setTicketId('');
       setStatus('Pendente');
       setResponsaveis([]);
     }
-  }, [demandaToEdit, isEditing]);
+  }, [demandaToEdit, isEditing, isClone, allowlist]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -146,11 +177,13 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
       }
     }
 
+    const finalLinkDemanda = (linkPlataforma && ticketId) ? allowlist[linkPlataforma] + ticketId : '';
+
     const demandaData = {
       demandaId,
       nome,
-      tempoEstimado: Number(tempoEstimado), // Garante que é enviado como número
-      linkDemanda,
+      tempoEstimado: Number(tempoEstimado),
+      linkDemanda: finalLinkDemanda,
       status,
       responsaveis: responsavelNames,
       project: projectId
@@ -252,15 +285,27 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
 
         {/* Link da Demanda (Opcional) */}
         <div>
-          <label htmlFor="dem-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Link da Demanda (Bitrix, Redmine, etc.)</label>
-          <input
-            type="url"
-            id="dem-link"
-            className="mt-1 block w-full input-style"
-            placeholder="https://bitrix.suaempresa.com/..."
-            value={linkDemanda}
-            onChange={(e) => setLinkDemanda(e.target.value)}
-          />
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Plataforma e Ticket (Opcional)</label>
+          <div className="flex gap-2">
+            <select
+              className="mt-1 block w-1/3 input-style"
+              value={linkPlataforma}
+              onChange={(e) => setLinkPlataforma(e.target.value)}
+            >
+              <option value="">Selecione...</option>
+              {Object.keys(allowlist).map((key) => (
+                <option key={key} value={key}>{key}</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              className="mt-1 block w-2/3 input-style"
+              placeholder="ID do Ticket"
+              value={ticketId}
+              onChange={(e) => setTicketId(e.target.value)}
+              disabled={!linkPlataforma}
+            />
+          </div>
         </div>
 
         {/* Botões */}

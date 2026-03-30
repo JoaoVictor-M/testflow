@@ -20,7 +20,6 @@ import EmailSettings from './pages/EmailSettings'
 import AuditLogsPage from './pages/AuditLogsPage'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
-import api from './api'
 
 // --- ÍCONES ---
 const ChevronDownIcon = () => (
@@ -188,7 +187,7 @@ function Navbar() {
               <Menu.Items className="absolute right-0 mt-1 w-44 origin-top-right divide-y divide-gray-100 dark:divide-neutral-700 rounded-lg bg-white dark:bg-neutral-800 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100 dark:border-neutral-700">
                 <div className="px-1 py-1">
                   <Menu.Item>
-                    {({ active }) => (
+                    {() => (
                       <div className="flex items-center gap-2 px-2 py-2">
                         <ThemeToggle />
                         <span className="text-sm text-gray-700 dark:text-neutral-200 font-medium">
@@ -226,7 +225,6 @@ function Navbar() {
 function AppContent() {
   const location = useLocation();
   const isPublicPage = ['/login', '/forgot-password', '/reset-password'].some(path => location.pathname.startsWith(path));
-  const { user } = useContext(AuthContext);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
 
 

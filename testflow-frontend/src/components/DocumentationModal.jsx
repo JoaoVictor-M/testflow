@@ -343,24 +343,23 @@ const DOC_CONTENT = {
     }
 };
 
+const MenuItem = ({ id, label, icon, activeTab, setActiveTab }) => (
+    <button
+        onClick={() => setActiveTab(id)}
+        className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-lg 
+        ${activeTab === id
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800'}`}
+    >
+        {icon}
+        <span>{label}</span>
+    </button>
+);
+
 const DocumentationModal = ({ isOpen, onClose }) => {
     const [activeTab, setActiveTab] = useState('intro');
 
     if (!isOpen) return null;
-
-    // Helper para item do menu
-    const MenuItem = ({ id, label, icon }) => (
-        <button
-            onClick={() => setActiveTab(id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-lg 
-            ${activeTab === id
-                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-neutral-800'}`}
-        >
-            {icon}
-            <span>{label}</span>
-        </button>
-    );
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 dark:bg-black/80 backdrop-blur-sm p-4 transition-all duration-300">
@@ -370,14 +369,14 @@ const DocumentationModal = ({ isOpen, onClose }) => {
                 <div className="w-full md:w-1/4 bg-gray-50 dark:bg-neutral-950 border-b md:border-b-0 md:border-r border-gray-200 dark:border-neutral-800 p-4 overflow-y-auto md:overflow-y-auto max-h-[200px] md:max-h-full">
                     <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">Menu</h3>
                     <div className="space-y-1 grid grid-cols-2 md:block gap-2 md:gap-0">
-                        <MenuItem id="intro" label="Introdução" icon={<BookOpen size={18} />} />
-                        <MenuItem id="projects" label="Projetos" icon={<Layers size={18} />} />
-                        <MenuItem id="demands" label="Demandas" icon={<FileText size={18} />} />
-                        <MenuItem id="scenarios" label="Cenários" icon={<CheckSquare size={18} />} />
-                        <MenuItem id="evidences" label="Evidências" icon={<Hash size={18} />} />
-                        <MenuItem id="users" label="Usuários" icon={<Users size={18} />} />
-                        <MenuItem id="audit" label="Auditoria" icon={<Activity size={18} />} />
-                        <MenuItem id="settings" label="Configurações" icon={<Settings size={18} />} />
+                        <MenuItem id="intro" label="Introdução" icon={<BookOpen size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="projects" label="Projetos" icon={<Layers size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="demands" label="Demandas" icon={<FileText size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="scenarios" label="Cenários" icon={<CheckSquare size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="evidences" label="Evidências" icon={<Hash size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="users" label="Usuários" icon={<Users size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="audit" label="Auditoria" icon={<Activity size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
+                        <MenuItem id="settings" label="Configurações" icon={<Settings size={18} />} activeTab={activeTab} setActiveTab={setActiveTab} />
                     </div>
                 </div>
 

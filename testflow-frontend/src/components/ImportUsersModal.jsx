@@ -29,7 +29,7 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
 
             const dataLines = hasHeader ? lines.slice(1) : lines;
 
-            const parsed = dataLines.map((line, index) => {
+            const parsed = dataLines.map((line) => {
                 const parts = line.split(';');
                 if (parts.length < 2) return null; // Skip invalid lines
                 const [nome, email, perfil] = parts;
@@ -58,7 +58,6 @@ const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
     const validateData = (data) => {
         const newErrors = [];
         const uniqueEmails = new Set();
-        const uniqueUsernames = new Set();
 
         data.forEach((user, index) => {
             if (!user.name) newErrors.push(`Linha ${index + 1}: Nome ausente.`);

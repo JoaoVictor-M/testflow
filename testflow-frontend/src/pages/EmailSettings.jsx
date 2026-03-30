@@ -19,19 +19,28 @@ function EmailSettings() {
         from: ''
     });
 
+    const [allowlist, setAllowlist] = useState([]);
+    const [savingAllowlist, setSavingAllowlist] = useState(false);
+
     useEffect(() => {
         fetchSettings().finally(() => setLoading(false));
     }, []);
 
     const fetchSettings = async () => {
         try {
-            const response = await api.get('/config/email', {
-                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-            });
-            setFormData(response.data);
+            const [emailRes, allowlistRes] = await Promise.all([
+                api.get('/config/email', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
+                api.get('/config/allowlist', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
+            ]);
+            setFormData(emailRes.data);
+            
+            if (allowlistRes.data) {
+                const list = Object.entries(allowlistRes.data).map(([k, v]) => ({ key: k, value: v }));
+                setAllowlist(list);
+            }
         } catch (error) {
             console.error('Erro ao buscar configurações:', error);
-            toast.error('Erro ao carregar configurações de email.');
+            toast.error('Erro ao carregar configurações globais.');
         }
     };
 
@@ -51,12 +60,54 @@ function EmailSettings() {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
             toast.success('Configurações salvas com sucesso!');
-            fetchSettings();
         } catch (error) {
             console.error('Erro ao salvar configurações:', error);
             toast.error(error.response?.data?.message || 'Erro ao salvar configurações.');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleAddAllowlist = () => {
+        setAllowlist([...allowlist, { key: '', value: '' }]);
+    };
+
+    const handleRemoveAllowlist = (index) => {
+        const newList = [...allowlist];
+        newList.splice(index, 1);
+        setAllowlist(newList);
+    };
+
+    const handleChangeAllowlist = (index, field, val) => {
+        const newList = [...allowlist];
+        newList[index][field] = val;
+        setAllowlist(newList);
+    };
+
+    const handleSaveAllowlist = async () => {
+        setSavingAllowlist(true);
+        const hasEmptyKeys = allowlist.some(item => !item.key.trim() || !item.value.trim());
+        if (hasEmptyKeys) {
+            toast.error('Preencha todos os campos da Allowlist ou remova os vazios.');
+            setSavingAllowlist(false);
+            return;
+        }
+
+        const dataObj = {};
+        allowlist.forEach(item => {
+            dataObj[item.key.trim()] = item.value.trim();
+        });
+
+        try {
+            await api.post('/config/allowlist', dataObj, {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+            });
+            toast.success('Allowlist salva com sucesso!');
+        } catch (error) {
+            console.error('Erro ao salvar allowlist:', error);
+            toast.error(error.response?.data?.message || 'Erro ao salvar allowlist.');
+        } finally {
+            setSavingAllowlist(false);
         }
     };
 
@@ -200,6 +251,52 @@ function EmailSettings() {
                     </div>
 
                 </form>
+            </div>
+
+            <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 transition-colors border border-gray-200 dark:border-neutral-800">
+                <div className="flex justify-between items-center mb-6 border-b pb-2 dark:border-neutral-800">
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-neutral-200">URLs Permitidas (Allowlist de Demandas)</h2>
+                    <button onClick={handleAddAllowlist} className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors">+ Adicionar Nova URL</button>
+                </div>
+                <div className="space-y-4">
+                    {allowlist.length === 0 && <p className="text-gray-500 text-sm">Nenhuma URL configurada.</p>}
+                    {allowlist.map((item, index) => (
+                        <div key={index} className="flex gap-4 items-center">
+                            <input
+                                type="text"
+                                placeholder="Plataforma (Ex: Bitrix)"
+                                value={item.key}
+                                onChange={(e) => handleChangeAllowlist(index, 'key', e.target.value)}
+                                className="w-1/3 input-style"
+                            />
+                            <input
+                                type="url"
+                                placeholder="URL Base (Ex: https://bitrix.../)"
+                                value={item.value}
+                                onChange={(e) => handleChangeAllowlist(index, 'value', e.target.value)}
+                                className="w-2/3 input-style"
+                            />
+                            <button
+                                onClick={() => handleRemoveAllowlist(index)}
+                                className="text-red-500 hover:text-red-700 transition-colors"
+                                title="Remover regra"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                    ))}
+                    <div className="flex justify-end pt-4 mt-4 border-t border-gray-100 dark:border-neutral-800">
+                        <button
+                            onClick={handleSaveAllowlist}
+                            disabled={savingAllowlist}
+                            className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${savingAllowlist ? 'opacity-70 cursor-not-allowed' : ''}`}
+                        >
+                            {savingAllowlist ? 'Salvando...' : 'Salvar Allowlist'}
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

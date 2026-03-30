@@ -5,6 +5,8 @@ import { Dialog, Transition, Popover } from '@headlessui/react';
 import UserForm from '../components/UserForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 import ImportUsersModal from '../components/ImportUsersModal';
+import { AuthContext } from '../context/AuthContext';
+import { useContext } from 'react';
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -44,6 +46,9 @@ const ResetIcon = () => (
 );
 
 const UsersManager = () => {
+    const { user } = useContext(AuthContext);
+    const isAdmin = user?.role === 'admin';
+
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -232,19 +237,23 @@ const UsersManager = () => {
                 </button>
 
                 <div className="flex gap-2 w-full md:w-auto md:ml-auto">
-                    <button
-                        onClick={() => setIsImportModalOpen(true)}
-                        className="w-full md:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 flex items-center justify-center gap-2"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                        Importar CSV
-                    </button>
-                    <button
-                        onClick={openCreateModal}
-                        className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
-                    >
-                        + Novo Usuário
-                    </button>
+                    {isAdmin && (
+                        <>
+                            <button
+                                onClick={() => setIsImportModalOpen(true)}
+                                className="w-full md:w-auto px-4 py-2 bg-green-600 text-white font-semibold rounded-lg shadow-md hover:bg-green-700 flex items-center justify-center gap-2"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                                Importar CSV
+                            </button>
+                            <button
+                                onClick={openCreateModal}
+                                className="w-full md:w-auto px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
+                            >
+                                + Novo Usuário
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -266,7 +275,7 @@ const UsersManager = () => {
                                     <tr>
                                         <th className="px-6 py-3 font-semibold text-sm">Usuário</th>
                                         <th className="px-6 py-3 font-semibold text-sm">Perfil</th>
-                                        <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>
+                                        {isAdmin && <th className="px-6 py-3 font-semibold text-sm text-right">Ações</th>}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100 dark:divide-neutral-800">
@@ -285,31 +294,33 @@ const UsersManager = () => {
                                                         {u.role === 'admin' ? 'ADMINISTRADOR' : (u.role === 'analyst' ? 'ANALISTA' : 'VISUALIZADOR')}
                                                     </span>
                                                 </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <button
-                                                            onClick={() => openEditModal(u)}
-                                                            className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
-                                                            title="Editar"
-                                                        >
-                                                            <EditIcon />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => openResetModal(u)}
-                                                            className="p-1.5 rounded-full text-gray-400 hover:text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
-                                                            title="Resetar Senha"
-                                                        >
-                                                            <ResetIcon />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => openDeleteModal(u)}
-                                                            className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
-                                                            title="Excluir"
-                                                        >
-                                                            <TrashIcon />
-                                                        </button>
-                                                    </div>
-                                                </td>
+                                                {isAdmin && (
+                                                    <td className="px-6 py-4 text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => openEditModal(u)}
+                                                                className="p-1.5 rounded-full text-gray-400 hover:text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                                                title="Editar"
+                                                            >
+                                                                <EditIcon />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openResetModal(u)}
+                                                                className="p-1.5 rounded-full text-gray-400 hover:text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                                                                title="Resetar Senha"
+                                                            >
+                                                                <ResetIcon />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => openDeleteModal(u)}
+                                                                className="p-1.5 rounded-full text-gray-400 hover:text-red-600 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                                                title="Excluir"
+                                                            >
+                                                                <TrashIcon />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))
                                     )}
