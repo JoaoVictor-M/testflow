@@ -15,6 +15,7 @@ const EvidenceModal = ({ isOpen, onClose, demanda, onUpdate }) => {
     // [New] State for Status Revert Warning
     const [showStatusRevertWarning, setShowStatusRevertWarning] = useState(false);
     const [evidenceToDelete, setEvidenceToDelete] = useState(null);
+    const [showTooltip, setShowTooltip] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -85,7 +86,12 @@ const EvidenceModal = ({ isOpen, onClose, demanda, onUpdate }) => {
                     successCount++;
                 } catch (err) {
                     console.error(`Erro ao subir arquivo ${file.name}:`, err);
-                    toast.error(`Erro ao salvar "${file.name}".`);
+                    const backendMsg = err.response?.data?.message || '';
+                    if (backendMsg.includes('Extensão não permitida') || backendMsg.includes('MIME Type') || backendMsg.includes('única extensão')) {
+                        toast.error(`Extensão não suportada: "${file.name}"`);
+                    } else {
+                        toast.error(backendMsg || `Erro ao salvar "${file.name}".`);
+                    }
                 }
             }
 
@@ -248,11 +254,35 @@ const EvidenceModal = ({ isOpen, onClose, demanda, onUpdate }) => {
                                 leaveFrom="opacity-100 scale-100"
                                 leaveTo="opacity-0 scale-95"
                             >
-                                <Dialog.Panel className="w-full max-w-3xl transform overflow-hidden rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
+                                <Dialog.Panel className="w-full max-w-3xl transform overflow-visible rounded-2xl bg-white dark:bg-neutral-800 p-6 text-left align-middle shadow-xl transition-all border border-gray-100 dark:border-neutral-700">
                                     <div className="flex justify-between items-center mb-4">
-                                        <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
-                                            Evidências de Teste - {demanda.nome}
-                                        </Dialog.Title>
+                                        <div className="flex items-center gap-2">
+                                            <Dialog.Title as="h3" className="text-lg font-medium leading-6 text-gray-900 dark:text-gray-100">
+                                                Evidências de Teste - {demanda.nome}
+                                            </Dialog.Title>
+                                            <div className="relative flex items-center">
+                                                <span
+                                                    className="cursor-help text-gray-400 hover:text-blue-500 transition-colors"
+                                                    onMouseEnter={() => setShowTooltip(true)}
+                                                    onMouseLeave={() => setShowTooltip(false)}
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                    </svg>
+                                                </span>
+                                                {showTooltip && (
+                                                    <div className="absolute left-0 top-full mt-2 w-64 p-4 bg-gray-900 dark:bg-neutral-900 text-white text-xs rounded-lg shadow-xl z-50 border border-gray-700 dark:border-neutral-700">
+                                                        <span className="font-bold mb-2 block text-sm text-blue-200">Formatos permitidos: </span>
+                                                        <ul className="space-y-1 text-gray-300">
+                                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Docs: .csv, .xlsx, .docx, .doc, .pdf, .txt, .log</li>
+                                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Imagens: .png, .jpg, .jpeg</li>
+                                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Vídeos: .mp4, .mkv</li>
+                                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Áudios: .mp3, .wav</li>
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
                                         <button onClick={handleCloseRequest} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                                             <span className="sr-only">Fechar</span>
                                             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -370,7 +400,7 @@ const EvidenceModal = ({ isOpen, onClose, demanda, onUpdate }) => {
                                                 ref={fileInputRef}
                                                 onChange={handleFileSelection}
                                                 className="hidden"
-                                                accept="image/*,video/*,audio/*,.pdf"
+                                                accept="image/*,video/*,audio/*,.pdf,.csv,.xlsx,.docx,.doc,.txt,.log"
                                             />
 
                                             <button

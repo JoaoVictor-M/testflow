@@ -1,4 +1,4 @@
-import { X, Rocket, Shield, Layers, FileText, CheckSquare, Image, Settings, Server, Wrench, Activity } from 'lucide-react';
+import { X, Rocket, Shield, Wrench } from 'lucide-react';
 
 const ReleaseNotes = ({ isOpen, onClose, version }) => {
     if (!isOpen) return null;
@@ -25,7 +25,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                             Production Ready
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
-                            05/03/2026
+                            30/03/2026
                         </p>
                     </div>
                 </div>
@@ -36,108 +36,58 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
 
                         <div className="text-center space-y-2">
                             <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-                                🎉 <strong>Temos o orgulho de apresentar a primeira versão oficial do TestFlow!</strong>
+                                🔒 <strong>Correções de segurança e melhorias de usabilidade.</strong>
                             </p>
                             <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Uma plataforma completa, robusta e containerizada de Quality Management.
+                                Remediação completa das 7 vulnerabilidades identificadas no pentest.
                             </p>
                         </div>
 
                         <div className="border-t border-gray-100 dark:border-neutral-700 pt-6">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                <Rocket className="text-emerald-500" size={20} />
-                                Funcionalidades Principais
+                                <Shield className="text-red-500" size={20} />
+                                Correções de Segurança (Pentest)
                             </h3>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Auth */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <Shield size={16} className="text-blue-500" /> Segurança
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>Login Seguro (JWT):</strong> Proteção completa de rotas.</li>
-                                        <li><strong>RBAC:</strong> Perfis de Admin (Gestão Total) e Analista (Execução).</li>
-                                        <li><strong>Recuperação de Senha:</strong> Fluxo seguro com token via e-mail.</li>
-                                        <li><strong>Restrição Administrativa:</strong> Apenas Administradores podem criar ou editar perfis de outros Administradores.</li>
-                                    </ul>
-                                </div>
-
-                                {/* Projects */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <Layers size={16} className="text-purple-500" /> Projetos
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>CRUD Completo:</strong> Gestão total de projetos.</li>
-                                        <li><strong>Deep Clone:</strong> Duplicação inteligente de estruturas para testes de regressão.</li>
-                                    </ul>
-                                </div>
-
-                                {/* Demands */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <FileText size={16} className="text-orange-500" /> Demandas
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>Fluxo Ágil:</strong> Pendente &rarr; Em Andamento &rarr; Testado.</li>
-                                        <li><strong>Tags & Links:</strong> Organização visual e integração com Jira/Trello.</li>
-                                    </ul>
-                                </div>
-
-                                {/* Evidences */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <Image size={16} className="text-pink-500" /> Evidências
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>Galeria:</strong> Upload múltiplo e visualização integrada.</li>
-                                        <li><strong>Centralização:</strong> Adeus pastas soltas na rede.</li>
-                                    </ul>
-                                </div>
-
-                                {/* Audit */}
-                                <div className="space-y-3">
-                                    <h4 className="font-bold text-gray-800 dark:text-white flex items-center gap-2 text-sm uppercase tracking-wide">
-                                        <Activity size={16} className="text-teal-500" /> Auditoria
-                                    </h4>
-                                    <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2 list-disc pl-4 text-justify">
-                                        <li><strong>Rastreabilidade Total:</strong> Registro claro sobre qualquer mudança sensível na plataforma.</li>
-                                        <li><strong>Filtros Avançados:</strong> Identifique anomalias filtrando por Entidade, Usuário e Data.</li>
-                                    </ul>
-                                </div>
-
-
+                            <div className="bg-gray-50 dark:bg-neutral-900 p-4 rounded-xl border border-gray-200 dark:border-neutral-800 text-sm text-gray-600 dark:text-gray-400 space-y-4">
+                                <ul className="list-disc pl-4 space-y-2">
+                                    <li><strong>[FIX] CWE-434:</strong> Upload restrito a 14 extensões permitidas (.csv, .xlsx, .docx, .doc, .pdf, .txt, .log, .png, .jpg, .jpeg, .mp4, .mkv, .mp3, .wav) com validação de MIME type e bloqueio de dupla extensão.</li>
+                                    <li><strong>[FIX] CWE-601:</strong> Validação de URLs via Allowlist configurável. Links de demandas só são aceitos se pertencerem às plataformas autorizadas.</li>
+                                    <li><strong>[FIX] CWE-326:</strong> Cifras TLS fracas removidas. Apenas TLSv1.2/1.3 com Forward Secrecy (ECDHE).</li>
+                                    <li><strong>[FIX] CWE-693:</strong> Content Security Policy (CSP) implementada no NGINX.</li>
+                                    <li><strong>[FIX] CWE-1021:</strong> Proteção anti-Clickjacking com X-Frame-Options e frame-ancestors.</li>
+                                    <li><strong>[FIX] CWE-200:</strong> Versão do NGINX ocultada em cabeçalhos e páginas de erro (3 instâncias).</li>
+                                    <li><strong>[FIX] CWE-272:</strong> RBAC reforçado — apenas Administradores podem gerenciar usuários.</li>
+                                </ul>
                             </div>
                         </div>
 
                         <div className="border-t border-gray-100 dark:border-neutral-700 pt-6">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                <Wrench className="text-gray-500" size={20} />
-                                Infraestrutura & Changelog
+                                <Rocket className="text-emerald-500" size={20} />
+                                Melhorias
                             </h3>
 
                             <div className="bg-gray-50 dark:bg-neutral-900 p-4 rounded-xl border border-gray-200 dark:border-neutral-800 text-sm text-gray-600 dark:text-gray-400 space-y-4">
                                 <div>
                                     <strong className="text-gray-900 dark:text-white block mb-1">Frontend</strong>
                                     <ul className="list-disc pl-4 space-y-1">
-                                        <li>[FIX] Refatoração completa das requisições para suporte a Proxy Reverso (Nginx).</li>
-                                        <li>[FIX] Corrigido bug na paginação e filtros dinâmicos de data na Auditoria.</li>
-                                        <li>[NEW] DocumentationModal e AboutModal responsivos e detalhados.</li>
-                                        <li>[FIX] Correção do fluxo de ResetPassword e limpeza de URLs.</li>
-                                        <li>[UPDATE] Refinamento visual com TailwindCSS.</li>
+                                        <li>[NEW] Tela administrativa de URLs Permitidas (Allowlist) nas Configurações.</li>
+                                        <li>[NEW] Seletor dinâmico de Plataforma + Ticket no formulário de demandas.</li>
+                                        <li>[NEW] Tooltip informativo com lista de formatos permitidos no modal de Evidências.</li>
+                                        <li>[NEW] Notificação de "Extensão não suportada" ao tentar enviar arquivos não permitidos.</li>
+                                        <li>[UPDATE] Filtro de seleção de arquivos atualizado para pré-filtrar extensões válidas.</li>
+                                        <li>[FIX] Ocultação de botões administrativos para perfis não-admin na tela de Usuários.</li>
                                     </ul>
                                 </div>
                                 <div>
-                                    <strong className="text-gray-900 dark:text-white block mb-1">Backend & Infra</strong>
+                                    <strong className="text-gray-900 dark:text-white block mb-1">Backend &amp; Infra</strong>
                                     <ul className="list-disc pl-4 space-y-1">
-                                        <li>[NEW] Implementação de HTTPS via Nginx Reverse Proxy.</li>
-                                        <li>[NEW] Fallback inteligente de SSL para HTTP caso não existam certificados (HTTPS Dinâmico).</li>
-                                        <li>[FIX] Removido requisito estrito de certificados autoassinados no Dockerfile.</li>
-                                        <li>[FIX] Configuração de CORS dinâmica e inteligente baseada na origem HTTPS.</li>
-                                        <li>[NEW] Serviço de Email dinâmico com suporte a Gmail/Outlook.</li>
-                                        <li>[FIX] Configuração Nginx otimizada para SPA e Deep Linking.</li>
-                                        <li>[NEW] Proteção de rotas sensíveis e sanitização de dados.</li>
+                                        <li>[NEW] Cabeçalhos de segurança HSTS, CSP e X-Frame-Options no NGINX.</li>
+                                        <li>[NEW] Pastas de evidências com nomenclatura legível (ID_Nome) ao invés de hash.</li>
+                                        <li>[UPDATE] Cifras TLS refinadas com exclusão explícita de suítes fracas.</li>
+                                        <li>[UPDATE] Middleware RBAC restrito a admin para rotas de gestão de usuários.</li>
+                                        <li>[UPDATE] server_tokens off aplicado em todas as instâncias NGINX.</li>
                                     </ul>
                                 </div>
                             </div>

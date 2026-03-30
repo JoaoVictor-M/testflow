@@ -1,5 +1,2 @@
 {
-  "Bitrix": "https://bitrix.callflex.local/ticket/",
-  "GLPI": "https://glpi.callflex.local/front/ticket.form.php?id=",
-  "Redmine": "https://redmine.callflex.local/issues/"
 }

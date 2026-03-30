@@ -1277,21 +1277,44 @@ const getBaseEvidenceDir = () => {
     return baseDir;
 };
 
-// Obter diretório seguro baseado no ID exato
-const getSecureEvidenceDir = (demandaId) => {
-    if (!isValidMongoId(demandaId)) return null;
+// Obter diretório seguro baseado no ID exato e nome (prioriza formato novo legível)
+const getSecureEvidenceDir = async (demandaIdHash, fallbackDemandaObj = null) => {
+    if (!isValidMongoId(demandaIdHash)) return null;
     const baseDir = getBaseEvidenceDir();
     if (!baseDir) return null;
-    return path.resolve(path.join(baseDir, demandaId));
+
+    let demanda = fallbackDemandaObj;
+    if (!demanda) {
+        demanda = await Demanda.findById(demandaIdHash).lean();
+    }
+
+    if (demanda && demanda.demandaId && demanda.nome) {
+        const safeFriendlyId = String(demanda.demandaId).replace(/[^a-zA-Z0-9]/g, '');
+        const safeName = String(demanda.nome).replace(/\0/g, '').replace(/[^a-zA-Z0-9.\-_ \u00C0-\u00FF]/g, '').trim().replace(/\s+/g, '_');
+        const newFormatDir = path.resolve(path.join(baseDir, `${safeFriendlyId}_${safeName}`));
+
+        // Se a pasta nova existir, usa ela.
+        if (fs.existsSync(newFormatDir)) return newFormatDir; // eslint-disable-line security/detect-non-literal-fs-filename
+
+        // Retaguarda de compatibilidade (se existe no formato hash antigo, usa a antiga para não perder arquivos passados).
+        const oldFormatDir = path.resolve(path.join(baseDir, demandaIdHash));
+        if (fs.existsSync(oldFormatDir)) return oldFormatDir; // eslint-disable-line security/detect-non-literal-fs-filename
+
+        // Padrão novo vira base para novas criações
+        return newFormatDir;
+    }
+
+    return path.resolve(path.join(baseDir, demandaIdHash));
 };
 
-// Configuração do Multer (Extremamente Restrita)
 const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
+    destination: async (req, file, cb) => {
         const demandaId = req.params.id;
         if (!isValidMongoId(demandaId)) return cb(new Error('ID de demanda inválido'), null);
 
-        const dir = getSecureEvidenceDir(demandaId);
+        const dir = await getSecureEvidenceDir(demandaId);
+        if (!dir) return cb(new Error('Não foi possível obter o diretório de evidências'), null);
+
         if (!fs.existsSync(dir)) { // eslint-disable-line security/detect-non-literal-fs-filename
             fs.mkdirSync(dir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
         }
@@ -1308,13 +1331,25 @@ const storage = multer.diskStorage({
 const allowedMimeTypes = [
     'text/csv',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/msword',
+    'application/pdf',
     'image/png',
     'image/jpeg',
     'image/jpg',
     'video/x-matroska',
-    'video/mp4'
+    'video/mkv',
+    'video/mp4',
+    'video/webm',
+    'application/octet-stream',
+    'video/mp4',
+    'audio/mpeg',
+    'audio/mp3',
+    'audio/wav',
+    'audio/x-wav',
+    'text/plain'
 ];
-const allowedExtensions = ['.csv', '.xlsx', '.png', '.jpg', '.jpeg', '.mkv', '.mp4'];
+const allowedExtensions = ['.csv', '.xlsx', '.docx', '.doc', '.pdf', '.txt', '.log', '.png', '.jpg', '.jpeg', '.mkv', '.mp4', '.mp3', '.wav'];
 
 const uploadFilter = (req, file, cb) => {
     const parts = file.originalname.split('.');
@@ -1328,7 +1363,12 @@ const uploadFilter = (req, file, cb) => {
     }
 
     if (!allowedMimeTypes.includes(file.mimetype)) {
-        return cb(new Error(`MIME Type não permitido.`));
+        // Exceção de UX: Navegadores não têm um padrão fixo para o MIME Type de arquivos .mkv (podem enviar vazio, octet-stream, x-matroska, etc).
+        // Como já restringimos duramente as extensões permitidas inclusive contra dupla-extensão, validamos passivamente o .mkv.
+        if (ext === '.mkv') {
+            return cb(null, true);
+        }
+        return cb(new Error(`MIME Type não permitido pelo backend local: [${file.mimetype}]`));
     }
     
     cb(null, true);
@@ -1392,7 +1432,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
         const evidence = demanda.evidences.id(evidenceId);
         if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
-        const dirPath = getSecureEvidenceDir(id);
+        const dirPath = await getSecureEvidenceDir(id, demanda);
         if (dirPath) {
             // Validate filename before accessing
             const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
@@ -1436,7 +1476,7 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
         const evidence = demanda.evidences.id(evidenceId);
         if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
-        const dirPath = getSecureEvidenceDir(id);
+        const dirPath = await getSecureEvidenceDir(id, demanda);
         if (dirPath) {
             const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
             const filePath = path.resolve(path.join(dirPath, safeFilename));

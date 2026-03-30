@@ -88,7 +88,7 @@ function EmailSettings() {
         setSavingAllowlist(true);
         const hasEmptyKeys = allowlist.some(item => !item.key.trim() || !item.value.trim());
         if (hasEmptyKeys) {
-            toast.error('Preencha todos os campos da Allowlist ou remova os vazios.');
+            toast.error('Preencha todos os campos das URLs ou remova os vazios.');
             setSavingAllowlist(false);
             return;
         }
@@ -102,10 +102,10 @@ function EmailSettings() {
             await api.post('/config/allowlist', dataObj, {
                 headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
             });
-            toast.success('Allowlist salva com sucesso!');
+            toast.success('URLs salvas com sucesso!');
         } catch (error) {
-            console.error('Erro ao salvar allowlist:', error);
-            toast.error(error.response?.data?.message || 'Erro ao salvar allowlist.');
+            console.error('Erro ao salvar URLs:', error);
+            toast.error(error.response?.data?.message || 'Erro ao salvar URLs.');
         } finally {
             setSavingAllowlist(false);
         }
@@ -255,7 +255,7 @@ function EmailSettings() {
 
             <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 transition-colors border border-gray-200 dark:border-neutral-800">
                 <div className="flex justify-between items-center mb-6 border-b pb-2 dark:border-neutral-800">
-                    <h2 className="text-lg font-semibold text-gray-800 dark:text-neutral-200">URLs Permitidas (Allowlist de Demandas)</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 dark:text-neutral-200">URLs Permitidas</h2>
                     <button onClick={handleAddAllowlist} className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 transition-colors">+ Adicionar Nova URL</button>
                 </div>
                 <div className="space-y-4">
@@ -293,7 +293,7 @@ function EmailSettings() {
                             disabled={savingAllowlist}
                             className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${savingAllowlist ? 'opacity-70 cursor-not-allowed' : ''}`}
                         >
-                            {savingAllowlist ? 'Salvando...' : 'Salvar Allowlist'}
+                            {savingAllowlist ? 'Salvando...' : 'Salvar'}
                         </button>
                     </div>
                 </div>
