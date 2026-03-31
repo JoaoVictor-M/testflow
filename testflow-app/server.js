@@ -397,7 +397,7 @@ app.post('/api/users/generate-username', authMiddleware, async (req, res) => {
 
 app.get('/api/users/all', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
-        const users = await User.find({}, '-password').sort({ username: 1 });
+        const users = await User.find({}, '-password').sort({ username: 1 }).lean();
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -407,7 +407,7 @@ app.get('/api/users/all', authMiddleware, roleMiddleware(['admin', 'analyst']), 
 
 app.get('/api/users', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
-        const users = await User.find({ username: { $ne: 'admin' } }, '-password').sort({ username: 1 });
+        const users = await User.find({ username: { $ne: 'admin' } }, '-password').sort({ username: 1 }).lean();
         res.json(users);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -586,7 +586,7 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'analyst'
 
 app.get('/api/projects', authMiddleware, async (req, res) => {
     try {
-        const projects = await Project.find({}).populate('tags').populate('responsaveis').populate('versions').populate('servers');
+        const projects = await Project.find({}).populate('tags').populate('responsaveis').populate('versions').populate('servers').lean();
         res.status(200).json(projects);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -622,7 +622,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), 
             const sourceId = req.body.sourceId;
             console.log(`[CLONE] Duplicando demandas do projeto ${sourceId} para ${savedProject._id}`); // eslint-disable-line no-console
 
-            const demandas = await Demanda.find({ project: sourceId });
+            const demandas = await Demanda.find({ project: sourceId }).lean();
             for (const dem of demandas) {
                 // const responsavelIdsDemanda = await findOrCreateResponsaveis(dem.responsaveis.map(r => r.name)); // Unused and potentially incorrect
 
@@ -652,7 +652,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), 
                 const savedDem = await newDem.save();
 
                 // Clone Scenarios
-                const scenarios = await Scenario.find({ demanda: dem._id });
+                const scenarios = await Scenario.find({ demanda: dem._id }).lean();
                 for (const scen of scenarios) {
                     const newScen = new Scenario({
                         title: scen.title,
@@ -717,7 +717,7 @@ app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analys
         if (!project) {
             return res.status(404).json({ message: 'Projeto não encontrado' });
         }
-        const demandas = await Demanda.find({ project: projectId });
+        const demandas = await Demanda.find({ project: projectId }).lean();
         const demandaIds = demandas.map(d => d._id);
         await Scenario.deleteMany({ demanda: { $in: demandaIds } });
         await Demanda.deleteMany({ project: projectId });
@@ -732,7 +732,7 @@ app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analys
 
 app.get('/api/tags', async (req, res) => {
     try {
-        const tags = await Tag.find({}).sort({ name: 1 });
+        const tags = await Tag.find({}).sort({ name: 1 }).lean();
         res.status(200).json(tags);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -742,7 +742,7 @@ app.get('/api/tags', async (req, res) => {
 
 app.get('/api/responsaveis', authMiddleware, async (req, res) => {
     try {
-        const responsaveis = await Responsavel.find({}).sort({ name: 1 });
+        const responsaveis = await Responsavel.find({}).sort({ name: 1 }).lean();
         res.status(200).json(responsaveis);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -751,7 +751,7 @@ app.get('/api/responsaveis', authMiddleware, async (req, res) => {
 
 app.get('/api/versions', async (req, res) => {
     try {
-        const items = await Version.find({}).sort({ name: 1 });
+        const items = await Version.find({}).sort({ name: 1 }).lean();
         res.status(200).json(items);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -760,7 +760,7 @@ app.get('/api/versions', async (req, res) => {
 
 app.get('/api/servers', async (req, res) => {
     try {
-        const items = await Server.find({}).sort({ name: 1 });
+        const items = await Server.find({}).sort({ name: 1 }).lean();
         res.status(200).json(items);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -832,7 +832,7 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), 
         if (req.body.sourceId) {
             const sourceId = req.body.sourceId;
             console.log(`[CLONE] Duplicando cenários da demanda ${sourceId} para ${savedDemanda._id}`); // eslint-disable-line no-console
-            const scenarios = await Scenario.find({ demanda: sourceId });
+            const scenarios = await Scenario.find({ demanda: sourceId }).lean();
             for (const scen of scenarios) {
                 const newScen = new Scenario({
                     title: scen.title,
@@ -859,7 +859,7 @@ app.get('/api/demandas', authMiddleware, async (req, res) => {
         if (!projectId) {
             return res.status(400).json({ message: 'O projectId é obrigatório' });
         }
-        const demandas = await Demanda.find({ project: projectId }).populate('responsaveis');
+        const demandas = await Demanda.find({ project: projectId }).populate('responsaveis').lean();
         res.status(200).json(demandas);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -938,7 +938,7 @@ app.get('/api/scenarios', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'O demandaId é inválido' });
         }
         const demandaObjId = new mongoose.Types.ObjectId(demandaId);
-        const scenarios = await Scenario.find({ demanda: demandaObjId });
+        const scenarios = await Scenario.find({ demanda: demandaObjId }).lean();
         res.status(200).json(scenarios);
     } catch (error) {
         console.error('Erro na rota GET /api/scenarios:', error); // eslint-disable-line no-console
@@ -1023,7 +1023,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
         }
 
         if (pId || rId) {
-            const demandaIds = (await Demanda.find(demandaMatch, '_id')).map(d => d._id);
+            const demandaIds = (await Demanda.find(demandaMatch, '_id').lean()).map(d => d._id);
             scenarioMatch = { demanda: { $in: demandaIds } };
         }
 
@@ -1518,7 +1518,7 @@ app.get('/api/audit', authMiddleware, roleMiddleware(['admin']), async (req, res
                     { name: { $regex: req.query.user, $options: 'i' } },
                     { username: { $regex: req.query.user, $options: 'i' } }
                 ]
-            }).select('_id');
+            }).select('_id').lean();
             const userIds = users.map(u => u._id);
             query.user = { $in: userIds };
         }

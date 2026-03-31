@@ -1,7 +1,7 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
 import { Toaster } from 'react-hot-toast'
-import { useContext, Fragment, useState } from 'react'
+import { useContext, Fragment, useState, lazy, Suspense } from 'react'
 
 import { AuthProvider, AuthContext } from './context/AuthContext'
 import { ThemeProvider, ThemeContext } from './context/ThemeContext'
@@ -9,17 +9,17 @@ import ThemeToggle from './components/ThemeToggle'
 import PrivateRoute from './components/PrivateRoute'
 import DeveloperCreditsModal from './components/DeveloperCreditsModal'
 
-import WelcomePage from './pages/WelcomePage'
-import ProjectsListPage from './pages/ProjectsListPage'
-import DemandasListPage from './pages/DemandasListPage'
-import ScenariosListPage from './pages/ScenariosListPage'
-import DashboardPage from './pages/DashboardPage'
-import Login from './pages/Login'
-import UsersManager from './pages/UsersManager'
-import EmailSettings from './pages/EmailSettings'
-import AuditLogsPage from './pages/AuditLogsPage'
-import ForgotPassword from './pages/ForgotPassword'
-import ResetPassword from './pages/ResetPassword'
+const WelcomePage = lazy(() => import('./pages/WelcomePage'))
+const ProjectsListPage = lazy(() => import('./pages/ProjectsListPage'))
+const DemandasListPage = lazy(() => import('./pages/DemandasListPage'))
+const ScenariosListPage = lazy(() => import('./pages/ScenariosListPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const Login = lazy(() => import('./pages/Login'))
+const UsersManager = lazy(() => import('./pages/UsersManager'))
+const EmailSettings = lazy(() => import('./pages/EmailSettings'))
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'))
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'))
+const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 
 // --- ÍCONES ---
 const ChevronDownIcon = () => (
@@ -237,29 +237,36 @@ function AppContent() {
         <div className={`${isPublicPage ? 'max-w-md mx-auto' : 'bg-white dark:bg-neutral-900 shadow-lg rounded-lg border border-gray-200 dark:border-neutral-800 p-6 md:p-8 min-h-[calc(100vh-8rem)] grid grid-rows-[1fr_auto]'}`}>
 
           <div className="w-full overflow-hidden">
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password/:token" element={<ResetPassword />} />
+            <Suspense fallback={
+              <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
+                <div className="w-10 h-10 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin"></div>
+                <span className="text-gray-500 dark:text-gray-400 font-medium animate-pulse">Carregando módulos...</span>
+              </div>
+            }>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
 
-              <Route element={<PrivateRoute />}>
-                <Route path="/" element={<WelcomePage />} />
-                <Route path="/projects" element={<ProjectsListPage />} />
-                <Route path="/project/:projectId/demandas" element={<DemandasListPage />} />
-                <Route path="/demanda/:demandaId/scenarios" element={<ScenariosListPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
-              </Route>
+                <Route element={<PrivateRoute />}>
+                  <Route path="/" element={<WelcomePage />} />
+                  <Route path="/projects" element={<ProjectsListPage />} />
+                  <Route path="/project/:projectId/demandas" element={<DemandasListPage />} />
+                  <Route path="/demanda/:demandaId/scenarios" element={<ScenariosListPage />} />
+                  <Route path="/dashboard" element={<DashboardPage />} />
+                </Route>
 
-              <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>
-                <Route path="/users" element={<UsersManager />} />
-              </Route>
+                <Route element={<PrivateRoute requiredRole={['admin', 'analyst']} />}>
+                  <Route path="/users" element={<UsersManager />} />
+                </Route>
 
-              <Route element={<PrivateRoute requiredRole="admin" />}>
-                <Route path="/email-settings" element={<EmailSettings />} />
-                <Route path="/audit-logs" element={<AuditLogsPage />} />
-              </Route>
+                <Route element={<PrivateRoute requiredRole="admin" />}>
+                  <Route path="/email-settings" element={<EmailSettings />} />
+                  <Route path="/audit-logs" element={<AuditLogsPage />} />
+                </Route>
 
-            </Routes>
+              </Routes>
+            </Suspense>
           </div>
 
           {/* Rodapé Global para Páginas Logadas */}
