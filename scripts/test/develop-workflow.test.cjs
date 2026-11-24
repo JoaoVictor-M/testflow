@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { execFileSync } = require('node:child_process');
+const { createHash } = require('node:crypto');
 const os = require('node:os');
 const { test } = require('node:test');
 
@@ -184,7 +185,7 @@ test('the Playwright image matches the locked test runner and the images are pin
     assert.match(read('scripts/ci-dast-baseline.sh'), /^ZAP_IMAGE=ghcr.io\/zaproxy\/zaproxy:[\w.]+@sha256:[a-f0-9]{64}$/m);
 });
 
-test('the DAST baseline plan fails on Medium or higher and accepts alerts one rule at a time, with a reason', () => {
+test('the DAST baseline plan fails on Medium or higher and filters only single rules, with a reason', () => {
     const plan = read('.zap/baseline.yaml');
     const exitStatus = plan.split('- type: exitStatus')[1];
 
@@ -192,9 +193,33 @@ test('the DAST baseline plan fails on Medium or higher and accepts alerts one ru
     assert.doesNotMatch(exitStatus, /errorLevel: (?:High|Informational)/);
     assert.match(plan, /failOnError: true/);
     const filters = [...plan.matchAll(/^\s+- ruleId: (.*)$/gm)].map((match) => match[1]);
-    assert.ok(filters.length > 0);
     for (const filter of filters) assert.match(filter, /^\d+-\d+ +# \S.+$/, `filter needs an alertRef and a reason: ${filter}`);
     assert.equal([...plan.matchAll(/newRisk: False Positive/g)].length, filters.length);
     assert.doesNotMatch(plan, /alertFilters:\s*\n\s+- ruleId: ["']?\d+["']?\s*\n/);
     assert.doesNotMatch(plan, /excludePaths|urlRegex/);
+});
+
+test('the CSP that nginx sends has no inline or eval allowance, no wildcard and covers the directives without fallback', () => {
+    const policy = read('nginx/nginx-ssl.conf.template').match(/add_header Content-Security-Policy "([^"]+)"/)[1];
+    const directives = Object.fromEntries(policy.split(';').map((part) => part.trim()).filter(Boolean)
+        .map((part) => [part.split(' ')[0], part.split(' ').slice(1)]));
+
+    assert.doesNotMatch(policy, /unsafe-inline|unsafe-eval|\*/);
+    assert.deepEqual(directives['connect-src'], ["'self'"]);
+    // The only style allowance besides 'self' is the hash of empty content (SHA-256 of nothing).
+    assert.deepEqual(directives['style-src'], ["'self'", `'sha256-${createHash('sha256').update('').digest('base64')}'`]);
+    assert.deepEqual(directives['script-src'], ["'self'"]);
+    assert.deepEqual(directives['default-src'], ["'none'"]);
+    for (const directive of ['base-uri', 'form-action', 'frame-ancestors']) assert.ok(directives[directive], directive);
+    // These two belong to the evidence preview and are not tightened here.
+    assert.deepEqual(directives['frame-src'], ["'none'"]);
+    assert.deepEqual(directives['media-src'], ["'self'"]);
+});
+
+test('the page shell has no inline script, so the CSP needs no allowance for one', () => {
+    const scripts = [...read('testflow-frontend/index.html').matchAll(/<script\b[^>]*>/g)].map((match) => match[0]);
+
+    assert.ok(scripts.length > 0);
+    for (const script of scripts) assert.match(script, /\bsrc="/);
+    assert.match(read('testflow-frontend/public/theme-init.js'), /classList\.add\('dark'\)/);
 });

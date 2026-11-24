@@ -16,6 +16,10 @@ module.exports = defineConfig({
         baseURL: process.env.TESTFLOW_E2E_URL,
         // The stack serves a self-signed certificate created for each run.
         ignoreHTTPSErrors: true,
-        trace: 'retain-on-failure',
+        // The tests type the administrator's password and send its token: no trace, video or screenshot,
+        // because the report is published as an artifact.
+        trace: 'off',
+        video: 'off',
+        screenshot: 'off',
     },
 });

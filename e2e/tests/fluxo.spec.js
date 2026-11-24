@@ -1,4 +1,4 @@
-const { test, expect } = require('@playwright/test');
+const { test, expect, entrar, abrirMenu } = require('./apoio');
 
 test('o administrador cria projeto, demanda e cenário pela interface', async ({ page }) => {
     const sufixo = Date.now().toString(36);
@@ -6,14 +6,8 @@ test('o administrador cria projeto, demanda e cenário pela interface', async ({
     const demanda = `Demanda e2e ${sufixo}`;
     const cenario = `Cenário e2e ${sufixo}`;
 
-    await page.goto('/testflow/');
-    await page.getByPlaceholder('Digite seu usuário').fill(process.env.TESTFLOW_E2E_USER);
-    await page.getByPlaceholder('Digite sua senha').fill(process.env.TESTFLOW_E2E_PASSWORD);
-    await page.getByRole('button', { name: 'Entrar' }).click();
-    // O roteador é em memória (a URL não muda) e a sessão também: o menu aparece só depois do login,
-    // e a navegação segue por ele, sem recarregar a página.
-    await page.getByRole('button', { name: 'Gerenciamento' }).click();
-    await page.getByRole('menuitem', { name: 'Projetos' }).click();
+    await entrar(page);
+    await abrirMenu(page, 'Gerenciamento', 'Projetos');
     await page.getByRole('button', { name: '+ Novo Projeto' }).click();
     await page.getByLabel('Título do Projeto').fill(projeto);
     await page.getByRole('button', { name: 'Salvar Projeto' }).click();

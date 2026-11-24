@@ -2,10 +2,13 @@
 # Functions shared by the targets that run against a disposable stack (full DAST, e2e, DAST baseline)
 # and by their repository tests. The browser-facing targets set TESTFLOW_CI_OVERLAY to the Compose file
 # that adds the frontend and nginx.
+# GitHub Actions hides a value from its logs when told so; elsewhere the line would only be noise.
+mask_secret() { [ -z "${GITHUB_ACTIONS:-}" ] || echo "::add-mask::$1"; }
+
 prepare_ci_stack() {
   umask 077
   jwt_secret="$(openssl rand -hex 32)"
-  echo "::add-mask::$jwt_secret"
+  mask_secret "$jwt_secret"
   printf '%s\n' \
     "MONGO_URI=mongodb://mongodb-service:27017/testflow" \
     "JWT_SECRET=$jwt_secret" \
@@ -34,7 +37,7 @@ prepare_ci_web() {
   chmod 644 "$ci_directory/tls/testflow.key" "$ci_directory/tls/testflow.crt"
   export TESTFLOW_CI_TLS="$ci_directory/tls"
   ci_admin_password="$(openssl rand -hex 16)"
-  echo "::add-mask::$ci_admin_password"
+  mask_secret "$ci_admin_password"
   ci_compose build backend-service
   TESTFLOW_ADMIN_PASSWORD_HASH=$(printf '%s' "$ci_admin_password" | ci_compose run --rm --no-deps -T backend-service \
     node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(require('bcryptjs').hashSync(s,10)))")

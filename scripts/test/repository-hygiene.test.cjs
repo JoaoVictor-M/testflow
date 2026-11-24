@@ -75,7 +75,7 @@ for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-pro
         const secrets = [];
         for (let run = 0; run < 2; run += 1) {
             const output = execFileSync('bash', ['--noprofile', '--norc', '-e', '-c', script], {
-                cwd: directory, encoding: 'utf8',
+                cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true' },
             });
             const envPath = path.join(directory, 'testflow-app/.env');
             const lines = fs.readFileSync(envPath, 'utf8').trim().split('\n');
@@ -90,6 +90,23 @@ for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-pro
         }
         assert.notEqual(secrets[0], secrets[1]);
     });
+
+    if (workflow.endsWith('ci-stack.sh')) {
+        test('scripts/lib/ci-stack.sh asks GitHub to mask the secret only when running there', (t) => {
+            const content = fs.readFileSync(path.join(root, workflow), 'utf8');
+            const script = workflowScript(content, 'Create .env for testing');
+            const directory = temporaryDirectory(t);
+            fs.mkdirSync(path.join(directory, 'testflow-app'));
+            const environment = { ...process.env };
+            delete environment.GITHUB_ACTIONS;
+
+            const output = execFileSync('bash', ['--noprofile', '--norc', '-e', '-c', script], {
+                cwd: directory, encoding: 'utf8', env: environment,
+            });
+
+            assert.equal(output, '');
+        });
+    }
 
     test(`${workflow} passes the generated JWT and database URI to the Compose backend`, (t) => {
         const content = fs.readFileSync(path.join(root, workflow), 'utf8');

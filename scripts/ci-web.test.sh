@@ -17,6 +17,14 @@ for argument in "$@"; do
   [ "$previous" != --env-file ] || cp "$argument" "$TESTFLOW_ENV_COPY"
   previous=$argument
 done
+# TESTFLOW_LEAK simulates a test run that writes the password into its report or its output.
+case "$*" in *playwright*)
+  password=$(sed -n 's/^TESTFLOW_E2E_PASSWORD=//p' "$TESTFLOW_ENV_COPY")
+  case "${TESTFLOW_LEAK:-}" in
+    report) mkdir -p reports/e2e && echo "$password" > reports/e2e/relatorio.txt ;;
+    output) echo "$password" ;;
+  esac ;;
+esac
 case "$*" in *'run --rm --no-deps -T backend-service'*) cat > /dev/null; echo '$2b$10$fixture' ;; esac
 case "$*" in *"$TESTFLOW_FAIL_ON"*) exit 1 ;; esac
 EOF
@@ -45,6 +53,13 @@ password=$(sed -n 's/^TESTFLOW_E2E_PASSWORD=//p' "$tmp/env.copy")
 ! grep -qF "$password" "$tmp/docker.log"
 cleaned
 echo 'ok - e2e starts the production stack with a seeded administrator and keeps the password off the command line'
+
+for leak in report output; do
+  if TESTFLOW_LEAK=$leak run_target ci-e2e.sh @never@; then echo "FAIL - e2e accepted a password in the $leak" >&2; exit 1; fi
+  grep -q 'password appears' "$tmp/output"
+  cleaned
+  echo "ok - e2e fails when the generated password shows up in the $leak"
+done
 
 run_target ci-dast-baseline.sh @never@
 grep -q -- '-f docker-compose.ci.yml -f docker-compose.e2e.yml up -d --build --wait --wait-timeout 180' "$tmp/docker.log"
