@@ -49,15 +49,19 @@ check() {
 
     # Tests with coverage; the minimums live in testflow-app/.c8rc.json and the front vite.config.js.
     test) check test-back; check test-front ;;
-    # The back reaches the MongoDB of docker-compose.teste.yml by the service name on its network; the
-    # database is torn down even when the tests fail.
+    # Each run gets its own Compose project (and network), so parallel runs never tear down each other's
+    # MongoDB; the trap removes it on failure, Ctrl-C and normal exit. The back reaches the database by
+    # the service name on that network.
     test-back)
-      compose="docker compose -f docker-compose.teste.yml"
+      project="testflow-teste-$$"
+      compose="docker compose -p $project -f docker-compose.teste.yml"
+      trap '$compose down' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
       $compose up -d --wait
-      status=0
-      run --network testflow-teste_default -w "/work/$BACK" "$NODE_IMAGE" sh -c 'npm ci && npm test' || status=$?
+      run --network "${project}_default" -w "/work/$BACK" "$NODE_IMAGE" sh -c 'npm ci && npm test'
       $compose down
-      [ "$status" -eq 0 ]
+      trap - EXIT INT TERM
       ;;
     test-front) node "$FRONT" 'npm ci && npm test' ;;
 

@@ -5,8 +5,9 @@ const mongoose = require('mongoose');
 const connectTo = (databaseName) =>
     mongoose.connect(`mongodb://mongodb-service:27017/${databaseName}`, { serverSelectionTimeoutMS: 10000 });
 
+// Só apaga o banco com a conexão aberta: se o connect falhou, o erro dele é o que deve aparecer.
 const dropAndDisconnect = async () => {
-    await mongoose.connection.dropDatabase();
+    if (mongoose.connection.readyState === 1) await mongoose.connection.dropDatabase();
     await mongoose.disconnect();
 };
 
