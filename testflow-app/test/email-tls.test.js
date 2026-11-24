@@ -38,9 +38,6 @@ test('email service refuses an SMTP server whose certificate is not trusted', as
         value: { host: '127.0.0.1', port: server.address().port, secure: true, from: 'sender@example.test' }
     }));
     t.mock.method(PendingEmail, 'create', async (email) => queued.push(email));
-    t.mock.method(fs, 'appendFile', (_path, _message, callback) => callback(null));
-    t.mock.method(console, 'log', () => {});
-    t.mock.method(console, 'error', () => {});
 
     const { sendResetPasswordEmail } = require('../services/emailService');
     await sendResetPasswordEmail('recipient@example.test', 'Test User', 'https://example.test/reset');

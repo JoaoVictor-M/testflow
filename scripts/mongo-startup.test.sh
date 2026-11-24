@@ -44,24 +44,32 @@ mongo_eval() { compose exec -T mongodb-service mongosh --quiet --eval "$1"; }
 stop_mongo() { compose down --remove-orphans >/dev/null 2>&1; }
 no_users='if (db.getSiblingDB("testflow-db").users.countDocuments({}) !== 0) quit(1)'
 
-# Without the hash variable the seed creates no account and says how to create one.
+# Without the hash variable the seed creates no account and says the variable is missing.
 unset TESTFLOW_ADMIN_PASSWORD_HASH
 start_mongo
 mongo_eval "$no_users"
-if ! compose logs --no-color mongodb-service | grep -q 'TESTFLOW_ADMIN_PASSWORD_HASH'; then
-  echo 'mongo-startup: the seed did not explain how to create the admin' >&2
+if ! compose logs --no-color mongodb-service | grep -q 'TESTFLOW_ADMIN_PASSWORD_HASH não está definida'; then
+  echo 'mongo-startup: the seed did not say the hash variable is missing' >&2
   exit 1
 fi
 stop_mongo
 
-# A value that is not a bcrypt hash is refused, so a plain password never becomes the stored one.
-export TESTFLOW_ADMIN_PASSWORD_HASH=plaintext-password
-start_mongo
-mongo_eval "$no_users"
-stop_mongo
+# A value that is not a strong bcrypt hash is refused and reported as invalid: a plain password,
+# a cost below 10 and a character outside the bcrypt alphabet.
+body=$(printf 'x%.0s' $(seq 53))
+for invalid in plaintext-password "\$2b\$04\$$body" "\$2b\$10\$${body%x}!"; do
+  export TESTFLOW_ADMIN_PASSWORD_HASH="$invalid"
+  start_mongo
+  mongo_eval "$no_users"
+  if ! compose logs --no-color mongodb-service | grep -q 'não é um hash bcrypt válido'; then
+    echo 'mongo-startup: the seed did not report the invalid hash' >&2
+    exit 1
+  fi
+  stop_mongo
+done
 
 # With a bcrypt hash the admin is created with exactly that hash.
-bcrypt_hash="\$2b\$10\$$(printf 'x%.0s' $(seq 53))"
+bcrypt_hash="\$2b\$10\$$body"
 export TESTFLOW_ADMIN_PASSWORD_HASH="$bcrypt_hash"
 start_mongo
 # Prove that initialization and ordinary database operations work, beyond the healthcheck ping.

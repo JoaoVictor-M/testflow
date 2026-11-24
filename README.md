@@ -48,9 +48,22 @@ sem caminho ou barra final. Sem ambas as configurações, o padrão local é `ht
 O redirecionamento preserva o caminho e usa essa origem confiável; o proxy envia o host do upstream.
 As portas públicas continuam 80/443 (internas 8080/8443). Sem certificados, há fallback HTTP.
 
-O usuário `admin` só é criado na primeira subida, e só se `TESTFLOW_ADMIN_PASSWORD_HASH` (hash bcrypt
-da senha escolhida por você) estiver no `.env`; o `.env.example` mostra como gerar o hash. Sem a
-variável, nenhum usuário é criado e o log do MongoDB avisa. Instalações com dados não mudam.
+### Primeiro administrador
+
+O banco nasce sem usuários: o `admin` só é criado na primeira subida de um volume `mongo-data` novo,
+e só a partir de um hash bcrypt (custo 10 ou mais) que você fornece. Antes do primeiro `docker compose up`:
+
+1. Gere o hash da senha escolhida, sem deixá-la no histórico do shell:
+   ```bash
+   read -rs SENHA && printf '%s' "$SENHA" | docker compose run --rm --no-deps -T backend-service \
+     node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>console.log(require('bcryptjs').hashSync(s,10)))"
+   ```
+2. Grave a saída no `.env`, entre aspas simples por causa dos `$`:
+   `TESTFLOW_ADMIN_PASSWORD_HASH='$2b$10$...'`
+3. Suba o sistema. O log do MongoDB (`docker compose logs mongodb-service`) diz se o admin foi criado,
+   se a variável faltou ou se o hash é inválido.
+
+Instalações que já têm dados não mudam: o seed não roda de novo.
 
 ---
 
