@@ -31,10 +31,11 @@ test('all develop checks use check.sh and preserve the mandatory integration and
     const commands = [...develop.matchAll(/^\s+(?:- )?run: (.+)$/gm)].map((match) => match[1]);
     assert.deepEqual(commands, [
         'scripts/check.sh "$CHECK_TARGET"', 'scripts/check.sh secrets',
-        'scripts/check.sh integration', 'scripts/check.sh image-scan', 'scripts/check.sh dast-full',
+        'scripts/check.sh integration', 'scripts/check.sh e2e', 'scripts/check.sh dast',
+        'scripts/check.sh image-scan', 'scripts/check.sh dast-full',
     ]);
     assert.match(develop, /  secrets:[\s\S]*fetch-depth: 0/);
-    for (const job of ['integration', 'dynamic']) {
+    for (const job of ['integration', 'e2e', 'dast', 'dynamic']) {
         assert.match(develop, new RegExp(`  ${job}:\\n    needs: \\[static, secrets\\]`));
     }
     assert.doesNotMatch(develop, /if:.*(?:integration|hashFiles)|\|\| true/);
@@ -89,16 +90,16 @@ function dockerfileDirectories(directory, found = []) {
     return found;
 }
 
-test('Dependabot updates both lockfiles, actions, Dockerfiles and Compose images against develop', () => {
+test('Dependabot updates the lockfiles, actions, Dockerfiles and Compose images against develop', () => {
     const config = read('.github/dependabot.yml');
     const updates = config.split('  - package-ecosystem: ').slice(1);
-    assert.equal(updates.length, 5);
+    assert.equal(updates.length, 6);
     for (const update of updates) {
         assert.match(update, /target-branch: develop/);
         assert.match(update, /interval: weekly/);
         assert.match(update, /cooldown:\n      default-days: 7/);
     }
-    for (const directory of ['/testflow-app', '/testflow-frontend']) {
+    for (const directory of ['/testflow-app', '/testflow-frontend', '/e2e']) {
         assert.ok(updates.some((update) => update.startsWith('npm\n') && update.includes(`directory: ${directory}\n`)));
     }
     assert.ok(updates.some((update) => update.startsWith('github-actions\n')));
@@ -128,4 +129,72 @@ test('DAST uses an isolated stack with no persistent volumes, published ports or
     } finally {
         fs.rmSync(envFile);
     }
+});
+
+const composeFiles = ['-f', 'docker-compose.ci.yml', '-f', 'docker-compose.e2e.yml'];
+
+function renderBrowserStack(directory) {
+    const envFile = path.join(directory, 'backend.env');
+    fs.writeFileSync(envFile, 'JWT_SECRET=fixture\nMONGO_URI=mongodb://mongodb-service:27017/testflow\n');
+    return JSON.parse(execFileSync('docker', ['compose', ...composeFiles, 'config', '--format', 'json'], {
+        cwd: root, encoding: 'utf8',
+        env: { ...process.env, TESTFLOW_CI_ENV: envFile, TESTFLOW_CI_TLS: directory },
+    }));
+}
+
+test('the browser stack serves the production images over HTTPS with nothing published or persistent', (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-web-compose-'));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const { services } = renderBrowserStack(directory);
+
+    assert.deepEqual(Object.keys(services).sort(), ['backend-service', 'frontend-service', 'mongodb-service', 'nginx-service']);
+    for (const service of Object.values(services)) {
+        assert.equal(service.ports, undefined);
+        assert.equal(service.container_name, undefined);
+        for (const volume of service.volumes ?? []) {
+            assert.equal(volume.type, 'bind');
+            assert.equal(volume.read_only, true);
+        }
+    }
+    assert.equal(services['frontend-service'].build.target, 'prod');
+    assert.equal(services['nginx-service'].environment.FRONTEND_URL, 'https://nginx-service:8443');
+    assert.equal(services['backend-service'].environment.FRONTEND_URL, 'https://nginx-service:8443');
+    assert.deepEqual(services['nginx-service'].volumes.map((volume) => volume.target), ['/etc/nginx/ssl']);
+    assert.deepEqual(services['mongodb-service'].volumes.map((volume) => volume.target),
+        ['/docker-entrypoint-initdb.d/mongo-init.js']);
+    assert.match(services['mongodb-service'].image, /@sha256:[a-f0-9]{64}$/);
+});
+
+test('the backend of the browser stack uses the database the first-administrator seed writes to', (t) => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-web-compose-'));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const { services } = renderBrowserStack(directory);
+    const seed = read('install/mongo-init.js').match(/getSiblingDB\('([^']+)'\)/)[1];
+
+    assert.equal(services['backend-service'].environment.MONGO_URI, `mongodb://mongodb-service:27017/${seed}`);
+});
+
+test('the Playwright image matches the locked test runner and the images are pinned by digest', () => {
+    const lock = JSON.parse(read('e2e/package-lock.json'));
+    const runner = lock.packages['node_modules/@playwright/test'].version;
+    const image = read('scripts/ci-e2e.sh').match(/^PLAYWRIGHT_IMAGE=(\S+)$/m)[1];
+
+    assert.match(image, new RegExp(`^mcr\\.microsoft\\.com/playwright:v${runner.replaceAll('.', '\\.')}-[a-z]+@sha256:[a-f0-9]{64}$`));
+    assert.equal(JSON.parse(read('e2e/package.json')).devDependencies['@playwright/test'], runner);
+    assert.match(read('scripts/ci-dast-baseline.sh'), /^ZAP_IMAGE=ghcr.io\/zaproxy\/zaproxy:[\w.]+@sha256:[a-f0-9]{64}$/m);
+});
+
+test('the DAST baseline plan fails on Medium or higher and accepts alerts one rule at a time, with a reason', () => {
+    const plan = read('.zap/baseline.yaml');
+    const exitStatus = plan.split('- type: exitStatus')[1];
+
+    assert.match(exitStatus, /errorLevel: Medium\n/);
+    assert.doesNotMatch(exitStatus, /errorLevel: (?:High|Informational)/);
+    assert.match(plan, /failOnError: true/);
+    const filters = [...plan.matchAll(/^\s+- ruleId: (.*)$/gm)].map((match) => match[1]);
+    assert.ok(filters.length > 0);
+    for (const filter of filters) assert.match(filter, /^\d+-\d+ +# \S.+$/, `filter needs an alertRef and a reason: ${filter}`);
+    assert.equal([...plan.matchAll(/newRisk: False Positive/g)].length, filters.length);
+    assert.doesNotMatch(plan, /alertFilters:\s*\n\s+- ruleId: ["']?\d+["']?\s*\n/);
+    assert.doesNotMatch(plan, /excludePaths|urlRegex/);
 });

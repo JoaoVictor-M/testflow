@@ -14,6 +14,13 @@ updates:
     target-branch: develop
     schedule:
       interval: weekly
+  - package-ecosystem: npm
+    directory: /e2e
+    cooldown:
+      default-days: 7
+    target-branch: develop
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     cooldown:
