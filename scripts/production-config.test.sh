@@ -44,5 +44,7 @@ assert.match(readme, /root:root/);
 assert.match(readme, /640/);
 assert.doesNotMatch(readme, /prepare-evidence\.sh/);
 assert.doesNotMatch(readme, /## 🛠️ Desenvolvimento/);
+assert.doesNotMatch(readme, /\]\(CHANGELOG\.md\)/);
+assert.match(readme, /https:\/\/github\.com\/JoaoVictor-M\/testflow\/blob\/main\/CHANGELOG\.md/);
 console.log('production: automatic evidence initialization, backup files and TLS migration docs preserved');
 NODE

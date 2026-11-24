@@ -75,7 +75,7 @@ test('README.md explains how to start production and development concisely and l
     assert.match(readme, /docker compose up -d/);
     assert.match(readme, /sh scripts\/dev\.sh up/);
     assert.match(readme, /docs\/desenvolvimento\.md/);
-    assert.match(readme, /CHANGELOG\.md/);
+    assert.match(readme, /https:\/\/github\.com\/JoaoVictor-M\/testflow\/blob\/main\/CHANGELOG\.md/);
 
     const devSection = readme.match(/## 🛠️ Desenvolvimento \(Para Code Maintainers\)([\s\S]*?)^---$/m);
     assert.ok(devSection, 'README.md must keep the development section delimited by --- for production packaging');

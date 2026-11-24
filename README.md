@@ -14,7 +14,7 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 *   **Auditoria Transparente**: Painel silencioso interativo para administradores rastrearem quem criou, apagou ou editou cada campo do software em tempo real (Comparação de Diff).
 *   **Infraestrutura Otimizada**: Reversa por Nginx estritamente tipado e MongoDB persistindo relatórios locais e artefatos de mídia.
 
-Consulte o histórico de versões em [CHANGELOG.md](CHANGELOG.md).
+Consulte o histórico de versões em [CHANGELOG.md](https://github.com/JoaoVictor-M/testflow/blob/main/CHANGELOG.md).
 
 ---
 
