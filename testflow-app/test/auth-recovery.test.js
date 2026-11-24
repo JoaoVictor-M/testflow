@@ -108,6 +108,34 @@ describe('recuperação e redefinição de senha', () => {
             assert.equal(blocked.status, 429);
             assert.ok(Number(blocked.headers['retry-after']) >= 1);
         });
+
+        test('atrás do proxy confiável isola clientes distintos por X-Forwarded-For e resiste a cabeçalho forjado', async () => {
+            const previousHops = process.env.TRUST_PROXY_HOPS;
+            process.env.TRUST_PROXY_HOPS = '1';
+            try {
+                for (let i = 0; i < 4; i += 1) {
+                    const ok = await request(app).post('/api/auth/forgot-password')
+                        .set('X-Forwarded-For', '198.51.100.10')
+                        .send({ username: `proxy.a.${i}`, email: `proxy.a.${i}@example.test` });
+                    assert.equal(ok.status, 200);
+                }
+
+                // Mesmo cliente atrás do proxy é bloqueado, inclusive tentando forjar salto à esquerda.
+                const blockedClientA = await request(app).post('/api/auth/forgot-password')
+                    .set('X-Forwarded-For', '203.0.113.99, 198.51.100.10')
+                    .send({ username: 'proxy.a.extra', email: 'proxy.a.extra@example.test' });
+                assert.equal(blockedClientA.status, 429);
+
+                // Outro cliente atrás do mesmo Nginx não herda o bloqueio do primeiro cliente.
+                const clientB = await request(app).post('/api/auth/forgot-password')
+                    .set('X-Forwarded-For', '198.51.100.20')
+                    .send({ username: 'proxy.b.1', email: 'proxy.b.1@example.test' });
+                assert.equal(clientB.status, 200);
+            } finally {
+                if (previousHops === undefined) delete process.env.TRUST_PROXY_HOPS;
+                else process.env.TRUST_PROXY_HOPS = previousHops;
+            }
+        });
     });
 
     describe('janela temporária e estado compartilhado do limitador', () => {

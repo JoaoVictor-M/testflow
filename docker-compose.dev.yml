@@ -14,6 +14,7 @@ services:
     restart: "no"
     environment:
       - FRONTEND_URL=http://localhost:5173
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-0}
     ports:
       - "127.0.0.1:3000:3000"
     volumes: !override
