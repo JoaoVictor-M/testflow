@@ -1,6 +1,7 @@
 #!/bin/sh
 # Restores a backup into a NEW database and an EMPTY evidence directory; it never replaces live data.
-# Verifies SHA-256 checksums and POSIX file modes recorded at backup time.
+# Supports versioned manifest archives (schema v1: verifies SHA-256 checksums and POSIX file modes)
+# and legacy pre-manifest archives (mongo.archive.gz + evidencias_testes only).
 # Mounts: /restore/backup.tar.age, /restore/identity (age private key), /restore/evidencias (target).
 # Environment: RESTORE_MONGO_URI (server only, no database) and RESTORE_DB (the new database name).
 set -eu -o pipefail
@@ -18,14 +19,49 @@ esac
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 decrypt() { age -d -i /restore/identity /restore/backup.tar.age; }
+has_member() { grep -Fxq -- "$1" "$work/members.txt"; }
 
-# Decrypting metadata and the database archive first means a wrong key fails before anything is written.
-decrypt | tar -x -C "$work" manifest.json checksums.sha256 permissions.txt mongo.archive.gz
+# Inspecting the archive table of contents first means a wrong key fails before anything is written.
+decrypt | tar -t >"$work/members.txt"
 
-# Verify the database archive checksum before restoring into MongoDB.
-grep '  mongo\.archive\.gz$' "$work/checksums.sha256" >"$work/mongo.sha256"
-[ -s "$work/mongo.sha256" ] || { echo 'restore: missing mongo.archive.gz checksum' >&2; exit 1; }
-(cd "$work" && sha256sum -c "$work/mongo.sha256" >/dev/null)
+has_manifest=0
+has_checksums=0
+has_permissions=0
+if has_member 'manifest.json'; then has_manifest=1; fi
+if has_member 'checksums.sha256'; then has_checksums=1; fi
+if has_member 'permissions.txt'; then has_permissions=1; fi
+
+if [ "$has_manifest" -eq 1 ] && [ "$has_checksums" -eq 1 ] && [ "$has_permissions" -eq 1 ]; then
+  format=v1
+elif [ "$has_manifest" -eq 0 ] && [ "$has_checksums" -eq 0 ] && [ "$has_permissions" -eq 0 ]; then
+  format=legacy
+else
+  echo 'restore: incomplete backup metadata; archive must contain either full manifest v1 files or legacy layout' >&2
+  exit 1
+fi
+
+if ! has_member 'mongo.archive.gz'; then
+  echo 'restore: missing mongo.archive.gz in backup archive' >&2
+  exit 1
+fi
+
+if [ "$format" = 'v1' ]; then
+  decrypt | tar -x -C "$work" manifest.json checksums.sha256 permissions.txt mongo.archive.gz
+
+  schema_version=$(awk '/^[[:space:]]*"schemaVersion"[[:space:]]*:[[:space:]]*[0-9]+[[:space:]]*,?[[:space:]]*$/ { sub(/^[^:]*:[[:space:]]*/, ""); sub(/[[:space:]]*,?[[:space:]]*$/, ""); print; exit }' "$work/manifest.json")
+  case "$schema_version" in
+    1) ;;
+    '') echo 'restore: manifest.json is missing or has invalid schemaVersion' >&2; exit 1 ;;
+    *) echo "restore: unsupported manifest schemaVersion $schema_version" >&2; exit 1 ;;
+  esac
+
+  # Verify the database archive checksum before restoring into MongoDB.
+  grep '  mongo\.archive\.gz$' "$work/checksums.sha256" >"$work/mongo.sha256" || true
+  [ -s "$work/mongo.sha256" ] || { echo 'restore: missing mongo.archive.gz checksum' >&2; exit 1; }
+  (cd "$work" && sha256sum -c "$work/mongo.sha256" >/dev/null)
+else
+  decrypt | tar -x -C "$work" mongo.archive.gz
+fi
 
 mongorestore --quiet --uri "$RESTORE_MONGO_URI" --gzip --archive="$work/mongo.archive.gz" \
   --nsInclude "$source_db"'.*' --nsFrom "$source_db"'.$collection$' --nsTo "$RESTORE_DB"'.$collection$'
@@ -33,19 +69,22 @@ mongorestore --quiet --uri "$RESTORE_MONGO_URI" --gzip --archive="$work/mongo.ar
 # Preserve recorded file modes while extracting evidence files into the empty target directory.
 decrypt | tar -xp --no-overwrite-dir -C /restore/evidencias --strip-components=1 evidencias_testes
 
-# Verify every restored evidence file checksum and permission mode.
-sed -n 's#  evidencias_testes/#  #p' "$work/checksums.sha256" >"$work/evidence.sha256"
-if [ -s "$work/evidence.sha256" ]; then
-  (cd /restore/evidencias && sha256sum -c "$work/evidence.sha256" >/dev/null)
+if [ "$format" = 'v1' ]; then
+  # Verify every restored evidence file checksum and permission mode.
+  sed -n 's#  evidencias_testes/#  #p' "$work/checksums.sha256" >"$work/evidence.sha256"
+  if [ -s "$work/evidence.sha256" ]; then
+    (cd /restore/evidencias && sha256sum -c "$work/evidence.sha256" >/dev/null)
+  fi
+  while IFS="$(printf '\t')" read -r expected_mode rel; do
+    [ -n "$rel" ] || continue
+    sub=${rel#evidencias_testes/}
+    actual_mode=$(stat -c '%a' "/restore/evidencias/$sub")
+    [ "$actual_mode" = "$expected_mode" ] || {
+      echo "restore: permission mismatch for $sub (expected $expected_mode, got $actual_mode)" >&2
+      exit 1
+    }
+  done <"$work/permissions.txt"
+  echo "restore: database $RESTORE_DB and the evidence files restored and verified (schema v1)"
+else
+  echo "restore: legacy archive format (pre-manifest); database $RESTORE_DB and evidence files restored without embedded checksum verification"
 fi
-while IFS="$(printf '\t')" read -r expected_mode rel; do
-  [ -n "$rel" ] || continue
-  sub=${rel#evidencias_testes/}
-  actual_mode=$(stat -c '%a' "/restore/evidencias/$sub")
-  [ "$actual_mode" = "$expected_mode" ] || {
-    echo "restore: permission mismatch for $sub (expected $expected_mode, got $actual_mode)" >&2
-    exit 1
-  }
-done <"$work/permissions.txt"
-
-echo "restore: database $RESTORE_DB and the evidence files restored and verified"

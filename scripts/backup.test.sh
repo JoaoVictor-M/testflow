@@ -216,7 +216,7 @@ const Project = require('./models/Project');
         assert.ok(corruptReport.discrepancies.some((d) => d.code === 'checksum_mismatch'));
 
         // Recupera a cascata interrompida no banco restaurado sem apagar o anexo físico retido.
-        const rec = await recoverPendingCascades();
+        const rec = await recoverPendingCascades({ evidenceBaseDir: '/rehearsal/restored' });
         assert.equal(rec.recovered.length, 1);
         assert.equal(rec.failed.length, 0);
         assert.equal(await Project.exists({ _id: '650000000000000000000040' }), null);
@@ -255,6 +255,45 @@ docker run --rm --user "$(id -u):$(id -g)" \
 if restore "$tmp/backups/tampered.tar.age" "$tmp/keys/right.txt" testflow-db-tampered "$tmp/tampered-restored" >/dev/null 2>&1; then miss
 elif [ -z "$(ls -A "$tmp/tampered-restored")" ] && [ -z "$(snapshot testflow-db-tampered)" ]; then pass; else miss; fi
 rm -f "$tmp/backups/tampered.tar.age"
+
+label="restore supports legacy pre-manifest backups containing only database archive and evidence"
+mkdir "$tmp/legacy-restored"
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$backup":/in/backup.tar.age:ro -v "$tmp/keys/right.txt":/in/id:ro -v "$tmp/backups":/out \
+  -e PUBLIC_KEY="$public_key" --entrypoint sh testflow-backup:local -c '
+    w=$(mktemp -d)
+    age -d -i /in/id /in/backup.tar.age | tar -x -C "$w" mongo.archive.gz evidencias_testes
+    tar -c -C "$w" mongo.archive.gz evidencias_testes \
+      | age -r "$PUBLIC_KEY" -o /out/legacy.tar.age
+    rm -rf "$w"
+  ' >/dev/null 2>&1
+legacy_out=$(restore "$tmp/backups/legacy.tar.age" "$tmp/keys/right.txt" testflow-db-legacy "$tmp/legacy-restored" 2>&1 || true)
+legacy_snapshot=$(snapshot testflow-db-legacy)
+if printf '%s' "$legacy_out" | grep -q 'legacy archive format' \
+  && diff -r "$tmp/evidence" "$tmp/legacy-restored" >/dev/null \
+  && [ -n "$legacy_snapshot" ] && [ "$legacy_snapshot" = "$live_before" ]; then pass; else miss; fi
+rm -f "$tmp/backups/legacy.tar.age"
+
+label="restore rejects partial metadata archives and unsupported manifest schema versions"
+mkdir "$tmp/partial-restored" "$tmp/unsupported-restored"
+docker run --rm --user "$(id -u):$(id -g)" \
+  -v "$backup":/in/backup.tar.age:ro -v "$tmp/keys/right.txt":/in/id:ro -v "$tmp/backups":/out \
+  -e PUBLIC_KEY="$public_key" --entrypoint sh testflow-backup:local -c '
+    w=$(mktemp -d)
+    age -d -i /in/id /in/backup.tar.age | tar -x -C "$w"
+    tar -c -C "$w" manifest.json mongo.archive.gz evidencias_testes \
+      | age -r "$PUBLIC_KEY" -o /out/partial.tar.age
+    sed "s/\"schemaVersion\": 1/\"schemaVersion\": 99/" "$w/manifest.json" >"$w/manifest.v99"
+    mv "$w/manifest.v99" "$w/manifest.json"
+    tar -c -C "$w" manifest.json checksums.sha256 permissions.txt mongo.archive.gz evidencias_testes \
+      | age -r "$PUBLIC_KEY" -o /out/unsupported.tar.age
+    rm -rf "$w"
+  ' >/dev/null 2>&1
+if restore "$tmp/backups/partial.tar.age" "$tmp/keys/right.txt" testflow-db-partial "$tmp/partial-restored" >/dev/null 2>&1 \
+  || restore "$tmp/backups/unsupported.tar.age" "$tmp/keys/right.txt" testflow-db-unsupported "$tmp/unsupported-restored" >/dev/null 2>&1; then miss
+elif [ -z "$(ls -A "$tmp/partial-restored")" ] && [ -z "$(snapshot testflow-db-partial)" ] \
+  && [ -z "$(ls -A "$tmp/unsupported-restored")" ] && [ -z "$(snapshot testflow-db-unsupported)" ]; then pass; else miss; fi
+rm -f "$tmp/backups/partial.tar.age" "$tmp/backups/unsupported.tar.age"
 
 label="restore refuses the live database name"
 if restore "$backup" "$tmp/keys/right.txt" "$database" "$tmp/wrong-restored" >/dev/null 2>&1; then miss; else pass; fi
