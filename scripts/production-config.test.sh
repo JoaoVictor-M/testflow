@@ -2,7 +2,8 @@
 # Verify the published configuration, including the workflow's removal of development docs.
 set -eu
 cd "$(dirname "$0")/.."
-tmp=$(mktemp -d /tmp/testflow-production-config-XXXXXX)
+mkdir -p .cache
+tmp=$(mktemp -d "$PWD/.cache/testflow-production-config-XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 sh scripts/test/format-production.sh "$tmp" >/dev/null 2>&1
 cp docker-compose.yml "$tmp/source-compose.yml"
