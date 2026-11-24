@@ -86,12 +86,31 @@ describe('log de requisições', () => {
         assert.equal(JSON.stringify(fields).includes('token-secreto-123'), false);
     });
 
-    test('aproveita um id válido recebido do proxy e troca um inválido', async () => {
+    test('aproveita um id válido recebido do proxy', async () => {
         const reused = await request(app).get('/health').set('X-Request-Id', 'proxy-abc-123456');
-        const replaced = await request(app).get('/health').set('X-Request-Id', 'id com espacos!');
 
         assert.equal(reused.headers['x-request-id'], 'proxy-abc-123456');
-        assert.match(replaced.headers['x-request-id'], /^[\w.-]{8,64}$/);
+    });
+
+    for (const [caso, incoming] of [
+        ['com caracteres fora do formato', 'id com espacos!'],
+        ['com menos de 8 caracteres', 'a'.repeat(7)],
+        ['com mais de 64 caracteres', 'a'.repeat(65)],
+    ]) {
+        test(`troca um id do proxy ${caso}`, async () => {
+            const replaced = await request(app).get('/health').set('X-Request-Id', incoming);
+
+            assert.notEqual(replaced.headers['x-request-id'], incoming);
+            assert.match(replaced.headers['x-request-id'], /^[\w.-]{8,64}$/);
+        });
+    }
+
+    test('aceita os limites de 8 e de 64 caracteres', async () => {
+        for (const incoming of ['a'.repeat(8), 'b'.repeat(64)]) {
+            const reused = await request(app).get('/health').set('X-Request-Id', incoming);
+
+            assert.equal(reused.headers['x-request-id'], incoming);
+        }
     });
 
     test('não registra as sondas de saúde', async () => {

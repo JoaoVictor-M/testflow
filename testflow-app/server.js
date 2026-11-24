@@ -629,7 +629,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), 
         // DEEP CLONE LOGIC
         if (req.body.sourceId) {
             const sourceId = req.body.sourceId;
-            logger.info('Duplicando demandas do projeto', { sourceId, targetId: savedProject._id });
+            logger.info('Duplicando demandas do projeto', { sourceId: isValidMongoId(sourceId) ? sourceId : undefined, targetId: savedProject._id });
 
             const demandas = await Demanda.find({ project: sourceId }).lean();
             for (const dem of demandas) {
@@ -840,7 +840,7 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), 
         // DEEP CLONE LOGIC
         if (req.body.sourceId) {
             const sourceId = req.body.sourceId;
-            logger.info('Duplicando cenários da demanda', { sourceId, targetId: savedDemanda._id });
+            logger.info('Duplicando cenários da demanda', { sourceId: isValidMongoId(sourceId) ? sourceId : undefined, targetId: savedDemanda._id });
             const scenarios = await Scenario.find({ demanda: sourceId }).lean();
             for (const scen of scenarios) {
                 const newScen = new Scenario({

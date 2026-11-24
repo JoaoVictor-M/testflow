@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { describe, test } = require('node:test');
+const mongoose = require('mongoose');
 const { createLogger, runWithRequestId } = require('../utils/logger');
 
 const capture = () => {
@@ -74,6 +75,27 @@ describe('logger', () => {
         assert.equal(entry.msg, 'convite para [email] enviado');
         assert.equal(entry.detail, 'falhou para [email]');
         assert.equal(entry.circular.name, 'volta');
+    });
+
+    test('valores com toJSON (ObjectId, Date) saem como o JSON deles, não como a estrutura interna', () => {
+        const { lines, log } = capture();
+        const id = new mongoose.Types.ObjectId();
+        const when = new Date('2026-11-24T12:00:00.000Z');
+
+        log.info('registro', { id, when, nested: { ids: [id] } });
+
+        const entry = JSON.parse(lines[0]);
+        assert.equal(entry.id, id.toString());
+        assert.equal(entry.when, '2026-11-24T12:00:00.000Z');
+        assert.deepEqual(entry.nested, { ids: [id.toString()] });
+    });
+
+    test('o toJSON também passa pela ocultação de campos sensíveis', () => {
+        const { lines, log } = capture();
+
+        log.info('documento', { doc: { toJSON: () => ({ name: 'ok', password: 'segredo-5' }) } });
+
+        assert.deepEqual(JSON.parse(lines[0]).doc, { name: 'ok', password: '[redacted]' });
     });
 
     test('um erro vira nome, código e pontos da pilha, sem a mensagem', () => {

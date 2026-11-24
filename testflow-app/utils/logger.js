@@ -17,15 +17,27 @@ const serializeError = (error) => ({
         .filter((line) => line.startsWith('at ')).slice(0, MAX_STACK_FRAMES),
 });
 
-const sanitize = (value, depth = 0, seen = new WeakSet()) => {
+const sanitizeObject = (value, depth, ancestors) => {
+    // ObjectId, Date e documentos do Mongoose definem a própria forma em JSON.
+    if (typeof value.toJSON === 'function') return sanitize(value.toJSON(), depth + 1, ancestors);
+    if (Array.isArray(value)) return value.map((item) => sanitize(item, depth + 1, ancestors));
+    return Object.fromEntries(Object.entries(value).map(([key, item]) =>
+        [key, SENSITIVE_KEY.test(key) ? '[redacted]' : sanitize(item, depth + 1, ancestors)]));
+};
+
+// `ancestors` guarda só o caminho até o valor atual: referência circular vira '[omitido]', mas o
+// mesmo objeto citado em dois lugares sai nos dois.
+const sanitize = (value, depth = 0, ancestors = new Set()) => {
     if (typeof value === 'string') return value.replace(EMAIL_IN_TEXT, '[email]');
     if (value instanceof Error) return serializeError(value);
     if (value === null || typeof value !== 'object') return value;
-    if (seen.has(value) || depth >= MAX_DEPTH) return '[omitido]';
-    seen.add(value);
-    if (Array.isArray(value)) return value.map((item) => sanitize(item, depth + 1, seen));
-    return Object.fromEntries(Object.entries(value).map(([key, item]) =>
-        [key, SENSITIVE_KEY.test(key) ? '[redacted]' : sanitize(item, depth + 1, seen)]));
+    if (ancestors.has(value) || depth >= MAX_DEPTH) return '[omitido]';
+    ancestors.add(value);
+    try {
+        return sanitizeObject(value, depth, ancestors);
+    } finally {
+        ancestors.delete(value);
+    }
 };
 
 const createLogger = (write) => {
