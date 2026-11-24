@@ -8,6 +8,10 @@ sh scripts/test/format-production.sh "$tmp" >/dev/null 2>&1
 cp docker-compose.yml "$tmp/source-compose.yml"
 FRONTEND_URL=https://frontend.example.test/testflow NGINX_PUBLIC_ORIGIN= \
   docker compose -f "$tmp/prod/docker-compose.yml" config --format json >"$tmp/config.json"
+# The backup service and the restore script reach production together with the Compose file.
+[ -f "$tmp/prod/backup/Dockerfile" ] && [ -x "$tmp/prod/scripts/restore.sh" ] \
+  || { echo 'production: backup/ and scripts/restore.sh must be published' >&2; exit 1; }
+docker compose --env-file /dev/null --profile tools -f "$tmp/prod/docker-compose.yml" config --format json >"$tmp/config-tools.json"
 node_image=$(sed -n 's/^NODE_IMAGE=//p' scripts/check.sh)
 docker run --rm -i --user "$(id -u):$(id -g)" -v "$tmp:/fixture:ro" "$node_image" node - <<'NODE'
 const assert = require('node:assert/strict');
@@ -29,6 +33,9 @@ assert.equal(backend.depends_on['evidence-init'].condition, 'service_completed_s
 assert.deepEqual(init.volumes, backend.volumes);
 assert.equal(services['nginx-service'].environment.NGINX_PUBLIC_ORIGIN, '');
 assert.equal(services['nginx-service'].environment.FRONTEND_URL, 'https://frontend.example.test/testflow');
+const backup = JSON.parse(fs.readFileSync('/fixture/config-tools.json', 'utf8')).services.backup;
+assert.ok(backup.build.context.endsWith('/prod/backup'), 'the backup image is built from the published folder');
+assert.equal(backup.image, 'testflow-backup:local');
 const readme = fs.readFileSync('/fixture/prod/README.md', 'utf8');
 assert.match(readme, /NGINX_PUBLIC_ORIGIN/);
 assert.match(readme, /FRONTEND_URL/);
@@ -36,5 +43,5 @@ assert.match(readme, /root:root/);
 assert.match(readme, /640/);
 assert.doesNotMatch(readme, /prepare-evidence\.sh/);
 assert.doesNotMatch(readme, /## 🛠️ Desenvolvimento/);
-console.log('production: automatic evidence initialization and TLS migration docs preserved');
+console.log('production: automatic evidence initialization, backup files and TLS migration docs preserved');
 NODE

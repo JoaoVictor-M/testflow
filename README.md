@@ -69,14 +69,13 @@ O backup junta o banco e as evidências num único arquivo criptografado com [ag
 
 1. Em outra máquina, gere o par: `age-keygen -o age-identity.txt`. Guarde `age-identity.txt` em local seguro.
 2. No `.env`, defina `BACKUP_AGE_RECIPIENT` com a chave pública (a linha `age1...` do arquivo gerado).
-3. Crie a pasta de destino (`mkdir backups`) e rode `docker compose --profile tools run --rm backup`. O arquivo `backups/testflow-<data>.tar.age` aparece ao final. `BACKUP_DIR` muda a pasta de destino.
+3. Crie a pasta de destino (`mkdir backups`; o UID 1000 precisa poder gravar nela, e o arquivo sai com modo 0600 desse UID) e rode `docker compose --profile tools run --rm backup`. O arquivo `backups/testflow-<data>.tar.age` aparece ao final. `BACKUP_DIR` muda a pasta de destino.
 
 A restauração nunca sobrescreve os dados em uso: ela cria um banco novo e preenche uma pasta vazia.
 ```bash
 scripts/restore.sh backups/testflow-<data>.tar.age --identity age-identity.txt --network testflow_default \
   --mongo-uri mongodb://mongodb-service:27017 --db testflow-db-restaurado --evidence-dir ./evidencias-restauradas
 ```
-O backup é um teste de rotina: `scripts/check.sh integration` faz backup, restaura num banco descartável e compara.
 
 ---
 
@@ -125,6 +124,7 @@ testes (MongoDB e Mailpit), usados pelo `scripts/check.sh test`. A preparação 
 evidências e a configuração TLS são as mesmas da seção de produção.
 
 Antes de enviar alterações, rode `scripts/check.sh quality` e, para infraestrutura, `scripts/check.sh all`.
+`scripts/check.sh integration` faz um backup, restaura num banco descartável e compara.
 Consulte a [política de versões e entradas de build](docs/build-inputs.md) para atualizar dependências e imagens.
 
 O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,
