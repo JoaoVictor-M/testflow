@@ -158,7 +158,7 @@ function ScenariosListPage() {
 
   const handleScenarioSaveSuccess = (savedScenario, mode) => {
     if (mode === 'create') {
-      setScenarios((prev) => [savedScenario, ...prev]);
+      fetchData();
     } else if (mode === 'update') {
       setScenarios((prev) =>
         prev.map((s) => (s._id === savedScenario._id ? savedScenario : s))
