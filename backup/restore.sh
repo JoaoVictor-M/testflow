@@ -21,6 +21,6 @@ decrypt() { age -d -i /restore/identity /restore/backup.tar.age; }
 # Decrypting the database archive first means a wrong key fails before anything is written.
 decrypt | tar -x -C "$work" mongo.archive.gz
 mongorestore --quiet --uri "$RESTORE_MONGO_URI" --gzip --archive="$work/mongo.archive.gz" \
-  --nsFrom "$source_db"'.$collection$' --nsTo "$RESTORE_DB"'.$collection$'
+  --nsInclude "$source_db"'.*' --nsFrom "$source_db"'.$collection$' --nsTo "$RESTORE_DB"'.$collection$'
 decrypt | tar -x -C /restore/evidencias --strip-components=1 evidencias_testes
 echo "restore: database $RESTORE_DB and the evidence files restored"

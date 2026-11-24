@@ -13,8 +13,10 @@ restored=testflow-db-restored
 test_mongo="docker compose -p $project -f docker-compose.teste.yml"
 # The backup service of the production file, on the network of the throwaway MongoDB (service alias
 # mongodb-service): only the backup container starts, never the production services.
+# It runs as the caller (-u), so the test works for any UID, not only 1000.
 run_backup() {
-  docker compose -p "$project" -f docker-compose.yml --profile tools run --rm --no-deps -T backup
+  docker compose -p "$project" -f docker-compose.yml --profile tools run --rm --no-deps -T \
+    -u "$(id -u):$(id -g)" backup
 }
 fails=0
 pass() { echo "ok   - $label"; }
@@ -23,8 +25,10 @@ miss() { echo "FAIL - $label"; fails=$((fails + 1)); }
 mkdir -p .cache
 tmp=$(mktemp -d .cache/backup-test.XXXXXX)
 tmp=$PWD/$tmp
+made_live_dir=
 cleanup() {
   $test_mongo down --remove-orphans >/dev/null 2>&1 || true
+  [ -z "$made_live_dir" ] || rmdir evidencias_testes 2>/dev/null || true
   rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -101,6 +105,18 @@ if restore "$backup" "$tmp/keys/right.txt" "$database" "$tmp/wrong-restored" >/d
 label="restore refuses a directory that already has files"
 if restore "$backup" "$tmp/keys/right.txt" testflow-db-again "$tmp/restored" >/dev/null 2>&1; then miss
 elif [ -z "$(snapshot testflow-db-again)" ]; then pass; else miss; fi
+
+label="restore refuses the live evidence directory, however the path is written"
+[ -d evidencias_testes ] || { mkdir evidencias_testes; made_live_dir=1; }
+if restore "$backup" "$tmp/keys/right.txt" testflow-db-live evidencias_testes >/dev/null 2>&1 \
+  || restore "$backup" "$tmp/keys/right.txt" testflow-db-live ./scripts/../evidencias_testes/ >/dev/null 2>&1; then miss
+elif [ -z "$(snapshot testflow-db-live)" ]; then pass; else miss; fi
+
+label="restore resolves relative paths from where it is run, not from the repository"
+mkdir "$tmp/relative"
+if (cd "$tmp" && sh "$OLDPWD/scripts/restore.sh" "backups/$(basename "$backup")" --identity keys/right.txt \
+  --network "${project}_default" --mongo-uri mongodb://mongodb-service:27017 --db testflow-db-relative \
+  --evidence-dir relative) >/dev/null 2>&1 && diff -r "$tmp/evidence" "$tmp/relative" >/dev/null; then pass; else miss; fi
 
 label="the backup refuses to run without the public key and leaves no file"
 rm "$backup"

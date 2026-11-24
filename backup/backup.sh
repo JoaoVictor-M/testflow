@@ -11,6 +11,8 @@ uri=${BACKUP_MONGO_URI:-mongodb://mongodb-service:27017/testflow-db}
 work=$(mktemp -d)
 name="testflow-$(date -u +%Y%m%dT%H%M%SZ).tar.age"
 trap 'rm -rf "$work" "/backups/.$name.partial"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 mongodump --quiet --uri "$uri" --gzip --archive="$work/mongo.archive.gz"
 tar -c -C "$work" mongo.archive.gz -C / evidencias_testes | age -r "$BACKUP_AGE_RECIPIENT" -o "/backups/.$name.partial"
