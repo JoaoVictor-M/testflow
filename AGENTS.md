@@ -1,67 +1,98 @@
-# TestFlow — Instruções para agentes
+# TestFlow — instruções para agentes
 
-## Contexto
+<!-- Versionado e público: só regras. Nunca coloque aqui e-mail, nome, caminho da máquina, token,
+     host interno ou dado real. CLAUDE.md e GEMINI.md só importam este arquivo. -->
 
-Este repositório contém o código-fonte do TestFlow.
+## O que é
 
-A documentação oficial do produto fica em um cofre Obsidian
-separado, acessível localmente por `.testflow-docs/`.
+Sistema web para gerenciar projetos, demandas, cenários de teste e evidências. Stack MERN em Docker:
+`testflow-app/` (Node, Express, Mongoose; entrada `index.js`, rotas em `server.js`),
+`testflow-frontend/` (React, Vite, Tailwind), `nginx/` (HTTPS e proxy) e MongoDB.
 
-O vínculo `.testflow-docs` é específico de cada computador e
-não deve ser versionado.
+## Cofre (contexto do projeto)
 
-## Consulta à documentação
+O cofre Obsidian fica fora do repositório, no link local `.testflow-docs/` (não versionado). Leia,
+nesta ordem e nada além:
 
-Antes de analisar ou implementar uma funcionalidade:
+1. `.testflow-docs/00-indice.md` — mapa e estado atual.
+2. `.testflow-docs/tarefas/00-fila.md` — fila de tarefas.
+3. A nota da sua tarefa (`.testflow-docs/tarefas/<ID>.md`) e só as notas que ela linka.
 
-1. Consultar `.testflow-docs/00-Mapa-do-Conhecimento.md`.
-2. Consultar `.testflow-docs/00-Guia-de-Governanca.md`.
-3. Localizar as regras de negócio pertinentes à tarefa.
-4. Consultar auditorias, pareceres e ADRs quando relevantes.
-5. Verificar as decisões e o status de aprovação antes de agir.
+`regras/`, `referencias/` e `decisions/`: busque o ID (`grep -n RN-41`), não leia o arquivo inteiro.
+Nunca leia `99-arquivo/`. Ao terminar a tarefa, atualize a nota dela: `status: feita` e a seção
+"Resultado" em até 5 linhas. Notas curtas, sem hashes, logs, caminhos absolutos ou segredos.
 
-Se o cofre não estiver acessível, informar a limitação.
-Não inventar regras nem assumir que a documentação foi consultada.
+**O repositório é público.** Nada do cofre (auditoria, vulnerabilidades, regras internas) vai para
+código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudança, não a falha.
 
-## Fontes de verdade
+## Inegociáveis
 
-- Regras de negócio aprovadas orientam o comportamento esperado.
-- Auditorias registram evidências e problemas identificados.
-- Pareceres podem conter recomendações ainda não aprovadas.
-- ADRs aceitos registram decisões arquiteturais.
-- O backlog aprovado define o trabalho autorizado.
+- Tudo roda em Docker. `docker compose up -d --build` sobe a aplicação. Nada de instalar linguagem
+  ou ferramenta no host: comandos de Node rodam em container.
+- Segurança por padrão: OWASP ASVS nível 2 e OWASP Top 10.
+- Toda mudança vem com testes. Regra de negócio usa TDD.
+- Código limpo: funções pequenas, nomes claros, sem código morto, sem abstração prematura.
+- Dependência nova só com justificativa.
+- Segredo nunca no Git: `.env` ignorado, só `.env.example` com placeholders.
 
-Não interpretar automaticamente um documento consolidado
-marcado como "em-validacao" como totalmente aprovado.
+## Comandos
 
-Em caso de conflito ou dúvida sobre uma decisão, sinalizar
-a divergência antes de implementar.
+- Verificação: `scripts/check.sh quality` (obrigatório antes de juntar) e `scripts/check.sh all`
+  (recomendado). Enquanto a tarefa BASE-04 não existir, rode `npm ci && npm run lint` em
+  `testflow-app/` e `testflow-frontend/`, e `npm run build` no front, num container `node:20`.
+- Logs: `docker compose logs <serviço>`.
 
-## Limites de atuação
+## Git
 
-- Ler a documentação oficial conforme a tarefa.
-- Não modificar o cofre sem autorização explícita.
-- Não alterar documentos históricos da auditoria para
-  acomodar mudanças de implementação.
-- Não modificar código sem uma tarefa autorizada.
-- Respeitar alterações locais preexistentes no Git.
-- Não executar operações destrutivas, deploy ou alterações
-  em produção sem autorização.
+- Branches: `main` (só versões oficiais), `develop` (funcionalidades prontas; até a BASE-01 ela se
+  chama `development`) e uma branch por tarefa a partir da `develop`:
+  `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `refactor/`, `test/` + `<id>-<tema>`.
+- Tarefa: branch → commits pequenos em Conventional Commits → `check.sh quality` verde →
+  revisão → `git merge --no-ff` na `develop` → push → apagar a branch local e remota → pipeline da
+  `develop` verde. Pipeline vermelho: `fix/` antes de qualquer outra tarefa.
+- Release: `check.sh release-local` → `chore/release-X.Y.Z` (`VERSION`, `CHANGELOG.md`) →
+  relatório e sim explícito do dono → `git merge --no-ff develop` na `main` → push →
+  `git switch develop && git merge --ff-only main && git push`.
+- Nunca commit direto em `main` ou `develop`, nunca force push, nunca `--no-verify`.
 
-## Ferramentas
+## Autonomia e relatório da main
 
-A leitura direta dos arquivos Markdown é o método principal.
+Neste repositório, trabalhe sem perguntar: pegue a próxima tarefa da fila, implemente, teste, faça
+commit, merge na `develop`, push e siga. A única parada é a `main`: antes de qualquer merge nela,
+mande ao dono este relatório (até 30 linhas) e espere um sim explícito. Silêncio, emoji ou resposta
+ambígua não são sim. Enquanto espera, continue as tarefas na `develop`.
 
-As Bases podem ser lidas como arquivos de configuração ou
-consultadas pela CLI do Obsidian quando disponível.
+```
+RELEASE vX.Y.Z — pronta para a main
+Tarefas: <ID> — <título> (uma por linha)
+Testes: release-local ✔ (quality, secrets, sast, sca, iac, image-scan, integration, e2e, dast-full, load)
+Pipeline da develop: ✔ <link do run>
+O que o usuário vai notar: …
+Riscos e pendências: …
+Posso versionar na main?
+```
 
-O trabalho não deve depender de o aplicativo Obsidian estar aberto.
+## Regras de segurança
 
-## Entrega
+- Senhas com bcrypt; nunca registrar senha, token ou e-mail em log.
+- `JWT_SECRET` vem do ambiente, sem valor padrão; a aplicação não sobe sem ele.
+- Toda rota de dados passa por `authMiddleware` e, quando restrita, `roleMiddleware`.
+- Toda consulta filtra pelo que o usuário pode ver (teste de IDOR em cada rota nova).
+- Entrada validada no servidor; resposta com projeção mínima (nunca o documento inteiro do usuário).
+- Upload com limite de tamanho e tipo; arquivo de evidência só sai para quem tem acesso.
+- `helmet` ligado; CORS só para a origem do front.
 
-Ao concluir uma tarefa, informar:
+## Trabalhando neste repositório
 
-- O que foi analisado ou alterado.
-- Quais documentos fundamentaram o trabalho.
-- Quais testes foram executados.
-- Pendências, riscos ou decisões que exigem aprovação.
+- Pergunte ao dono só o que só ele resolve: credenciais, serviço pago, o sim da release, ou dúvida de
+  produto que as regras e o código não respondem. O resto: decida, registre uma ADR no cofre
+  (`decisions/`) e siga.
+- Gates nunca são afrouxados: não pular, desligar ou apagar teste; não baixar cobertura nem
+  severidade; nada de ignore genérico em Semgrep, ZAP, Trivy ou Gitleaks. Falso positivo só para uma
+  regra específica, com a justificativa ao lado.
+- Antes de cada commit, confira o que está em stage: nada de dado pessoal, caminho da máquina ou
+  segredo.
+- Docker: o host roda outros projetos. Mexa só em recursos `testflow`; nunca `prune` geral,
+  `--privileged`, rede do host, nem `down -v` ou remoção dos volumes `mongo-data` e
+  `evidencias_testes`.
+- A mesma falha depois de 3 tentativas: pare a tarefa, marque bloqueada com o motivo e siga.
