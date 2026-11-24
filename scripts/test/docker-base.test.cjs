@@ -26,10 +26,10 @@ function compose(...files) {
 }
 
 // Renders the configuration from the files alone: no ./.env (dev.sh creates one from .env.example) and
-// no BACKUP_* variable of the caller's shell may leak into the result.
+// no BACKUP_* or JWT_SECRET variable of the caller's shell may leak into the result.
 function composeWith(profiles, ...files) {
     const args = [...profiles.flatMap((profile) => ['--profile', profile]), ...files.flatMap((file) => ['-f', file])];
-    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('BACKUP_')));
+    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('BACKUP_') && name !== 'JWT_SECRET'));
     return JSON.parse(execFileSync('docker', ['compose', '--env-file', '/dev/null', ...args, 'config', '--format', 'json'], {
         cwd: root, encoding: 'utf8',
         env: { ...env, COMPOSE_PROJECT_NAME: 'testflow-config-test' },
@@ -129,6 +129,17 @@ test('.env.example leaves the backup key unset, so a copy of it never carries a 
     const lines = fs.readFileSync(path.join(root, '.env.example'), 'utf8').split('\n');
     assert.ok(lines.some((line) => line.startsWith('# BACKUP_AGE_RECIPIENT=')), 'the variable is documented');
     assert.ok(!lines.some((line) => line.startsWith('BACKUP_')));
+});
+
+test('Compose forwards JWT_SECRET without a default and .env.example keeps it commented out', () => {
+    const prodBackend = compose('docker-compose.yml').services['backend-service'];
+    assert.equal(prodBackend.environment.JWT_SECRET, '', 'JWT_SECRET must come from the environment, never a literal default');
+    const devBackend = compose('docker-compose.yml', 'docker-compose.dev.yml').services['backend-service'];
+    assert.equal(devBackend.environment.JWT_SECRET, '', 'dev overlay inherits JWT_SECRET without a literal default');
+
+    const lines = fs.readFileSync(path.join(root, '.env.example'), 'utf8').split('\n');
+    assert.ok(lines.some((line) => line.startsWith('# JWT_SECRET=')), 'JWT_SECRET is documented in .env.example');
+    assert.ok(!lines.some((line) => line.startsWith('JWT_SECRET=')), '.env.example must not ship an active placeholder');
 });
 
 test('the backup image pins its base by digest, runs as a regular user and installs pinned tools', () => {

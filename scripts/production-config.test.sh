@@ -34,12 +34,16 @@ assert.equal(backend.depends_on['evidence-init'].condition, 'service_completed_s
 assert.deepEqual(init.volumes, backend.volumes);
 assert.equal(services['nginx-service'].environment.NGINX_PUBLIC_ORIGIN, '');
 assert.equal(services['nginx-service'].environment.FRONTEND_URL, 'https://frontend.example.test/testflow');
+assert.equal(backend.environment.JWT_SECRET, '');
 const backup = JSON.parse(fs.readFileSync('/fixture/config-tools.json', 'utf8')).services.backup;
 assert.ok(backup.build.context.endsWith('/prod/backup'), 'the backup image is built from the published folder');
 assert.equal(backup.image, 'testflow-backup:local');
 const readme = fs.readFileSync('/fixture/prod/README.md', 'utf8');
 assert.match(readme, /NGINX_PUBLIC_ORIGIN/);
 assert.match(readme, /FRONTEND_URL/);
+assert.match(readme, /JWT_SECRET/);
+assert.match(readme, /Rotação/);
+assert.match(readme, /sessões/);
 assert.match(readme, /root:root/);
 assert.match(readme, /640/);
 assert.doesNotMatch(readme, /prepare-evidence\.sh/);

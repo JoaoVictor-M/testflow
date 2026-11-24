@@ -74,6 +74,8 @@ cat >"$tmp/secret.yml" <<EOF
 services:
   backend-service:
     env_file: $tmp/backend.env
+    environment:
+      JWT_SECRET: !reset null
 EOF
 export COMPOSE_FILE="$COMPOSE_FILE:$tmp/secret.yml"
 docker compose build
