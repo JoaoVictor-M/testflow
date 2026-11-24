@@ -67,9 +67,13 @@ jobs:
 
       - name: Create .env for testing
         run: |
-          echo "MONGO_URI=mongodb://mongodb-service:27017/testflow" >> ./testflow-app/.env
-          echo "JWT_SECRET=supersecret_test_key" >> ./testflow-app/.env
-          echo "PORT=3000" >> ./testflow-app/.env
+          umask 077
+          jwt_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt_secret"
+          printf '%s\n' \
+            "MONGO_URI=mongodb://mongodb-service:27017/testflow" \
+            "JWT_SECRET=$jwt_secret" \
+            "PORT=3000" > ./testflow-app/.env
 
       - name: Build Backend Image for Scanning
         run: docker build -t testflow-backend:latest ./testflow-app

@@ -1,21 +1,49 @@
-# Dependencias
-node_modules/
+# Segredos e configuração local; exemplos contêm apenas placeholders
+.env*
+!.env.example
+# Configuração pública do Vite: somente a URL da API, sem segredos
+!/testflow-frontend/.env.development
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+backups/
+*.dump
+*.sql.gz
 
-# Ambiente
-.env
-
-# Pastas
-evidencias_testes/
-certificados/
-
-# IDE e Sistema
+# Estado local de ferramentas
+.claude/
+.codex/
+.agents/
+.maestri/
+.serena/
+.cache/
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
 
-# Documentacao
-Cenarios_de_Teste_TestFlow.md
+# Resultados de testes, cobertura e verificações de segurança
+/reports/
+coverage/
+playwright-report/
+test-results/
+*.sarif
 
-# Cofre documental local do TestFlow
+# Dependências e saídas de build
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Dados locais do ambiente
+.data/
+uploads/
+evidencias_testes/
+certificados/
+
+# Documentação local
+Cenarios_de_Teste_TestFlow.md
 .testflow-docs
