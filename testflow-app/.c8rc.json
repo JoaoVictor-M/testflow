@@ -5,5 +5,5 @@
   "exclude": ["test/**", "eslint.config.js", "coverage/**", "node_modules/**"],
   "reporter": ["text-summary", "json-summary"],
   "check-coverage": true,
-  "lines": 39
+  "lines": 78.2
 }
