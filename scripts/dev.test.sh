@@ -13,7 +13,7 @@ dev() { (cd "$repo" && PATH="$tmp/bin:$PATH" FAKE_DOCKER_LOG="$tmp/docker.log" s
 untouched() { [ ! -e "$repo/.env" ] && [ -z "$(git -C "$repo" config --local core.hooksPath || true)" ]; }
 
 mkdir -p "$tmp/bin" "$repo/scripts"
-printf '#!/bin/sh\necho "$*" >>"$FAKE_DOCKER_LOG"\nprintf "project=%%s\\n" "$COMPOSE_PROJECT_NAME" >>"$FAKE_DOCKER_LOG"\n' >"$tmp/bin/docker"
+printf '#!/bin/sh\necho "$*" >>"$FAKE_DOCKER_LOG"\nprintf "project=%%s\\nfiles=%%s\\n" "$COMPOSE_PROJECT_NAME" "$COMPOSE_FILE" >>"$FAKE_DOCKER_LOG"\n' >"$tmp/bin/docker"
 chmod +x "$tmp/bin/docker"
 cp "$here/dev.sh" "$repo/scripts/dev.sh"
 echo 'JWT_SECRET=placeholder' >"$repo/.env.example"
@@ -29,6 +29,10 @@ dev up && cmp -s "$repo/.env" "$repo/.env.example" \
   && grep -q 'compose up' "$tmp/docker.log" && pass || miss
 label="up keeps an existing .env"
 echo 'JWT_SECRET=mine' >"$repo/.env"; dev up && grep -qx 'JWT_SECRET=mine' "$repo/.env" && pass || miss
+label="up starts the development files in their own project, never the production one"
+: >"$tmp/docker.log"; dev up && grep -qx 'project=testflow-dev' "$tmp/docker.log" \
+  && grep -qx 'files=docker-compose.yml:docker-compose.dev.yml' "$tmp/docker.log" \
+  && grep -q -- '--wait' "$tmp/docker.log" && grep -q -- '--renew-anon-volumes' "$tmp/docker.log" && pass || miss
 label="up preserves an explicitly isolated Compose project"
 COMPOSE_PROJECT_NAME=testflow-dev-isolated dev up && grep -qx 'project=testflow-dev-isolated' "$tmp/docker.log" && pass || miss
 

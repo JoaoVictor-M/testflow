@@ -1,6 +1,6 @@
-# Serviços descartáveis dos testes automatizados (scripts/check.sh test). Sem porta publicada, sem
-# volume nomeado e sem nome de projeto: o check.sh passa um projeto por execução, e o banco nasce
-# vazio e some junto com o contêiner.
+# Disposable services for the automated tests (scripts/check.sh test). No published port, no named
+# volume, no container name and no project name: check.sh passes one project per worktree, so two
+# Devs test at the same time, and everything vanishes with `down`.
 services:
   mongodb-service:
     image: mongo:7.0@sha256:8bb4442761a63a8dda452744082cdac9644b429807eb977b42324a63cef59ca4
@@ -8,6 +8,15 @@ services:
       - /data/db
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Catches every e-mail the back sends: SMTP on mailpit:1025, inbox API on mailpit:8025.
+  mailpit:
+    image: axllent/mailpit:v1.34.0@sha256:23a2ef85bc50853ab3093645d1d64679afd8887e89da5e48a88940c172591a4e
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
       interval: 2s
       timeout: 5s
       retries: 30
