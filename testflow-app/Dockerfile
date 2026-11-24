@@ -1,7 +1,7 @@
 FROM node:20-alpine
 WORKDIR /app
-# Atualiza pacote nativo vulnerável detectado no CI/CD Trivy (CVE-2026-22184 / CVE-2026-27171)
-RUN apk add --upgrade --no-cache zlib
+# Keep all runtime packages current with the base distribution's security fixes.
+RUN apk upgrade --no-cache
 COPY package.json ./
 # Force fresh install and explicit tar versioning
 RUN rm -f package-lock.json && \
