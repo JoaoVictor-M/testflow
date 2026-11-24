@@ -6,9 +6,11 @@ const { randomBytes } = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { mock } = require('node:test');
 
 const jwtSecret = randomBytes(32).toString('hex');
 process.env.JWT_SECRET = jwtSecret;
+process.env.SMTP_HOST = '';
 
 const jwt = require('jsonwebtoken');
 const request = require('supertest');
@@ -16,6 +18,8 @@ const Demanda = require('../../models/Demanda');
 const Project = require('../../models/Project');
 const Scenario = require('../../models/Scenario');
 const User = require('../../models/User');
+const emailService = require('../../services/emailService');
+mock.method(emailService, 'sendInviteEmail', async () => {});
 const { app } = require('../../server');
 
 const ROLES = ['admin', 'analyst', 'viewer'];
@@ -84,4 +88,4 @@ const createEvidenceTracker = () => {
     };
 };
 
-module.exports = { ROLES, call, createCatalog, createEvidenceTracker, createProfiles, evidenceRoot, jwtSecret, tokenFor };
+module.exports = { call, createCatalog, createEvidenceTracker, createProfiles, evidenceRoot, tokenFor };

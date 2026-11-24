@@ -9,7 +9,6 @@ const Demanda = require('../models/Demanda');
 const Project = require('../models/Project');
 const Scenario = require('../models/Scenario');
 
-// A demanda só vai para Testado com ao menos uma evidência.
 describe('evidências e conclusão da demanda', () => {
     let analyst;
     let viewer;
@@ -92,7 +91,7 @@ describe('evidências e conclusão da demanda', () => {
             const response = await upload(missing);
 
             assert.equal(response.status, 404);
-            assert.deepEqual(fs.readdirSync(folder), []); // eslint-disable-line security/detect-non-literal-fs-filename
+            assert.ok(!fs.existsSync(folder) || fs.readdirSync(folder).length === 0); // eslint-disable-line security/detect-non-literal-fs-filename
         });
     });
 
@@ -176,7 +175,7 @@ describe('evidências e conclusão da demanda', () => {
         });
     });
 
-    describe('conclusão da demanda', () => {
+    describe('legado: conclusão da demanda com o status Testado', () => {
         test('com evidência vai para Testado, mesmo com cenários Aguardando e Com Erro', async () => {
             const demanda = await newDemanda('Testando');
             await upload(demanda._id);

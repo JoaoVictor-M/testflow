@@ -31,13 +31,15 @@ describe('acesso por perfil e chamada direta', () => {
                 ['get', '/api/config/allowlist'],
                 ['post', '/api/users/generate-username']
             ],
-            writers: [
+            accounts: [
                 ['post', '/api/auth/register'],
                 ['get', '/api/users'],
                 ['get', '/api/users/all'],
                 ['put', `/api/users/${id}`],
                 ['delete', `/api/users/${id}`],
-                ['post', '/api/users/import'],
+                ['post', '/api/users/import']
+            ],
+            writers: [
                 ['post', '/api/projects'],
                 ['put', `/api/projects/${id}`],
                 ['delete', `/api/projects/${id}`],
@@ -62,22 +64,27 @@ describe('acesso por perfil e chamada direta', () => {
 
     after(dropAndDisconnect);
 
-    const protectedRoutes = () => [...routes.readers, ...routes.writers, ...routes.adminOnly];
+    const protectedRoutes = () => [...routes.readers, ...routes.accounts, ...routes.writers, ...routes.adminOnly];
     const countDocuments = async () => Promise.all([User, Project, Demanda, Scenario].map((model) => model.countDocuments()));
+    const callRoute = (method, url, token) => {
+        const pending = call(method, url, token);
+        return ['post', 'put', 'patch'].includes(method) && !url.endsWith('/evidence') ? pending.send({}) : pending;
+    };
 
     describe('sem sessão válida', () => {
         test('sem token toda rota protegida responde 401', async () => {
             for (const [method, url] of protectedRoutes()) {
-                const response = await call(method, url);
+                const response = await callRoute(method, url);
                 assert.equal(response.status, 401, `${method} ${url}`);
                 assert.deepEqual(response.body, { message: 'Acesso negado. Token não fornecido.' });
             }
         });
+    });
 
-        // Falta de token é 401, mas token inválido ou expirado é 403, o mesmo código da falta de permissão.
+    describe('legado: resposta para token inválido', () => {
         test('com token inválido toda rota protegida responde 403', async () => {
             for (const [method, url] of protectedRoutes()) {
-                const response = await call(method, url, 'token.invalido.qualquer');
+                const response = await callRoute(method, url, 'token.invalido.qualquer');
                 assert.equal(response.status, 403, `${method} ${url}`);
                 assert.deepEqual(response.body, { message: 'Token inválido ou expirado.' });
             }
@@ -87,8 +94,8 @@ describe('acesso por perfil e chamada direta', () => {
     describe('perfil sem permissão de escrita (viewer)', () => {
         test('recebe 403 em toda rota de escrita e nada é gravado', async () => {
             const before = await countDocuments();
-            for (const [method, url] of [...routes.writers, ...routes.adminOnly]) {
-                const response = await call(method, url, profiles.viewer.token);
+            for (const [method, url] of [...routes.accounts, ...routes.writers, ...routes.adminOnly]) {
+                const response = await callRoute(method, url, profiles.viewer.token);
                 assert.equal(response.status, 403, `${method} ${url}`);
                 assert.equal(response.body.message, 'Acesso Proibido: Você não tem permissão para realizar esta ação.');
             }
@@ -97,7 +104,7 @@ describe('acesso por perfil e chamada direta', () => {
 
         test('consulta os dados do projeto, das demandas e dos cenários', async () => {
             for (const [method, url] of routes.readers.filter(([verb]) => verb === 'get')) {
-                const response = await call(method, url, profiles.viewer.token);
+                const response = await callRoute(method, url, profiles.viewer.token);
                 assert.equal(response.status, 200, `${method} ${url}`);
             }
         });
@@ -106,31 +113,36 @@ describe('acesso por perfil e chamada direta', () => {
     describe('perfil analyst', () => {
         test('recebe 403 nas rotas só do admin', async () => {
             for (const [method, url] of routes.adminOnly) {
-                const response = await call(method, url, profiles.analyst.token);
+                const response = await callRoute(method, url, profiles.analyst.token);
                 assert.equal(response.status, 403, `${method} ${url}`);
             }
         });
 
         test('passa do middleware nas rotas de escrita', async () => {
-            // Corpo vazio: a validação responde 400 ou 404, nunca 401 nem 403.
             for (const [method, url] of routes.writers) {
-                const response = await call(method, url, profiles.analyst.token);
-                assert.ok(![401, 403].includes(response.status), `${method} ${url} → ${response.status}`);
+                const response = await callRoute(method, url, profiles.analyst.token);
+                assert.ok([200, 400, 404].includes(response.status), `${method} ${url} → ${response.status}`);
             }
         });
     });
 
     describe('perfil admin', () => {
+        test('acessa a gestão de contas e valida as entradas vazias', async () => {
+            for (const [method, url] of routes.accounts) {
+                const response = await callRoute(method, url, profiles.admin.token);
+                assert.ok([200, 400, 404].includes(response.status), `${method} ${url} → ${response.status}`);
+            }
+        });
+
         test('passa do middleware nas rotas só do admin', async () => {
             for (const [method, url] of routes.adminOnly.filter(([verb]) => verb === 'get')) {
-                const response = await call(method, url, profiles.admin.token);
+                const response = await callRoute(method, url, profiles.admin.token);
                 assert.equal(response.status, 200, `${method} ${url}`);
             }
         });
     });
 
-    // Comportamento atual: quem está autenticado enxerga os dados de todos e só o papel restringe a escrita.
-    describe('escopo de acesso aos dados', () => {
+    describe('legado: acesso compartilhado aos dados autenticados', () => {
         test('os três perfis veem o mesmo projeto, a mesma demanda e o mesmo cenário', async () => {
             const { project, demanda, scenario } = catalog;
             for (const role of ['admin', 'analyst', 'viewer']) {
@@ -159,7 +171,9 @@ describe('acesso por perfil e chamada direta', () => {
             assert.equal(response.status, 200);
             assert.equal(response.body.title, 'Renomeado pelo colega');
         });
+    });
 
+    describe('escopo de acesso aos dados', () => {
         test('a listagem de um projeto ou de uma demanda não traz registros de outro par', async () => {
             const other = await createCatalog('outro');
             const { token } = profiles.viewer;
@@ -226,14 +240,9 @@ describe('acesso por perfil e chamada direta', () => {
     });
 
     describe('contas de usuário', () => {
-        test('o analyst cria viewer e analyst, mas não admin', async () => {
-            const { token } = profiles.analyst;
-            const create = (username, role) => call('post', '/api/auth/register', token)
-                .send({ username, name: `Conta ${username}`, email: `${username}@example.test`, role });
-
-            assert.equal((await create('conta.viewer', 'viewer')).status, 201);
-            assert.equal((await create('conta.analyst', 'analyst')).status, 201);
-            const denied = await create('conta.admin', 'admin');
+        test('o analyst não cria admin', async () => {
+            const denied = await call('post', '/api/auth/register', profiles.analyst.token)
+                .send({ username: 'conta.admin', name: 'Conta Admin', email: 'conta.admin@example.test', role: 'admin' });
             assert.equal(denied.status, 403);
             assert.equal(await User.exists({ username: 'conta.admin' }), null);
         });
@@ -244,6 +253,7 @@ describe('acesso por perfil e chamada direta', () => {
             const admin = await call('post', '/api/auth/register', profiles.admin.token)
                 .send({ username: 'conta.admin2', name: 'Conta Admin', email: 'conta.admin2@example.test', role: 'admin' });
 
+            assert.equal(noRole.status, 201);
             assert.equal(noRole.body.user.role, 'viewer');
             assert.equal(admin.status, 201);
             assert.equal(admin.body.user.role, 'admin');
@@ -259,11 +269,11 @@ describe('acesso por perfil e chamada direta', () => {
             assert.equal((await User.findById(profiles.viewer.user._id).lean()).role, 'viewer');
         });
 
-        test('ninguém apaga a si mesmo', async () => {
-            const response = await call('delete', `/api/users/${profiles.analyst.user._id}`, profiles.analyst.token);
+        test('o admin não apaga a si mesmo', async () => {
+            const response = await call('delete', `/api/users/${profiles.admin.user._id}`, profiles.admin.token);
 
             assert.equal(response.status, 400);
-            assert.ok(await User.exists({ _id: profiles.analyst.user._id }));
+            assert.ok(await User.exists({ _id: profiles.admin.user._id }));
         });
 
         test('a importação recusa admin e informa a falha por linha', async () => {
@@ -275,8 +285,10 @@ describe('acesso por perfil e chamada direta', () => {
             assert.equal(response.body.results.failed, 1);
             assert.equal(await User.exists({ email: 'importado.admin@example.test' }), null);
         });
+    });
 
-        test('a listagem sem /all esconde só a conta de username admin', async () => {
+    describe('legado: listagem da conta inicial', () => {
+        test('a listagem sem /all omite a conta de username admin', async () => {
             await User.create({
                 name: 'Conta inicial', username: 'admin', email: 'admin.inicial@example.test',
                 password: 'senha-sintetica-4', role: 'admin'

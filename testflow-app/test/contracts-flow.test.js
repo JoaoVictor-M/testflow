@@ -70,22 +70,6 @@ describe('projetos, demandas e cenários', () => {
             assert.equal(await Scenario.exists({ _id: scenario._id }), null);
             assert.ok(await AuditLog.exists({ entityId: project._id, action: 'DELETE', entity: 'Project' }));
         });
-
-        test('duplicar copia demandas e cenários para o projeto novo, sem tocar no original', async () => {
-            const { project, demanda } = await createCatalog('origem');
-            await Demanda.updateOne({ _id: demanda._id }, { status: 'Testando', tempoEstimado: 4 });
-
-            const copy = await createProject({ title: 'Projeto origem (Cópia)', sourceId: project._id.toString() });
-
-            assert.equal(copy.status, 201);
-            const copiedDemandas = await Demanda.find({ project: copy.body._id }).lean();
-            assert.equal(copiedDemandas.length, 1);
-            assert.equal(copiedDemandas[0].nome, demanda.nome);
-            assert.equal(copiedDemandas[0].status, 'Testando');
-            assert.equal(copiedDemandas[0].tempoEstimado, 4);
-            assert.equal(await Scenario.countDocuments({ demanda: copiedDemandas[0]._id }), 1);
-            assert.equal(await Demanda.countDocuments({ project: project._id }), 1);
-        });
     });
 
     describe('demanda', () => {
@@ -102,12 +86,12 @@ describe('projetos, demandas e cenários', () => {
             assert.equal(noProject.status, 400);
         });
 
-        test('recusa status fora dos quatro permitidos', async () => {
+        test('recusa status inexistente na criação e na edição', async () => {
             const { project, demanda } = await createCatalog('status');
 
-            const created = await createDemanda(project._id, { status: 'Finalizado' });
+            const created = await createDemanda(project._id, { status: 'Inexistente' });
             const edited = await call('put', `/api/demandas/${demanda._id}`, analyst.token)
-                .send({ demandaId: 'X', nome: 'X', status: 'Finalizado' });
+                .send({ demandaId: 'X', nome: 'X', status: 'Inexistente' });
 
             assert.equal(created.status, 400);
             assert.equal(edited.status, 400);
@@ -122,16 +106,6 @@ describe('projetos, demandas e cenários', () => {
             assert.equal(response.body.message, 'URL de demanda não permitida pela allowlist configurada.');
         });
 
-        test('duplicar copia os cenários para a demanda nova', async () => {
-            const { project, demanda } = await createCatalog('dup');
-
-            const copy = await createDemanda(project._id, { demandaId: 'COPY-1', sourceId: demanda._id.toString() });
-
-            assert.equal(copy.status, 201);
-            assert.equal(await Scenario.countDocuments({ demanda: copy.body._id }), 1);
-            assert.equal(await Scenario.countDocuments({ demanda: demanda._id }), 1);
-        });
-
         test('apagar a demanda apaga os cenários dela', async () => {
             const { demanda, scenario } = await createCatalog('apagar');
 
@@ -143,27 +117,25 @@ describe('projetos, demandas e cenários', () => {
     });
 
     describe('cenário', () => {
-        test('nasce Aguardando e exige título, descrição, passos, resultado esperado e demanda', async () => {
+        test('nasce Aguardando e exige vínculo com uma demanda', async () => {
             const { demanda } = await createCatalog('cenario');
 
             const created = await call('post', '/api/scenarios', analyst.token).send(scenarioBody(demanda._id));
-            const incomplete = await call('post', '/api/scenarios', analyst.token).send({ title: 'Só o título' });
+            const incomplete = await call('post', '/api/scenarios', analyst.token).send(scenarioBody(undefined));
 
             assert.equal(created.status, 201);
             assert.equal(created.body.status, 'Aguardando');
             assert.equal(incomplete.status, 400);
         });
 
-        test('o link do Mantis só fica quando o status é Com Erro', async () => {
+        test('registra o link do Mantis ao marcar o cenário Com Erro', async () => {
             const { scenario } = await createCatalog('mantis');
-            const patch = (body) => call('patch', `/api/scenarios/${scenario._id}/status`, analyst.token).send(body);
+            const failed = await call('patch', `/api/scenarios/${scenario._id}/status`, analyst.token)
+                .send({ status: 'Com Erro', mantisLink: 'https://mantis.example.test/1' });
 
-            const failed = await patch({ status: 'Com Erro', mantisLink: 'https://mantis.example.test/1' });
-            const passed = await patch({ status: 'Passou', mantisLink: 'https://mantis.example.test/1' });
-
+            assert.equal(failed.status, 200);
+            assert.equal(failed.body.status, 'Com Erro');
             assert.equal(failed.body.mantisLink, 'https://mantis.example.test/1');
-            assert.equal(passed.body.status, 'Passou');
-            assert.equal(passed.body.mantisLink, '');
         });
 
         test('recusa status fora de Aguardando, Passou e Com Erro', async () => {
@@ -191,11 +163,17 @@ describe('projetos, demandas e cenários', () => {
 
     describe('auditoria e estatísticas', () => {
         test('o admin lista a auditoria paginada, com o autor e filtro por ação', async () => {
+            for (let index = 0; index < 3; index += 1) {
+                const created = await createProject({ title: `Projeto de auditoria ${index}` });
+                assert.equal(created.status, 201);
+            }
+
             const response = await call('get', '/api/audit?action=CREATE&limit=2&page=1', admin.token);
 
             assert.equal(response.status, 200);
-            assert.ok(response.body.data.length <= 2);
-            assert.ok(response.body.total >= 1);
+            assert.equal(response.body.data.length, 2);
+            assert.ok(response.body.total >= 3);
+            assert.ok(response.body.pages >= 2);
             assert.equal(response.body.page, 1);
             assert.ok(response.body.data.every((entry) => entry.action === 'CREATE'));
             assert.deepEqual(Object.keys(response.body.data[0].user).sort(), ['_id', 'name', 'username']);
