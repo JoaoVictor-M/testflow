@@ -3,12 +3,16 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import { ArrowLeft, Mail } from 'lucide-react';
 import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
+import HelpTooltip from '../components/HelpTooltip';
+
+const DEFAULT_RECOVERY_MESSAGE = 'Se os dados estiverem corretos, um email de recuperação será enviado.';
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState('');
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    const [confirmationMessage, setConfirmationMessage] = useState(DEFAULT_RECOVERY_MESSAGE);
     const [error, setError] = useState('');
     const [showCreditsModal, setShowCreditsModal] = useState(false);
     const navigate = useNavigate();
@@ -19,10 +23,15 @@ const ForgotPassword = () => {
         setError('');
 
         try {
-            await api.post('/auth/forgot-password', { username, email });
+            const response = await api.post('/auth/forgot-password', { username, email });
+            setConfirmationMessage(response.data?.message || DEFAULT_RECOVERY_MESSAGE);
             setSubmitted(true);
         } catch (err) {
-            setError(err.response?.data?.message || 'Erro ao processar solicitação.');
+            if (!err.response) {
+                setError('Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.');
+            } else {
+                setError(err.response?.data?.message || 'Erro ao processar solicitação.');
+            }
         } finally {
             setLoading(false);
         }
@@ -37,7 +46,7 @@ const ForgotPassword = () => {
                     </div>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Verifique seu Email</h2>
                     <p className="text-gray-600 dark:text-gray-300 mb-6">
-                        Enviamos um link de recuperação para <strong>{email}</strong>.
+                        {confirmationMessage}
                     </p>
                     <button
                         onClick={() => navigate('/login')}
@@ -70,14 +79,22 @@ const ForgotPassword = () => {
                     <Link to="/login" className="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mb-4">
                         <ArrowLeft size={16} className="mr-1" /> Voltar
                     </Link>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Esqueceu a senha?</h1>
+                    <div className="flex items-center justify-between gap-2">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Esqueceu a senha?</h1>
+                        <HelpTooltip label="Ajuda sobre recuperação de senha">
+                            <p className="font-bold mb-1.5 text-sm text-blue-200">Como funciona a recuperação</p>
+                            <p className="text-gray-300 leading-relaxed">
+                                Informe o usuário e o email cadastrados. Por segurança, a mensagem de confirmação não indica se a conta existe. Se não receber o link, aguarde alguns minutos ou procure um administrador.
+                            </p>
+                        </HelpTooltip>
+                    </div>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                         Digite seu usuário e email para receber um link de redefinição.
                     </p>
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4 border border-red-100 dark:border-red-900/50">
+                    <div role="alert" className="bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-lg text-sm mb-4 border border-red-100 dark:border-red-900/50">
                         {error}
                     </div>
                 )}
