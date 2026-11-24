@@ -45,8 +45,17 @@ test('production install matches the runtime subset of the complete install', (t
     assert.throws(() => snapshot(root), /missing locked package/);
 });
 
+test('production rejects a complete installation containing both runtime and development packages', (t) => {
+    const { root } = fixture(t);
+    assert.equal(snapshot(root).packages.length, 2);
+    assert.throws(() => snapshot(root, true), {
+        name: 'AssertionError',
+        message: 'development package installed in production: node_modules/dev',
+    });
+});
+
 test('rejects changed installed versions, integrity, unexpected packages and missing runtime dependencies', (t) => {
-    const { root, write, runtime, dev } = fixture(t);
+    const { root, write, runtime } = fixture(t);
     write('node_modules/runtime/package.json', { version: '9.0.0' });
     assert.throws(() => snapshot(root), /installed version/);
     write('node_modules/runtime/package.json', { version: runtime.version });
@@ -54,7 +63,7 @@ test('rejects changed installed versions, integrity, unexpected packages and mis
     assert.throws(() => snapshot(root), /locked integrity/);
     write('node_modules/.package-lock.json', { packages: { 'node_modules/unknown': runtime } });
     assert.throws(() => snapshot(root), /unexpected installed package/);
-    write('node_modules/.package-lock.json', { packages: { 'node_modules/dev': dev } });
+    write('node_modules/.package-lock.json', { packages: {} });
     assert.throws(() => snapshot(root, true), /missing locked package/);
 });
 

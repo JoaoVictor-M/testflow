@@ -23,13 +23,12 @@ function snapshot(directory, productionOnly = false) {
         const expected = lock.packages[name];
         const actual = installed[name];
         assert.ok(expected, `unexpected installed package: ${name}`);
+        assert.ok(!productionOnly || !expected.dev, `development package installed in production: ${name}`);
         for (const field of ['version', 'resolved', 'integrity']) {
             assert.equal(actual[field], expected[field], `locked ${field} differs: ${name}`);
         }
         assert.equal(JSON.parse(read(`${name}/package.json`)).version, expected.version, `installed version differs: ${name}`);
-        if (!productionOnly || !expected.dev) {
-            packages.push({ path: name, version: expected.version, integrity: expected.integrity, dev: !!expected.dev });
-        }
+        packages.push({ path: name, version: expected.version, integrity: expected.integrity, dev: !!expected.dev });
     }
     for (const [name, expected] of Object.entries(lock.packages)) {
         if (!name || expected.optional || expected.devOptional || (productionOnly && expected.dev)) continue;
