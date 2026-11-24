@@ -7,6 +7,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e es
 ## [Unreleased]
 
 ### Adicionado
+- Pipeline de release na `main`, com build limpo, Trivy, SBOMs, imagens assinadas no GHCR e recusa de versões já publicadas.
 - Arquivo `VERSION`, `CHANGELOG.md` e guia de desenvolvimento em `docs/desenvolvimento.md`.
 - Script único `scripts/check.sh` com verificações de qualidade, testes, entradas de build, segredos, SAST, SCA, IaC, imagem e integração em contêineres fixados por digest.
 - Ambiente de desenvolvimento containerizado (`docker-compose.dev.yml` e `scripts/dev.sh`) isolado da pilha de produção, com recarga automática e ativação dos git hooks.

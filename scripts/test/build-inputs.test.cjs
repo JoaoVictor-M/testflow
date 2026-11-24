@@ -84,12 +84,7 @@ test('Compose files (dev, test and CI) share a MongoDB tag and digest; workflows
     assert.equal(images.length, 3);
     assert.equal(new Set(images).size, 1);
     assert.match(read('scripts/check.sh'), /^NODE_IMAGE=node:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/m);
-    for (const workflow of ['deploy-prod.yml']) {
-        const content = read(`.github/workflows/${workflow}`);
-        assert.match(content, /run: scripts\/check.sh build-inputs audit/);
-        assert.match(content, /run: scripts\/check.sh lint/);
-        assert.doesNotMatch(content, /actions\/setup-node|run: npm install/);
-    }
+    assert.match(read('.github/workflows/release.yml'), /uses: \.\/\.github\/workflows\/develop\.yml/);
     const develop = read('.github/workflows/develop.yml');
     assert.match(develop, /target: \[quality, sast, sca, iac, audit\]/);
     assert.match(develop, /run: scripts\/check.sh "\$CHECK_TARGET"/);

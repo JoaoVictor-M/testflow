@@ -25,6 +25,10 @@ assert.equal(services['mongodb-service'].image, source.match(/image: (mongo:[^\s
 assert.equal(init.image, backend.image);
 assert.equal(init.build, undefined);
 assert.equal(backend.build, undefined);
+assert.match(backend.image, /testflow-backend:v0\.0\.0$/);
+assert.match(services['frontend-service'].image, /testflow-frontend:v0\.0\.0$/);
+assert.match(services['nginx-service'].image, /testflow-nginx:v0\.0\.0$/);
+assert.equal(JSON.parse(fs.readFileSync('/fixture/prod/version.json', 'utf8')).version, 'v0.0.0');
 assert.equal(init.user, '0:0');
 assert.deepEqual(init.entrypoint, ['chown']);
 assert.deepEqual(init.command, ['-Rh', '1000:1000', '/evidencias_testes']);

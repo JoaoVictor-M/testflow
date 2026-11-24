@@ -50,6 +50,10 @@ test('actions have full SHA pins and no workflow interpolates expressions into s
     for (const name of fs.readdirSync(path.join(root, '.github/workflows')).filter((file) => /\.ya?ml$/.test(file))) {
         const content = read(`.github/workflows/${name}`);
         for (const action of content.matchAll(/^\s+(?:- )?uses: (.+)$/gm)) {
+            if (action[1].startsWith('./.github/workflows/')) {
+                assert.ok(fs.existsSync(path.join(root, action[1])));
+                continue;
+            }
             assert.match(action[1], /^[\w./-]+@[a-f0-9]{40} # [\w.]+$/, `${name}: ${action[1]}`);
         }
         const lines = content.split('\n');

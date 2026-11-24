@@ -33,7 +33,7 @@ fails_when() {
   if FAIL_ON=$2 run_check "$1"; then miss; else pass; fi
 }
 
-mkdir -p "$tmp/bin" "$repo/scripts/git-hooks" "$repo/testflow-app" "$repo/testflow-frontend" "$repo/e2e"
+mkdir -p "$tmp/bin" "$repo/scripts/git-hooks" "$repo/scripts/ci" "$repo/testflow-app" "$repo/testflow-frontend" "$repo/e2e"
 cat >"$tmp/bin/docker" <<'EOF'
 #!/bin/sh
 echo "$*" >>"$FAKE_DOCKER_LOG"
@@ -54,6 +54,8 @@ printf '#!/bin/sh\necho dast-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_DAST:-}" ]\n
 # The e2e and DAST baseline gates start a stack, so they need the daemon too.
 printf '#!/bin/sh\necho e2e-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_E2E:-}" ]\n' >"$repo/scripts/ci-e2e.sh"
 printf '#!/bin/sh\necho baseline-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BASELINE:-}" ]\n' >"$repo/scripts/ci-dast-baseline.sh"
+printf '#!/bin/sh\necho build-prod-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BUILD_PROD:-}" ]\n' >"$repo/scripts/ci/build-prod.sh"
+printf '#!/bin/sh\necho "scan-prod-ran $TRIVY_IMAGE" >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_SCAN_PROD:-}" ]\n' >"$repo/scripts/ci/scan-prod.sh"
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
@@ -157,6 +159,12 @@ runs integration 'backup-ran'
 label="integration fails when the backup test fails"
 if FAIL_BACKUP=1 FAIL_ON= run_check integration; then miss; else pass; fi
 runs dast-full 'dast-ran'
+runs build-prod 'build-prod-ran'
+runs scan-prod 'scan-prod-ran aquasec/trivy:'
+label="production build and scan targets propagate failures"
+if FAIL_BUILD_PROD=1 FAIL_ON= run_check build-prod; then miss
+elif FAIL_SCAN_PROD=1 FAIL_ON= run_check scan-prod; then miss
+else pass; fi
 label="dast-full fails when the DAST script fails"
 if FAIL_DAST=1 FAIL_ON= run_check dast-full; then miss; else pass; fi
 label="dast-full stays out of quality and all: the release runs it"
