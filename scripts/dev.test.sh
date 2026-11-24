@@ -33,6 +33,8 @@ label="up starts the development files in their own project, never the productio
 : >"$tmp/docker.log"; dev up && grep -qx 'project=testflow-dev' "$tmp/docker.log" \
   && grep -qx 'files=docker-compose.yml:docker-compose.dev.yml' "$tmp/docker.log" \
   && grep -q -- '--wait' "$tmp/docker.log" && grep -q -- '--renew-anon-volumes' "$tmp/docker.log" && pass || miss
+label="up respects a COMPOSE_FILE set by the caller"
+: >"$tmp/docker.log"; COMPOSE_FILE=a.yml:b.yml dev up && grep -qx 'files=a.yml:b.yml' "$tmp/docker.log" && pass || miss
 label="up preserves an explicitly isolated Compose project"
 COMPOSE_PROJECT_NAME=testflow-dev-isolated dev up && grep -qx 'project=testflow-dev-isolated' "$tmp/docker.log" && pass || miss
 

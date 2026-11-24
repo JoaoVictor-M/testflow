@@ -57,12 +57,13 @@ check() {
 
     # Tests with coverage; the minimums live in testflow-app/.c8rc.json and the front vite.config.js.
     test) check test-back; check test-front ;;
-    # The services live in a Compose project named after the worktree folder, with its own network and
-    # no published port, so two worktrees test at the same time and never reach the real data; the trap
+    # The services live in a Compose project named testflow-teste-<worktree folder> (never the project of
+    # dev.sh or of production, whose stacks the cleanup must not touch), with its own network and no
+    # published port, so two worktrees test at the same time and never reach the real data; the trap
     # removes them on failure, Ctrl-C and normal exit. The back reaches the database by the service
     # name on that network.
     test-back)
-      project="testflow-$(basename "$PWD" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')"
+      project="testflow-teste-$(basename "$PWD" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')"
       compose="docker compose -p $project -f docker-compose.teste.yml"
       trap '$compose down --remove-orphans' EXIT
       trap 'exit 130' INT

@@ -7,7 +7,8 @@ set -eu
 cd "$(dirname "$0")/.."
 
 export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-testflow-dev}
-export COMPOSE_FILE=docker-compose.yml:docker-compose.dev.yml
+# A caller's COMPOSE_FILE (the images smoke test layers its own overrides) wins.
+export COMPOSE_FILE=${COMPOSE_FILE:-docker-compose.yml:docker-compose.dev.yml}
 
 case ${1:-up} in
   up)
