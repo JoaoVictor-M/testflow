@@ -61,6 +61,12 @@ for (const file of ['testflow-app/Dockerfile', 'testflow-frontend/Dockerfile']) 
     });
 }
 
+test('the back-end health checks ask /ready, so a container is healthy only with MongoDB answering', () => {
+    for (const stage of stages('testflow-app/Dockerfile').filter((candidate) => ['dev', 'prod'].includes(candidate.name))) {
+        assert.match(stage.lines.join('\n'), /HEALTHCHECK [^\n]*\\\n[^\n]*path: '\/ready'/, `${stage.name} stage health check`);
+    }
+});
+
 test('production Compose publishes only the proxy, keeps the data volumes and waits for healthy services', () => {
     const { services, volumes } = compose('docker-compose.yml');
     assert.deepEqual(publishedPorts(services['nginx-service']).sort(), [':443', ':80']);

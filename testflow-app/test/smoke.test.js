@@ -64,7 +64,7 @@ test('backend modules, persistence and authenticated HTTP work with the updated 
     let output = '';
     server.stdout.on('data', (chunk) => {
         output += chunk.toString();
-        connected = output.includes('Conexão com o MongoDB (via Docker) estabelecida!');
+        connected = output.includes('Conexão com o MongoDB estabelecida');
     });
     server.stderr.on('data', () => {});
     for (let attempt = 0; !connected && attempt < 100; attempt += 1) {
@@ -88,4 +88,16 @@ test('backend modules, persistence and authenticated HTTP work with the updated 
     });
     assert.equal(projects.status, 200);
     assert.deepEqual(await projects.json(), []);
+
+    const ready = await fetch(`${base}/ready`);
+    assert.equal(ready.status, 200);
+
+    // Todo o log do processo é JSON, com o id de requisição, e nada sensível vazou nele.
+    const entries = output.trim().split('\n').map((line) => JSON.parse(line));
+    const requests = entries.filter((entry) => entry.msg === 'requisição concluída');
+    assert.ok(requests.length >= 3, 'cada requisição é registrada');
+    assert.ok(requests.every((entry) => typeof entry.requestId === 'string'));
+    for (const secret of [password, token, user.email]) {
+        assert.equal(output.includes(secret), false, 'o log não pode conter senha, token nem e-mail');
+    }
 });

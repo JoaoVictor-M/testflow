@@ -1,21 +1,9 @@
 const nodemailer = require('nodemailer');
-const fs = require('fs');
-const path = require('path');
 const SystemConfig = require('../models/SystemConfig');
-require('dotenv').config();
+const { logger } = require('../utils/logger');
+require('dotenv').config({ quiet: true }); // o aviso do dotenv não é JSON
 
 let transporter = null;
-
-// Log function to 'email.log' in project root
-const logEmail = (status, details) => {
-    const logPath = path.join(__dirname, '..', 'email.log');
-    const timestamp = new Date().toISOString();
-    const logMessage = `[${timestamp}] [${status}] ${details}\n`;
-
-    fs.appendFile(logPath, logMessage, (err) => {
-        if (err) console.error("Failed to write to email.log:", err); // eslint-disable-line no-console
-    });
-};
 
 const createTransporter = async () => {
     try {
@@ -36,9 +24,7 @@ const createTransporter = async () => {
                 tls: {
                     // Previne que o NodeMailer recuse os certificados SSL do servidor interno (MUITO COMUM EMPRESARIAL)
                     rejectUnauthorized: false
-                },
-                logger: true, // Log to console
-                debug: true   // Include SMTP traffic in logs
+                }
             };
 
             // Adiciona autenticação apenas se fornecida
@@ -50,16 +36,13 @@ const createTransporter = async () => {
                 from: config?.value?.from || user || 'noreply@testflow.local' // Default 'from' address
             });
 
-            logEmail('INFO', `Transporter initialized. Source: ${config ? 'Database' : 'Environment'}`);
-            console.log("Email Service: Transporter Initialized"); // eslint-disable-line no-console
+            logger.info('Email: transporter inicializado', { source: config ? 'database' : 'environment' });
         } else {
-            logEmail('WARN', 'Missing host configuration. Emails will not be sent.');
-            console.warn("Email Service: Missing host configuration."); // eslint-disable-line no-console
+            logger.warn('Email: servidor SMTP não configurado, nada será enviado');
             transporter = null;
         }
     } catch (err) {
-        logEmail('ERROR', `Failed to initialize transporter: ${err.message}`);
-        console.error("Email Service: Failed to initialize transporter", err); // eslint-disable-line no-console
+        logger.error('Email: falha ao inicializar o transporter', { err });
     }
 };
 
@@ -87,11 +70,9 @@ const sendEmail = async (to, subject, html, type = 'generic') => {
 
     try {
         await attemptSend();
-        logEmail('SENT', `${type} email sent to ${to}`);
-        console.log(`Email (${type}) enviado para ${to}`); // eslint-disable-line no-console
+        logger.info('Email enviado', { type });
     } catch (error) {
-        logEmail('ERROR', `Failed to send ${type} email to ${to}: ${error.message}. Queuing...`);
-        console.error(`Erro ao enviar email (${type}). Salvando na fila:`, error.message); // eslint-disable-line no-console
+        logger.error('Email: falha no envio, salvando na fila', { type, err: error });
 
         // Queue the email
         await PendingEmail.create({
@@ -106,7 +87,6 @@ const sendEmail = async (to, subject, html, type = 'generic') => {
 };
 
 const sendInviteEmail = async (to, username, name, setupLink) => {
-    console.log(`[DEBUG_SERVICE] sendInviteEmail called for ${to}`); // eslint-disable-line no-console
     const subject = 'Bem-vindo ao TestFlow - Ative sua conta';
     const firstName = name.split(' ')[0];
 
@@ -262,23 +242,20 @@ const sendResetPasswordEmail = async (to, name, resetLink) => {
 };
 
 const processQueue = async () => {
-    logEmail('INFO', 'Processing email queue...');
     const transport = await getTransporter();
 
     if (!transport) {
-        logEmail('WARN', 'Cannot process queue: Transporter not ready');
-        console.log('Fila de email não processada: Transporter não pronto.'); // eslint-disable-line no-console
+        logger.warn('Email: fila não processada, transporter não está pronto');
         return;
     }
 
     const pendingEmails = await PendingEmail.find({ status: { $in: ['pending', 'failed'] }, attempts: { $lt: 5 } });
 
     if (pendingEmails.length === 0) {
-        logEmail('INFO', 'Queue is empty.');
         return;
     }
 
-    console.log(`Processando ${pendingEmails.length} emails pendentes...`); // eslint-disable-line no-console
+    logger.info('Email: processando a fila', { pending: pendingEmails.length });
     const from = await getFromEmail();
 
     for (const email of pendingEmails) {
@@ -293,20 +270,19 @@ const processQueue = async () => {
             email.status = 'sent';
             email.lastAttempt = Date.now();
             await email.save();
-            logEmail('SENT_QUEUE', `Queued ${email.type} email sent to ${email.to}`);
+            logger.info('Email da fila enviado', { type: email.type });
         } catch (err) {
             email.status = 'failed';
             email.attempts += 1;
             email.lastAttempt = Date.now();
             email.errorLog = err.message;
             await email.save();
-            logEmail('ERROR_QUEUE', `Failed to send queued email to ${email.to}: ${err.message}`);
+            logger.error('Email da fila: falha no envio', { type: email.type, err });
         }
     }
 };
 
 const reloadConfig = async () => {
-    logEmail('INFO', 'Reloading configuration requested.');
     await createTransporter();
     // Trigger queue processing on config reload
     processQueue();

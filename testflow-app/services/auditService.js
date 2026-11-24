@@ -1,4 +1,5 @@
 const AuditLog = require('../models/AuditLog');
+const { logger } = require('../utils/logger');
 
 const logAudit = async (action, entity, entityId, userId, details = {}) => {
     try {
@@ -11,7 +12,7 @@ const logAudit = async (action, entity, entityId, userId, details = {}) => {
         });
         await audit.save();
     } catch (error) {
-        console.error('Falha ao registrar log de auditoria:', error); // eslint-disable-line no-console
+        logger.error('Falha ao registrar log de auditoria', { err: error });
     }
 };
 

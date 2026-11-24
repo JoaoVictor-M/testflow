@@ -20,7 +20,10 @@ const fs = require('fs');
 const path = require('path');
 const { logAudit } = require('./services/auditService');
 const AuditLog = require('./models/AuditLog');
-require('dotenv').config();
+const { logger } = require('./utils/logger');
+const requestLogger = require('./middleware/requestLogger');
+const { isDatabaseReady } = require('./services/healthService');
+require('dotenv').config({ quiet: true }); // o aviso do dotenv não é JSON
 
 const cleanAuditData = (doc) => {
     if (!doc) return doc;
@@ -81,6 +84,16 @@ app.use(helmet({
     crossOriginEmbedderPolicy: false,
 }));
 app.disable('x-powered-by');
+
+app.use(requestLogger);
+
+// Sondas dos containers: sem autenticação e sem dado algum além do estado.
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/ready', async (req, res) => {
+    if (await isDatabaseReady()) return res.json({ status: 'ok' });
+    logger.warn('banco de dados indisponível');
+    res.status(503).json({ status: 'unavailable' });
+});
 
 app.use((req, res, next) => {
     res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
@@ -227,7 +240,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
         const resetLink = `${frontendUrl}/reset-password/${token}`;
 
         sendResetPasswordEmail(email, user.name, resetLink)
-            .catch(err => console.error("Erro ao enviar email de reset:", err)); // eslint-disable-line no-console
+            .catch(err => logger.error('Erro ao enviar email de reset', { err }));
 
         res.status(200).json({ message: 'Se os dados estiverem corretos, um email de recuperação será enviado.' });
     } catch (error) {
@@ -344,7 +357,7 @@ app.post('/api/auth/register', authMiddleware, roleMiddleware(['admin', 'analyst
 
         // Send email (failed email should not rollback user creation, but log error)
         sendInviteEmail(email, username, name, setupLink)
-            .catch(err => console.error("Falha a enviar email de convite:", err)); // eslint-disable-line no-console
+            .catch(err => logger.error('Falha ao enviar email de convite', { err }));
 
         res.status(201).json({
             message: 'Usuário criado com sucesso. Link de definição de senha enviado por email.',
@@ -474,7 +487,7 @@ app.delete('/api/users/:id', authMiddleware, roleMiddleware(['admin', 'analyst']
 
 app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     const { users } = req.body; // Array of { name, email, role }
-    console.log(`[DEBUG] Received import request for ${users ? users.length : 0} users.`); // eslint-disable-line no-console
+    logger.info('Importação de usuários recebida', { count: Array.isArray(users) ? users.length : 0 });
 
     if (!users || !Array.isArray(users) || users.length === 0) {
         return res.status(400).json({ message: 'Nenhum usuário para importar.' });
@@ -562,9 +575,8 @@ app.post('/api/users/import', authMiddleware, roleMiddleware(['admin', 'analyst'
             const setupLink = `${frontendUrl}/reset-password/${token}`;
 
             // Use the queue-enabled send function
-            console.log(`[DEBUG] Sending invite email to ${userData.email} (User: ${username}, Name: ${userData.name})...`); // eslint-disable-line no-console
             sendInviteEmail(userData.email, username, userData.name, setupLink)
-                .catch(err => console.error(`Falha ao enviar convite para ${userData.email}:`, err)); // eslint-disable-line no-console
+                .catch(err => logger.error('Falha ao enviar convite da importação', { err }));
 
             results.success++;
         } catch (err) {
@@ -617,7 +629,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), 
         // DEEP CLONE LOGIC
         if (req.body.sourceId) {
             const sourceId = req.body.sourceId;
-            console.log(`[CLONE] Duplicando demandas do projeto ${sourceId} para ${savedProject._id}`); // eslint-disable-line no-console
+            logger.info('Duplicando demandas do projeto', { sourceId: isValidMongoId(sourceId) ? sourceId : undefined, targetId: savedProject._id });
 
             const demandas = await Demanda.find({ project: sourceId }).lean();
             for (const dem of demandas) {
@@ -672,7 +684,7 @@ app.post('/api/projects', authMiddleware, roleMiddleware(['admin', 'analyst']), 
             .populate('servers');
         res.status(201).json(populatedProject);
     } catch (error) {
-        console.error(error); // eslint-disable-line no-console
+        logger.error('Erro ao processar a requisição', { err: error });
         res.status(400).json({ message: error.message });
     }
 });
@@ -796,7 +808,7 @@ app.post('/api/config/allowlist', authMiddleware, roleMiddleware(['admin']), (re
         fs.writeFileSync(ALLOWLIST_PATH, JSON.stringify(newData, null, 2), 'utf8');  
         res.json({ message: 'Allowlist atualizada com sucesso', data: newData });
     } catch (error) {
-        console.error('Erro ao salvar allowlist:', error); // eslint-disable-line no-console
+        logger.error('Erro ao salvar allowlist', { err: error });
         res.status(500).json({ message: 'Erro ao salvar allowlist' });
     }
 });
@@ -828,7 +840,7 @@ app.post('/api/demandas', authMiddleware, roleMiddleware(['admin', 'analyst']), 
         // DEEP CLONE LOGIC
         if (req.body.sourceId) {
             const sourceId = req.body.sourceId;
-            console.log(`[CLONE] Duplicando cenários da demanda ${sourceId} para ${savedDemanda._id}`); // eslint-disable-line no-console
+            logger.info('Duplicando cenários da demanda', { sourceId: isValidMongoId(sourceId) ? sourceId : undefined, targetId: savedDemanda._id });
             const scenarios = await Scenario.find({ demanda: sourceId }).lean();
             for (const scen of scenarios) {
                 const newScen = new Scenario({
@@ -938,7 +950,7 @@ app.get('/api/scenarios', authMiddleware, async (req, res) => {
         const scenarios = await Scenario.find({ demanda: demandaObjId }).lean();
         res.status(200).json(scenarios);
     } catch (error) {
-        console.error('Erro na rota GET /api/scenarios:', error); // eslint-disable-line no-console
+        logger.error('Erro na rota GET /api/scenarios', { err: error });
         res.status(500).json({ message: error.message });
     }
 });
@@ -1186,7 +1198,7 @@ app.get('/api/stats', authMiddleware, async (req, res) => {
 
         res.status(200).json(stats);
     } catch (error) {
-        console.error("Erro na rota /api/stats:", error); // eslint-disable-line no-console
+        logger.error('Erro na rota /api/stats', { err: error });
         res.status(500).json({ message: error.message });
     }
 });
@@ -1269,7 +1281,7 @@ const isValidMongoId = (id) => /^[a-fA-F0-9]{24}$/.test(id);
 const getBaseEvidenceDir = () => {
     const baseDir = path.resolve(path.join(__dirname, '..', 'evidencias_testes'));
     if (!fs.existsSync(baseDir)) {
-        try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { console.error(e); return null; } // eslint-disable-line no-console
+        try { fs.mkdirSync(baseDir, { recursive: true }); } catch (e) { logger.error('Erro ao criar a pasta de evidências', { err: e }); return null; }
     }
     return baseDir;
 };
@@ -1410,7 +1422,7 @@ app.post('/api/demandas/:id/evidence', authMiddleware, roleMiddleware(['admin', 
             const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
             res.status(201).json(populatedDemanda);
         } catch (error) {
-            console.error('Erro no upload:', error); // eslint-disable-line no-console
+            logger.error('Erro no upload', { err: error });
             res.status(500).json({ message: error.message });
         }
     });
@@ -1456,7 +1468,7 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
         const populatedDemanda = await Demanda.findById(demanda._id).populate('responsaveis');
         res.status(200).json(populatedDemanda);
     } catch (error) {
-        console.error(error); // eslint-disable-line no-console
+        logger.error('Erro ao processar a requisição', { err: error });
         res.status(500).json({ message: error.message });
     }
 });
@@ -1493,7 +1505,7 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
             return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
         }
     } catch (error) {
-        console.error(error); // eslint-disable-line no-console
+        logger.error('Erro ao processar a requisição', { err: error });
         if (!res.headersSent) res.status(500).json({ message: error.message });
     }
 });
@@ -1595,14 +1607,23 @@ app.use((req, res) => {
     res.status(404).json({ message: 'Rota não encontrada ou não implementada na API.' });
 });
 
+// Último elo: erro fora das rotas (corpo inválido ou grande demais, por exemplo). O handler padrão
+// do Express escreveria a mensagem do erro, que pode conter o corpo enviado, fora do log estruturado.
+app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    const clientError = err.status >= 400 && err.status < 500;
+    logger.error('Erro não tratado na requisição', { err, status: err.status });
+    res.status(clientError ? err.status : 500).json({ message: clientError ? 'Requisição inválida.' : 'Erro interno do servidor.' });
+});
+
 // Conecta ao MongoDB e abre a porta; os testes importam só o app e controlam a conexão.
 const start = () => {
     mongoose.connect(MONGO_URI)
-        .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!')) // eslint-disable-line no-console
-        .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error)); // eslint-disable-line no-console
+        .then(() => logger.info('Conexão com o MongoDB estabelecida'))
+        .catch((error) => logger.error('Erro ao conectar no MongoDB', { err: error }));
 
     return app.listen(PORT, () => {
-        console.log(`Backend rodando na porta ${PORT}`); // eslint-disable-line no-console
+        logger.info('Backend rodando', { port: PORT });
     });
 };
 
