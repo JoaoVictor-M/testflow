@@ -25,6 +25,29 @@ Execute o comando abaixo no terminal do seu servidor ou nuvem para baixar os arq
 
 A partir desse momento, as imagens mais recentes do Github Container Registry (`ghcr.io`) serão orquestradas para rodarem via porta `80` (HTTP web).
 
+As três imagens da aplicação executam sem root. Antes de iniciar o backend (UID/GID 1000), o
+Compose executa um serviço pontual que ajusta a propriedade do bind `evidencias_testes`. Ele não
+apaga arquivos nem troca volumes, funciona também em atualizações e não precisa de script externo.
+Somente esse serviço de preparação executa como root, sem rede e com acesso de escrita ao bind.
+
+Para HTTPS, coloque o certificado `.crt` e a chave `.key` em `certificados/`. O nginx usa UID/GID
+101 e precisa ler ambos. Ao atualizar uma instalação com chave `root:root` e modo `0600`, ajuste
+o grupo e a leitura antes de subir o serviço (o nginx informa um erro explícito se não puder ler):
+
+```bash
+sudo chgrp 101 certificados certificados/*.crt certificados/*.key
+sudo chmod 750 certificados
+sudo chmod 640 certificados/*.crt certificados/*.key
+```
+
+Configure `.env` a partir de `.env.example`: `FRONTEND_URL=https://testflow.example.com/testflow`
+permite derivar automaticamente a origem `https://testflow.example.com`. Para várias URLs ou uma
+URL HTTP no front, defina explicitamente `NGINX_PUBLIC_ORIGIN=https://testflow.example.com`.
+A origem explícita tem prioridade e aceita somente hostname válido e porta entre 1 e 65535,
+sem caminho ou barra final. Sem ambas as configurações, o padrão local é `https://localhost`.
+O redirecionamento preserva o caminho e usa essa origem confiável; o proxy envia o host do upstream.
+As portas públicas continuam 80/443 (internas 8080/8443). Sem certificados, há fallback HTTP.
+
 ---
 
 ## 🔄 Como Atualizar o Sistema
@@ -75,6 +98,12 @@ Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou
     ```bash
     docker compose up -d --build
     ```
+
+O comando `sh scripts/dev.sh up` também prepara o ambiente local e habilita os git hooks. A
+preparação automática de evidências e a configuração TLS são as mesmas da seção de produção.
+
+O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,
+redirecionamento, fallback HTTP, login, upload e preservação de evidências existentes.
 
 ---
 

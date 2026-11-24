@@ -8,16 +8,15 @@ RUN npm run build
 
 # ----- ESTÁGIO 2: Serve -----
 FROM nginx:stable-alpine
-# Remove o config padrão
-RUN rm /etc/nginx/conf.d/default.conf
-
-# Atualiza pacote nativo vulnerável (CVE-2026-22184 / CVE-2026-27171)
-RUN apk add --upgrade --no-cache zlib
-
-# Copia os arquivos do React para subpasta testflow
-RUN mkdir -p /usr/share/nginx/html/testflow
+# Keep distribution security fixes and prepare nginx's runtime directories.
+RUN apk upgrade --no-cache && \
+    rm /etc/nginx/conf.d/default.conf && \
+    mkdir -p /usr/share/nginx/html/testflow && \
+    sed -i '/^user /d; s|^pid .*;|pid /tmp/nginx.pid;|' /etc/nginx/nginx.conf && \
+    chown -R nginx:nginx /var/cache/nginx
 COPY --from=build /app/dist /usr/share/nginx/html/testflow
 # Copia o nosso config personalizado
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+USER 101:101
+EXPOSE 8080
+ENTRYPOINT ["nginx", "-g", "daemon off;"]

@@ -5,7 +5,7 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-export COMPOSE_PROJECT_NAME='testflow'
+export COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-testflow}
 
 case ${1:-up} in
   up)

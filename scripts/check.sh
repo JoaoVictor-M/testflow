@@ -76,8 +76,16 @@ check() {
     iac)
       mkdir -p .cache/trivy
       failed=0
-      # shellcheck disable=SC2046 # one argument per Dockerfile
-      run "$HADOLINT_IMAGE" hadolint $(git ls-files '*Dockerfile*') || failed=1
+      # Include new files before staging, respect gitignore and preserve spaces in paths.
+      dockerfiles=$(git ls-files --cached --others --exclude-standard --deduplicate -- '*Dockerfile*')
+      set --
+      while IFS= read -r dockerfile; do
+        [ ! -f "$dockerfile" ] || set -- "$@" "$dockerfile"
+      done <<EOF
+$dockerfiles
+EOF
+      [ "$#" -gt 0 ] || { echo 'check.sh: no Dockerfiles found' >&2; return 1; }
+      run "$HADOLINT_IMAGE" hadolint "$@" || failed=1
       run "$TRIVY_IMAGE" config --quiet --cache-dir /work/.cache/trivy --exit-code 1 \
         --severity HIGH,CRITICAL --skip-dirs '**/node_modules' . || failed=1
       [ "$failed" -eq 0 ]

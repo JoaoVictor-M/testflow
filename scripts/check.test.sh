@@ -36,6 +36,7 @@ mkdir -p "$tmp/bin" "$repo/scripts/git-hooks" "$repo/testflow-app" "$repo/testfl
 cat >"$tmp/bin/docker" <<'EOF'
 #!/bin/sh
 echo "$*" >>"$FAKE_DOCKER_LOG"
+printf 'argument=%s\n' "$@" >>"$FAKE_DOCKER_LOG"
 case "$*" in *"$FAKE_DOCKER_FAIL"*) exit 1 ;; esac
 EOF
 chmod +x "$tmp/bin/docker"
@@ -66,6 +67,28 @@ fails_when sca '-w /work/testflow-frontend'
 runs iac 'hadolint' 'testflow-app/Dockerfile' 'config --quiet'
 fails_when iac 'hadolint'
 fails_when iac 'config --quiet'
+
+label="iac includes unstaged Dockerfiles and preserves spaces in their paths"
+mkdir -p "$repo/new image"
+printf 'FROM scratch\n' >"$repo/new image/Dockerfile"
+FAIL_ON= run_check iac && grep -qxF 'argument=new image/Dockerfile' "$log" && pass || miss
+label="iac propagates a lint failure in an unstaged Dockerfile"
+if FAIL_ON='new image/Dockerfile' run_check iac; then miss; else pass; fi
+label="iac excludes ignored Dockerfiles"
+printf 'ignored/\n' >"$repo/.gitignore"
+mkdir -p "$repo/ignored"
+printf 'FROM scratch\n' >"$repo/ignored/Dockerfile"
+FAIL_ON= run_check iac && ! grep -qF 'ignored/Dockerfile' "$log" && pass || miss
+label="iac skips deleted tracked Dockerfiles"
+rm "$repo/testflow-app/Dockerfile"
+FAIL_ON= run_check iac && ! grep -qF 'testflow-app/Dockerfile' "$log" && pass || miss
+printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
+
+label="iac fails clearly when no Dockerfiles exist"
+rm "$repo/testflow-app/Dockerfile" "$repo/new image/Dockerfile"
+if FAIL_ON= run_check iac; then miss; else pass; fi
+printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
+
 runs test-scripts 'test-scripts-ran'
 runs quality 'npm run lint' 'test-scripts-ran' 'npm run build'
 fails_when quality 'npm run lint'

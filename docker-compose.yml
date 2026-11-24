@@ -8,6 +8,21 @@ services:
       - mongo-data:/data/db
       - ./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 
+  evidence-init:
+    build: ./testflow-app
+    user: "0:0"
+    restart: "no"
+    network_mode: none
+    read_only: true
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE]
+    security_opt:
+      - no-new-privileges:true
+    entrypoint: ["chown"]
+    command: ["-Rh", "1000:1000", "/evidencias_testes"]
+    volumes:
+      - ./evidencias_testes:/evidencias_testes
+
   backend-service:
     build: ./testflow-app
     container_name: backend_testflow
@@ -17,7 +32,10 @@ services:
     volumes:
       - ./evidencias_testes:/evidencias_testes
     depends_on:
-      - mongodb-service
+      mongodb-service:
+        condition: service_started
+      evidence-init:
+        condition: service_completed_successfully
 
   frontend-service:
     build: ./testflow-frontend
@@ -30,9 +48,12 @@ services:
     build: ./nginx
     container_name: nginx_testflow
     restart: always
+    environment:
+      - NGINX_PUBLIC_ORIGIN=${NGINX_PUBLIC_ORIGIN:-}
+      - FRONTEND_URL=${FRONTEND_URL:-https://localhost/testflow}
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
     depends_on:
       - frontend-service
       - backend-service
