@@ -67,9 +67,13 @@ jobs:
 
       - name: Create .env for testing
         run: |
-          echo "MONGO_URI=mongodb://mongodb-service:27017/testflow" >> ./testflow-app/.env
-          echo "JWT_SECRET=supersecret_test_key" >> ./testflow-app/.env
-          echo "PORT=3000" >> ./testflow-app/.env
+          umask 077
+          jwt_secret="$(openssl rand -hex 32)"
+          echo "::add-mask::$jwt_secret"
+          printf '%s\n' \
+            "MONGO_URI=mongodb://mongodb-service:27017/testflow" \
+            "JWT_SECRET=$jwt_secret" \
+            "PORT=3000" > ./testflow-app/.env
 
       - name: Build Backend Image for Scanning
         run: docker build -t testflow-backend:latest ./testflow-app
@@ -88,6 +92,8 @@ jobs:
         run: |
           echo "services:" > docker-compose.ci.yml
           echo "  backend-service:" >> docker-compose.ci.yml
+          echo "    env_file:" >> docker-compose.ci.yml
+          echo "      - ./testflow-app/.env" >> docker-compose.ci.yml
           echo "    ports:" >> docker-compose.ci.yml
           echo "      - \"3000:3000\"" >> docker-compose.ci.yml
           docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build

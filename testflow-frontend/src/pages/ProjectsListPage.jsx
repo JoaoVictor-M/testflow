@@ -66,20 +66,6 @@ const getProjectStatusClasses = (status) => {
       return 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-gray-300';
   }
 };
-const getProjectCardBgClass = (status) => {
-  switch (status) {
-    case 'Concluído':
-      return 'bg-green-50 dark:bg-green-900/10';
-    case 'Em Andamento':
-      return 'bg-blue-50 dark:bg-blue-900/10';
-    case 'Interrompido':
-      return 'bg-red-50 dark:bg-red-900/10';
-    default: // Não Iniciado
-      return 'bg-white dark:bg-neutral-800';
-  }
-};
-
-
 function ProjectsListPage() {
   const navigate = useNavigate();
   const [projects, setProjects] = useState([]);

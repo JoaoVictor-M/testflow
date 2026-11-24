@@ -1,6 +1,5 @@
-import { createContext, useState, useEffect } from 'react';
-
-export const ThemeContext = createContext();
+import { useState, useEffect } from 'react';
+import { ThemeContext } from './ThemeContext';
 
 export const ThemeProvider = ({ children }) => {
     // Inicializa o tema verificando localStorage ou preferência do sistema
