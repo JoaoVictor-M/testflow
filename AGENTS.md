@@ -51,8 +51,8 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
 
 ## Git
 
-- Branches: `main` (só versões oficiais), `develop` (funcionalidades prontas; até a BASE-01 ela se
-  chama `development`) e uma branch por tarefa a partir da `develop`:
+- Branches: `main` (só versões oficiais), `develop` (funcionalidades prontas) e uma branch por
+  tarefa a partir da `develop`:
   `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `refactor/`, `test/` + `<id>-<tema>`.
 - Tarefa: branch → commits pequenos em Conventional Commits → `check.sh quality` verde →
   revisão → `git merge --no-ff` na `develop` → push → apagar a branch local e remota → pipeline da
