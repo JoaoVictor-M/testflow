@@ -112,13 +112,14 @@ check() {
     # Gitleaks over the staged changes only (pre-commit hook).
     secrets-staged) run "$GITLEAKS_IMAGE" git . --pre-commit --staged --redact --no-banner ;;
 
-    # Semgrep CE; fails on any finding (the image expects the code in /src).
+    # Semgrep CE; fails on any finding (the image expects the code in /src). One job: with parallel
+    # jobs it can silently miss taint findings, so the result would depend on the machine's cores.
     sast)
       mkdir -p "$REPORTS"
       rules=""
       for rule in $SEMGREP_RULES; do rules="$rules --config $rule"; done
       # shellcheck disable=SC2086 # rules is a flag list
-      run -v "$PWD":/src -w /src "$SEMGREP_IMAGE" semgrep scan --metrics=off --error \
+      run -v "$PWD":/src -w /src "$SEMGREP_IMAGE" semgrep scan --metrics=off --error --jobs 1 \
         --sarif --output "$REPORTS/semgrep.sarif" $rules
       ;;
     # Vulnerable dependencies from every lockfile; fails on high or critical. An accepted CVE goes in
