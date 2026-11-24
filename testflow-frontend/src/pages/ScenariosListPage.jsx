@@ -145,7 +145,7 @@ function ScenariosListPage() {
     setIsDeleteModalOpen(false);
   };
   const handleConfirmDelete = async () => {
-    if (!scenarioToDelete) return;
+    if (!scenarioToDelete) return false;
     try {
       await api.delete(`/scenarios/${scenarioToDelete._id}`);
       setScenarios(prev => prev.filter(s => s._id !== scenarioToDelete._id));
@@ -153,6 +153,7 @@ function ScenariosListPage() {
     } catch (err) {
       toast.error('Erro ao deletar o cenário.');
       console.error(err);
+      throw err;
     }
   };
 
@@ -181,7 +182,7 @@ function ScenariosListPage() {
     }
   };
   const handleMantisSubmit = async (mantisLink) => {
-    if (!scenarioEmExecucao) return;
+    if (!scenarioEmExecucao) return false;
     try {
       const response = await api.patch(`/scenarios/${scenarioEmExecucao}/status`, {
         status: 'Com Erro',
@@ -194,6 +195,7 @@ function ScenariosListPage() {
     } catch (err) {
       toast.error('Erro ao salvar o link do Mantis.');
       console.error(err);
+      throw err;
     }
   };
   const toggleScenarioExpand = (scenarioId) => {
