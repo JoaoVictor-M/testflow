@@ -1,10 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api';
-import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 function EmailSettings() {
-    const { user } = useContext(AuthContext);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 

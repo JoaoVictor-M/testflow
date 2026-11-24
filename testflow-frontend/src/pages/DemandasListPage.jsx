@@ -77,20 +77,6 @@ const getDemandaStatusClasses = (status) => {
       return 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-gray-300';
   }
 };
-const getDemandaCardBgClass = (status) => {
-  switch (status) {
-    case 'Testado':
-      return 'bg-green-50 dark:bg-green-900/10';
-    case 'Testando':
-      return 'bg-blue-50 dark:bg-blue-900/10';
-    case 'Aguardando Correção':
-      return 'bg-yellow-50 dark:bg-yellow-900/10';
-    default: // Pendente
-      return 'bg-white dark:bg-neutral-800';
-  }
-};
-
-
 function DemandasListPage() {
   const [demandas, setDemandas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
