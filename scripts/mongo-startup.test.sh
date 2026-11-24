@@ -3,7 +3,8 @@
 # Uses only disposable tmpfs storage; never starts the application or mounts its data.
 set -eu
 cd "$(dirname "$0")/.."
-tmp=$(mktemp -d /tmp/testflow-mongo-startup-XXXXXX)
+mkdir -p .cache
+tmp=$(mktemp -d "$PWD/.cache/testflow-mongo-startup-XXXXXX")
 project="testflow-mongo-startup-$(basename "$tmp" | tr 'A-Z' 'a-z')"
 compose() { docker compose --env-file /dev/null -p "$project" -f docker-compose.yml -f "$tmp/compose.yml" "$@"; }
 cleanup() {

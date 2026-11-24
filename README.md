@@ -6,7 +6,7 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 ---
 
-## 🚀 Funcionalidades da Versão 1.0.0
+## 🚀 Funcionalidades
 *   **Gestão de Projetos e Demandas**: Controle total do ciclo de vida, agrupando funcionalidades em níveis lógicos e organizados.
 *   **Evidências Inteligentes**: Upload múltiplo simultâneo, visualização em galeria integrada e separação sistêmica entre testes.
 *   **Deep Clone**: Duplicação imediata e profunda de projetos para cenários de teste de regressão versão-a-versão.
@@ -14,14 +14,18 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 *   **Auditoria Transparente**: Painel silencioso interativo para administradores rastrearem quem criou, apagou ou editou cada campo do software em tempo real (Comparação de Diff).
 *   **Infraestrutura Otimizada**: Reversa por Nginx estritamente tipado e MongoDB persistindo relatórios locais e artefatos de mídia.
 
+Consulte o histórico de versões em [CHANGELOG.md](https://github.com/JoaoVictor-M/testflow/blob/main/CHANGELOG.md).
+
 ---
 
 ## 📦 Instalação do Deploy para Produção
 
-Execute o comando abaixo no terminal do seu servidor ou nuvem para baixar os arquivos necessários e subir o sistema:
-   ```bash
-   git clone https://github.com/JoaoVictor-M/testflow-prod.git testflow && cd testflow && docker compose up -d
-   ```
+Suba o sistema em produção em poucas linhas:
+```bash
+git clone https://github.com/JoaoVictor-M/testflow-prod.git testflow && cd testflow
+cp .env.example .env   # defina JWT_SECRET, FRONTEND_URL e TESTFLOW_ADMIN_PASSWORD_HASH
+docker compose up -d
+```
 
 A partir desse momento, as imagens mais recentes do Github Container Registry (`ghcr.io`) serão orquestradas para rodarem via porta `80` (HTTP web).
 
@@ -121,31 +125,16 @@ docker compose down -v --rmi all ; cd .. ; Remove-Item -Recurse -Force testflow
 
 ## 🛠️ Desenvolvimento (Para Code Maintainers)
 
-Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou iterar nas rotas locais:
+Suba o ambiente local em Docker (recarga automática; API em `http://localhost:3000`, front em `http://localhost:5173/testflow/`):
 
-1.  Clone este repositório matricial:
-    ```bash
-    git clone git@github.com:JoaoVictor-M/testflow.git
-    ```
-2.  Suba o ambiente de desenvolvimento (recarga automática; API em `http://localhost:3000`, front em
-    `http://localhost:5173/testflow/`, nada publicado além disso):
-    ```bash
-    sh scripts/dev.sh up
-    ```
+```bash
+git clone git@github.com:JoaoVictor-M/testflow.git && cd testflow
+sh scripts/dev.sh up
+```
 
-O `scripts/dev.sh` usa `docker-compose.yml` mais `docker-compose.dev.yml`, num projeto próprio
-(`testflow-dev`) que não toca nos contêineres nem nos dados da produção; também prepara o `.env`
-e habilita os git hooks. Para compilar localmente a pilha de produção (HTTPS, as imagens `prod`),
-use `docker compose up -d --build`. `docker-compose.teste.yml` traz os serviços descartáveis dos
-testes (MongoDB e Mailpit), usados pelo `scripts/check.sh test`. A preparação automática de
-evidências e a configuração TLS são as mesmas da seção de produção.
+O `scripts/dev.sh` usa um projeto Compose isolado (`testflow-dev`), prepara `.env` e ativa os git hooks. Antes de enviar alterações, rode `scripts/check.sh quality` (ou `scripts/check.sh all` para mudanças em segurança, dados ou infraestrutura).
 
-Antes de enviar alterações, rode `scripts/check.sh quality` e, para infraestrutura, `scripts/check.sh all`.
-`scripts/check.sh integration` faz um backup, restaura num banco descartável e compara.
-Consulte a [política de versões e entradas de build](docs/build-inputs.md) para atualizar dependências e imagens.
-
-O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,
-redirecionamento, fallback HTTP, login, upload e preservação de evidências existentes.
+Consulte o [guia de desenvolvimento](docs/desenvolvimento.md) (pastas, comandos, alvos do `check.sh` e pipelines) e a [política de entradas de build](docs/build-inputs.md).
 
 ---
 
