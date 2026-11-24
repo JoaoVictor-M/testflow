@@ -3,7 +3,7 @@
 # Devs test at the same time, and everything vanishes with `down`.
 services:
   mongodb-service:
-    image: mongo:7.0@sha256:8bb4442761a63a8dda452744082cdac9644b429807eb977b42324a63cef59ca4
+    image: mongo:9.0.2@sha256:bac22ea7710d774103dcad3ec8ac13cba1eb378f488e3ce8a6b3a1adf2ba9dcc
     tmpfs:
       - /data/db
     healthcheck:

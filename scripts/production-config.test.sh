@@ -5,6 +5,7 @@ cd "$(dirname "$0")/.."
 tmp=$(mktemp -d /tmp/testflow-production-config-XXXXXX)
 trap 'rm -rf "$tmp"' EXIT
 sh scripts/test/format-production.sh "$tmp" >/dev/null 2>&1
+cp docker-compose.yml "$tmp/source-compose.yml"
 FRONTEND_URL=https://frontend.example.test/testflow NGINX_PUBLIC_ORIGIN= \
   docker compose -f "$tmp/prod/docker-compose.yml" config --format json >"$tmp/config.json"
 node_image=$(sed -n 's/^NODE_IMAGE=//p' scripts/check.sh)
@@ -14,6 +15,8 @@ const fs = require('node:fs');
 const { services } = JSON.parse(fs.readFileSync('/fixture/config.json', 'utf8'));
 const init = services['evidence-init'];
 const backend = services['backend-service'];
+const source = fs.readFileSync('/fixture/source-compose.yml', 'utf8');
+assert.equal(services['mongodb-service'].image, source.match(/image: (mongo:[^\s]+)/)[1]);
 assert.equal(init.image, backend.image);
 assert.equal(init.build, undefined);
 assert.equal(backend.build, undefined);
