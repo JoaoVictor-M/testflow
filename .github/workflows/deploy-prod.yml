@@ -19,10 +19,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '20'
 
@@ -40,10 +40,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '20'
 
@@ -64,7 +64,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Create .env for testing
         run: |
@@ -80,7 +80,7 @@ jobs:
         run: docker build -t testflow-backend:latest ./testflow-app
 
       - name: Container Security Scan (Trivy)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: 'testflow-backend:latest'
           format: 'table'
@@ -117,7 +117,7 @@ jobs:
 
       - name: Upload ZAP Report
         if: always()
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ZAP-Security-Report
           path: zap-work/report_html.html
@@ -132,7 +132,7 @@ jobs:
       contents: read
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Setup downcases
         run: |
@@ -141,18 +141,18 @@ jobs:
           echo "IMAGE_TAG=${TAG}" >> ${GITHUB_ENV}
 
       - name: Login to GHCR
-        uses: docker/login-action@v4
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GHCR_PAT }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
 
       # Backend
       - name: Build and Push Backend
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./testflow-app
           push: true
@@ -162,7 +162,7 @@ jobs:
 
       # Frontend
       - name: Build and Push Frontend
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./testflow-frontend
           push: true
@@ -172,7 +172,7 @@ jobs:
 
       # Nginx
       - name: Build and Push Nginx
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: ./nginx
           push: true
@@ -187,7 +187,7 @@ jobs:
     needs: [build-and-push-images]
     steps:
       - name: Checkout Source Code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: source
 
@@ -196,13 +196,15 @@ jobs:
           echo "IMAGE_OWNER=${GITHUB_REPOSITORY_OWNER,,}" >> ${GITHUB_ENV}
 
       - name: Checkout Prod Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: JoaoVictor-M/testflow-prod
           token: ${{ secrets.PROD_REPO_TOKEN }}
           path: prod
 
       - name: Format Prod Files
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           # 1. Limpeza Profunda: Remove absolutamente todos os arquivos da árvore do git na branch destino
           cd prod
@@ -219,16 +221,16 @@ jobs:
           # 2.1 Remove a seção de 'Desenvolvimento' inteira do README.md de produção usando sed delimitado
           sed -i '/## 🛠️ Desenvolvimento (Para Code Maintainers)/,/^---$/d' prod/README.md
 
-          echo '{"version": "${{ github.ref_name }}"}' > prod/version.json
+          printf '{"version": "%s"}\n' "$RELEASE_TAG" > prod/version.json
           
           # O arquivo Compose é copiado do seu código local e depois lapidado dinamicamente
           cp source/docker-compose.yml prod/docker-compose.yml
 
           # 3. Lapidação do docker-compose para Produção
           # Troca os builds pelas imagens na nuvem
-          sed -i "s|build: ./testflow-app|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-backend:latest|g" prod/docker-compose.yml
-          sed -i "s|build: ./testflow-frontend|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-frontend:latest|g" prod/docker-compose.yml
-          sed -i "s|build: ./nginx|image: ${{ env.REGISTRY }}/${{ env.IMAGE_OWNER }}/testflow-nginx:latest|g" prod/docker-compose.yml
+          sed -i "s|build: ./testflow-app|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-backend:latest|g" prod/docker-compose.yml
+          sed -i "s|build: ./testflow-frontend|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-frontend:latest|g" prod/docker-compose.yml
+          sed -i "s|build: ./nginx|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-nginx:latest|g" prod/docker-compose.yml
           
           # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
           sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
@@ -242,10 +244,12 @@ jobs:
 
 
       - name: Push release files to Github Prod
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd prod
           git config user.name "GitHub Actions Deploy"
           git config user.email "actions@github.com"
           git add .
-          git commit -m "chore: release components and infra matching version ${{ github.ref_name }}" || echo "No changes"
+          git commit -m "chore: release components and infra matching version ${RELEASE_TAG}" || echo "No changes"
           git push origin main
