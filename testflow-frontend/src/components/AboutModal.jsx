@@ -22,7 +22,7 @@ const AboutModal = ({ isOpen, onClose }) => {
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">O que é o TestFlow?</h2>
                         <p className="text-blue-200 text-base md:text-lg max-w-lg leading-relaxed">
-                            A solução definitiva para centralizar, organizar e escalar a qualidade dos seus projetos de software.
+                            Uma plataforma para centralizar e organizar projetos, demandas, cenários de teste e evidências.
                         </p>
                     </div>
                 </div>
@@ -35,8 +35,8 @@ const AboutModal = ({ isOpen, onClose }) => {
                             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 text-center md:text-left">Transforme Caos em Controle</h3>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-base text-justify">
                                 O desenvolvimento de software moderno exige velocidade, mas a velocidade sem controle resulta em bugs e retrabalho.
-                                O <strong>TestFlow</strong> não é apenas uma ferramenta de registro; é o centro de comando da sua equipe de Análise.
-                                Ele elimina planilhas descentralizadas, comunicações perdidas e evidências espalhadas, trazendo tudo para um fluxo único e coeso.
+                                O <strong>TestFlow</strong> substitui planilhas descentralizadas, comunicações perdidas e evidências espalhadas,
+                                reunindo o trabalho da equipe de Análise em um fluxo único.
                             </p>
                         </div>
 
@@ -47,7 +47,7 @@ const AboutModal = ({ isOpen, onClose }) => {
                                     <h4 className="font-bold text-gray-900 dark:text-white">Agilidade Real</h4>
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">
-                                    Crie demandas, associe cenários e gere evidências em segundos. O fluxo foi desenhado para reduzir cliques e maximizar produtividade.
+                                    Crie projetos, demandas e cenários e anexe as evidências na mesma ferramenta. O fluxo foi desenhado para reduzir cliques.
                                 </p>
                             </div>
 
@@ -57,7 +57,7 @@ const AboutModal = ({ isOpen, onClose }) => {
                                     <h4 className="font-bold text-gray-900 dark:text-white">Confiabilidade</h4>
                                 </div>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">
-                                    Garanta que cada entrega foi testada. Com a rastreabilidade total, você sabe exatamente o que foi validado, por quem e quando.
+                                    Registre o que foi testado e anexe a prova. Os administradores consultam, na Auditoria, quem criou, editou ou excluiu cada item e quando.
                                 </p>
                             </div>
                         </div>
@@ -88,8 +88,8 @@ const AboutModal = ({ isOpen, onClose }) => {
                                         <CheckCircle size={16} />
                                     </span>
                                     <div>
-                                        <strong className="text-gray-900 dark:text-white block">Feito para Escalar</strong>
-                                        <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block">De pequenas startups a grandes corporações, o TestFlow se adapta ao volume do seu time sem perder performance.</span>
+                                        <strong className="text-gray-900 dark:text-white block">Para Equipes de QA</strong>
+                                        <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block">Pensado para equipes de Análise de Qualidade, com perfis de acesso para administradores, analistas e visualizadores.</span>
                                     </div>
                                 </li>
                             </ul>

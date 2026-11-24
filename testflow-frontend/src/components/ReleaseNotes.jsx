@@ -22,7 +22,7 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                         </div>
                         <h2 className="text-2xl md:text-3xl font-bold tracking-tight">TestFlow {version}</h2>
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/30 text-emerald-50 border border-emerald-400/30">
-                            Production Ready
+                            Notas da versão
                         </span>
                         <p className="text-emerald-50 text-sm md:text-base max-w-lg mt-2 font-medium">
                             30/03/2026
@@ -36,28 +36,25 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
 
                         <div className="text-center space-y-2">
                             <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed">
-                                🔒 <strong>Correções de segurança e melhorias de usabilidade.</strong>
-                            </p>
-                            <p className="text-gray-500 dark:text-gray-400 text-sm">
-                                Remediação completa das 7 vulnerabilidades identificadas no pentest.
+                                🔒 <strong>Melhorias de segurança e de usabilidade.</strong>
                             </p>
                         </div>
 
                         <div className="border-t border-gray-100 dark:border-neutral-700 pt-6">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
                                 <Shield className="text-red-500" size={20} />
-                                Correções de Segurança (Pentest)
+                                Segurança
                             </h3>
 
                             <div className="bg-gray-50 dark:bg-neutral-900 p-4 rounded-xl border border-gray-200 dark:border-neutral-800 text-sm text-gray-600 dark:text-gray-400 space-y-4">
                                 <ul className="list-disc pl-4 space-y-2">
-                                    <li><strong>[FIX] CWE-434:</strong> Upload restrito a 14 extensões permitidas (.csv, .xlsx, .docx, .doc, .pdf, .txt, .log, .png, .jpg, .jpeg, .mp4, .mkv, .mp3, .wav) com validação de MIME type e bloqueio de dupla extensão.</li>
-                                    <li><strong>[FIX] CWE-601:</strong> Validação de URLs via Allowlist configurável. Links de demandas só são aceitos se pertencerem às plataformas autorizadas.</li>
-                                    <li><strong>[FIX] CWE-326:</strong> Cifras TLS fracas removidas. Apenas TLSv1.2/1.3 com Forward Secrecy (ECDHE).</li>
-                                    <li><strong>[FIX] CWE-693:</strong> Content Security Policy (CSP) implementada no NGINX.</li>
-                                    <li><strong>[FIX] CWE-1021:</strong> Proteção anti-Clickjacking com X-Frame-Options e frame-ancestors.</li>
-                                    <li><strong>[FIX] CWE-200:</strong> Versão do NGINX ocultada em cabeçalhos e páginas de erro (3 instâncias).</li>
-                                    <li><strong>[FIX] CWE-272:</strong> RBAC reforçado — apenas Administradores podem gerenciar usuários.</li>
+                                    <li>Upload restrito a 14 extensões permitidas (.csv, .xlsx, .docx, .doc, .pdf, .txt, .log, .png, .jpg, .jpeg, .mp4, .mkv, .mp3, .wav) com validação de MIME type e bloqueio de dupla extensão.</li>
+                                    <li>Validação de URLs via lista de URLs permitidas configurável. Links de demandas só são aceitos se pertencerem às plataformas autorizadas.</li>
+                                    <li>Apenas TLS 1.2 e 1.3, com cifras fracas removidas.</li>
+                                    <li>Content Security Policy (CSP) configurada no NGINX.</li>
+                                    <li>Proteção contra clickjacking com X-Frame-Options e frame-ancestors.</li>
+                                    <li>Versão do NGINX ocultada em cabeçalhos e páginas de erro.</li>
+                                    <li>Administradores só são criados e editados por administradores.</li>
                                 </ul>
                             </div>
                         </div>
@@ -86,7 +83,6 @@ const ReleaseNotes = ({ isOpen, onClose, version }) => {
                                         <li>[NEW] Cabeçalhos de segurança HSTS, CSP e X-Frame-Options no NGINX.</li>
                                         <li>[NEW] Pastas de evidências com nomenclatura legível (ID_Nome) ao invés de hash.</li>
                                         <li>[UPDATE] Cifras TLS refinadas com exclusão explícita de suítes fracas.</li>
-                                        <li>[UPDATE] Middleware RBAC restrito a admin para rotas de gestão de usuários.</li>
                                         <li>[UPDATE] server_tokens off aplicado em todas as instâncias NGINX.</li>
                                     </ul>
                                 </div>

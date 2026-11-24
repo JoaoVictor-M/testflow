@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { X, BookOpen, Layers, FileText, CheckSquare, Users, Settings, Hash, Activity } from 'lucide-react';
+import { APP_VERSION } from '../version';
 
 // Conteúdo da documentação mapeado por chaves
 const DOC_CONTENT = {
@@ -11,6 +12,9 @@ const DOC_CONTENT = {
                 <p className="text-lg text-gray-700 dark:text-gray-300 text-justify leading-relaxed">
                     O <strong>TestFlow</strong> é uma plataforma intuitiva projetada para centralizar e otimizar o gerenciamento de ciclos de teste de software.
                     Nesta documentação, você encontrará todos os detalhes operacionais para extrair o máximo da ferramenta, desde a criação de projetos até a configuração avançada de sistema.
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 text-justify">
+                    Esta documentação descreve a versão <strong>{APP_VERSION}</strong>. Funcionalidades planejadas só entram aqui quando forem entregues.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border-l-4 border-blue-500">
@@ -46,19 +50,19 @@ const DOC_CONTENT = {
                             <li>
                                 <strong className="text-gray-800 dark:text-white block">Criar Projeto</strong>
                                 <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                    Utilize o botão "Novo Projeto". É obrigatório definir um <strong>Nome</strong> único e recomendado adicionar uma <strong>Descrição</strong> detalhada sobre o escopo do projeto (ex: tecnologias, stakeholders).
+                                    Utilize o botão "Novo Projeto". O <strong>Título</strong> é obrigatório. Também é possível informar o status, as <strong>Tags</strong>, a <strong>Versão</strong> e o <strong>Servidor</strong> do projeto.
                                 </span>
                             </li>
                             <li>
                                 <strong className="text-gray-800 dark:text-white block">Editar Projeto</strong>
                                 <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                    Ao clicar no ícone de lápis, você pode alterar o nome ou descrição. O ID interno do projeto permanece imutável para garantir a integridade dos dados.
+                                    Ao clicar no ícone de lápis, você pode alterar o título, o status, as tags, a versão e o servidor. O ID interno do projeto permanece imutável.
                                 </span>
                             </li>
                             <li>
                                 <strong className="text-gray-800 dark:text-white block">Excluir Projeto</strong>
                                 <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                    <span className="text-red-500 font-bold">Atenção:</span> A exclusão é irreversível e cascata. Ao apagar um projeto, <strong>TODAS</strong> as demandas, cenários e evidências associadas serão permanentemente removidas do banco de dados e do sistema de arquivos.
+                                    <span className="text-red-500 font-bold">Atenção:</span> A exclusão é irreversível e cascata. Ao apagar um projeto, <strong>TODAS</strong> as demandas e cenários associados serão removidos permanentemente.
                                 </span>
                             </li>
                         </ul>
@@ -72,7 +76,7 @@ const DOC_CONTENT = {
                         <p className="text-sm text-gray-600 dark:text-gray-400 text-justify leading-relaxed">
                             O botão <strong>Duplicar</strong> aciona uma cópia profunda. Isso é extremamente útil para <strong>Testes de Regressão</strong> de uma nova versão (ex: v1.0 para v1.1).
                             <br /><br />
-                            O sistema cria uma cópia exata do Projeto, clonando todas as suas <strong>Demandas</strong> e todos os <strong>Cenários</strong> vinculados. As evidências (arquivos) não são copiadas, pois se entende que a nova versão exigirá novas provas.
+                            O sistema cria uma cópia do Projeto com todas as demandas e cenários vinculados, mantendo o status de cada um. As evidências (arquivos) não são copiadas, pois a nova versão exigirá novas provas. Demandas e cenários também têm o botão <strong>Duplicar</strong>.
                         </p>
                     </section>
                 </div>
@@ -93,16 +97,19 @@ const DOC_CONTENT = {
                         <h5 className="font-bold text-gray-900 dark:text-white border-b pb-2 border-gray-100 dark:border-neutral-800">Campos Essenciais</h5>
                         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-3">
                             <li>
+                                <strong className="text-blue-600 dark:text-blue-400">Número e Nome:</strong> identificam a demanda (ex: o número do card na sua ferramenta de gestão).
+                            </li>
+                            <li>
                                 <strong className="text-blue-600 dark:text-blue-400">Status:</strong> Define o ciclo de vida.
-                                <span className="block text-xs mt-1 bg-gray-100 dark:bg-neutral-800 p-1 rounded">Pendente &rarr; Em Andamento &rarr; Testado</span>
+                                <span className="block text-xs mt-1 bg-gray-100 dark:bg-neutral-800 p-1 rounded">Pendente &rarr; Testando &rarr; Aguardando Correção &rarr; Testado</span>
                             </li>
                             <li>
-                                <strong className="text-purple-600 dark:text-purple-400">Tags:</strong>
-                                Etiquetas visuais para agrupar demandas (ex: <code>Critico</code>, <code>Sprint-25</code>, <code>Front-End</code>).
-                            </li>
-                            <li>
-                                <strong className="text-green-600 dark:text-green-400">Responsáveis:</strong>
+                                <strong className="text-green-600 dark:text-green-400">Analistas:</strong>
                                 Múltiplos QAs podem ser atribuídos a uma única demanda.
+                            </li>
+                            <li>
+                                <strong className="text-purple-600 dark:text-purple-400">Tempo estimado:</strong>
+                                Em horas, opcional.
                             </li>
                         </ul>
                     </div>
@@ -110,8 +117,8 @@ const DOC_CONTENT = {
                     <div className="space-y-3">
                         <h5 className="font-bold text-gray-900 dark:text-white border-b pb-2 border-gray-100 dark:border-neutral-800">Integração</h5>
                         <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">
-                            O campo <strong>Link Externo</strong> é vital para rastreabilidade. Insira a URL direta do card na sua ferramenta de gestão de projetos (Jira, Monday, etc).
-                            Isso cria um link clicável direto na lista de demandas, facilitando a navegação entre sistemas.
+                            O campo <strong>Plataforma e Ticket</strong> (opcional) é vital para rastreabilidade. Escolha a plataforma e informe o ticket para criar um link clicável na lista de demandas.
+                            Só são aceitas as plataformas cadastradas em <strong>Configurações &gt; URLs Permitidas</strong>.
                         </p>
                     </div>
                 </div>
@@ -119,7 +126,7 @@ const DOC_CONTENT = {
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700/50">
                     <h5 className="font-bold text-yellow-800 dark:text-yellow-400 mb-1">Regra de Ouro do Analista</h5>
                     <p className="text-sm text-yellow-800/80 dark:text-yellow-500/80 text-justify">
-                        Uma demanda <strong>NUNCA</strong> deve ser movida para o status <strong>"Testado"</strong> sem que existam evidências (prints ou vídeos) anexadas. O sistema emite alertas, mas a disciplina do time é fundamental.
+                        O sistema não permite marcar como <strong>"Testado"</strong> sem evidência anexada: crie a demanda, anexe as evidências e só então atualize o status. Se a última evidência de uma demanda Testado for excluída, ela volta para Pendente.
                     </p>
                 </div>
             </div>
@@ -153,6 +160,14 @@ const DOC_CONTENT = {
                         </div>
                     </div>
                 </div>
+
+                <div className="bg-gray-50 dark:bg-neutral-800 p-6 rounded-xl border border-gray-100 dark:border-neutral-700 text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                    <h5 className="font-bold text-gray-800 dark:text-white">Resultado e cópia</h5>
+                    <p className="text-justify">
+                        Cada cenário tem um resultado: <strong>Aguardando</strong>, <strong>Passou</strong> ou <strong>Com Erro</strong>. Ao registrar um erro, é possível informar o link do registro do problema.
+                        O botão <strong>Duplicar</strong> cria uma cópia do cenário para ser ajustada.
+                    </p>
+                </div>
             </div>
         )
     },
@@ -168,15 +183,15 @@ const DOC_CONTENT = {
                 <ul className="space-y-3 bg-blue-50 dark:bg-blue-900/10 p-5 rounded-xl border border-blue-100 dark:border-blue-800/30">
                     <li className="flex gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <CheckSquare className="text-blue-500 shrink-0" size={18} />
-                        <span><strong>Upload Múltiplo:</strong> Arraste e solte várias imagens de uma vez.</span>
+                        <span><strong>Upload Múltiplo:</strong> Selecione vários arquivos de uma vez. São aceitos .csv, .xlsx, .docx, .doc, .pdf, .txt, .log, .png, .jpg, .jpeg, .mp4, .mkv, .mp3 e .wav, com até 50 MB cada.</span>
                     </li>
                     <li className="flex gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <CheckSquare className="text-blue-500 shrink-0" size={18} />
-                        <span><strong>Pré-visualização:</strong> Visualize as imagens diretamente no modal sem precisar baixar.</span>
+                        <span><strong>Pré-visualização:</strong> Visualize no modal, sem baixar, os arquivos que o navegador consegue exibir.</span>
                     </li>
                     <li className="flex gap-3 text-sm text-gray-700 dark:text-gray-300">
                         <CheckSquare className="text-blue-500 shrink-0" size={18} />
-                        <span><strong>Organização Automática:</strong> O sistema cria pastas no servidor organizadas por ID da Demanda, garantindo que nada se misture.</span>
+                        <span><strong>Organização Automática:</strong> O sistema guarda os arquivos em uma pasta por demanda, nomeada com o número e o nome da demanda.</span>
                     </li>
                 </ul>
             </div>
@@ -188,10 +203,10 @@ const DOC_CONTENT = {
         content: (
             <div className="space-y-8">
                 <p className="text-gray-600 dark:text-gray-300 text-justify">
-                    A segurança e organização do TestFlow dependem de uma correta atribuição de perfis. Existem dois níveis principais de acesso.
+                    A segurança e organização do TestFlow dependem de uma correta atribuição de perfis. Existem três perfis de acesso.
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="border border-gray-200 dark:border-neutral-700 rounded-xl overflow-hidden">
                         <div className="bg-gray-100 dark:bg-neutral-800 p-3 border-b border-gray-200 dark:border-neutral-700 font-bold text-center text-gray-800 dark:text-white">
                             ADMINISTRADOR (Admin)
@@ -200,12 +215,12 @@ const DOC_CONTENT = {
                             <p className="text-xs text-gray-500 pb-3 text-center uppercase tracking-wide">O usuário técnico</p>
                             <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                                 <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Acesso total ao sistema</li>
-                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Criar/Editar/Excluir Usuários</li>
+                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Gerenciar usuários na tela de Usuários</li>
                                 <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Configurar Servidor de Email</li>
-                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Resetar senhas de terceiros</li>
+                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Consultar a Auditoria</li>
                             </ul>
                             <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 text-xs rounded text-justify">
-                                <strong>Segurança:</strong> A senha do Admin nunca deve ser compartilhada. Ele é o guardião das configurações globais.
+                                <strong>Segurança:</strong> A senha do Admin nunca deve ser compartilhada. Administradores só são criados e editados por administradores.
                             </div>
                         </div>
                     </div>
@@ -219,7 +234,20 @@ const DOC_CONTENT = {
                             <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                                 <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Criar Projetos e Demandas</li>
                                 <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Executar Testes e Anexar Evidências</li>
-                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Editar seu próprio perfil</li>
+                                                                <li className="flex items-center gap-2"><X size={14} className="text-red-500" /> Sem acesso a Configurações Globais</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="border border-gray-200 dark:border-neutral-700 rounded-xl overflow-hidden">
+                        <div className="bg-gray-100 dark:bg-neutral-800 p-3 border-b border-gray-200 dark:border-neutral-700 font-bold text-center text-gray-800 dark:text-white">
+                            VISUALIZADOR
+                        </div>
+                        <div className="p-4 bg-white dark:bg-neutral-900 h-full">
+                            <p className="text-xs text-gray-500 pb-3 text-center uppercase tracking-wide">O usuário de consulta</p>
+                            <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                                <li className="flex items-center gap-2"><CheckSquare size={14} className="text-green-500" /> Consultar projetos, demandas e cenários</li>
+                                <li className="flex items-center gap-2"><X size={14} className="text-red-500" /> Não cria nem altera dados</li>
                                 <li className="flex items-center gap-2"><X size={14} className="text-red-500" /> Sem acesso a Configurações Globais</li>
                             </ul>
                         </div>
@@ -303,6 +331,15 @@ const DOC_CONTENT = {
                         </div>
                     </div>
                 </div>
+
+                <div className="space-y-4">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white border-b border-gray-200 dark:border-neutral-700 pb-2">
+                        URLs Permitidas
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 text-justify">
+                        Cadastre o nome e a URL base de cada plataforma de gestão (ex: Bitrix). O campo <strong>Plataforma e Ticket</strong> das demandas só aceita as plataformas cadastradas aqui.
+                    </p>
+                </div>
             </div>
         )
     },
@@ -321,7 +358,7 @@ const DOC_CONTENT = {
                         <li>
                             <strong className="text-gray-800 dark:text-white block">Monitoramento Contínuo</strong>
                             <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                O sistema intercepta silenciosamente qualquer operação de <i>Criação</i>, <i>Edição</i>, <i>Exclusão</i> ou <i>Duplicação</i> (Clone) de recursos chaves do sistema.
+                                O sistema registra as operações de <i>Criação</i>, <i>Edição</i> e <i>Exclusão</i> de projetos, demandas, cenários, usuários e configurações. Itens duplicados aparecem como criação.
                             </span>
                         </li>
                         <li>
@@ -333,7 +370,7 @@ const DOC_CONTENT = {
                         <li>
                             <strong className="text-gray-800 dark:text-white block">Filtros Avançados</strong>
                             <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                Para cenários com milhares de registros, utilize os botões superiores para filtrar os logs por uma janela específica de Data e Hora, por um Usuário específico, Menu ou Ação que você está procurando.
+                                Utilize os filtros para limitar os registros por Data e Hora, Usuário, Menu ou Ação.
                             </span>
                         </li>
                     </ul>
