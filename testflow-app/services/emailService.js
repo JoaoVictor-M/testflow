@@ -20,11 +20,7 @@ const createTransporter = async () => {
             const transportOptions = {
                 host,
                 port,
-                secure,
-                tls: {
-                    // Previne que o NodeMailer recuse os certificados SSL do servidor interno (MUITO COMUM EMPRESARIAL)
-                    rejectUnauthorized: false
-                }
+                secure
             };
 
             // Adiciona autenticação apenas se fornecida
