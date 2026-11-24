@@ -1,8 +1,5 @@
 const jwt = require('jsonwebtoken');
-
-// WARNING: In production, use environment variable for secret
-const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
-
+const { getJwtSecret } = require('../config/jwt');
 
 const authMiddleware = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -12,8 +9,9 @@ const authMiddleware = (req, res, next) => {
         return res.status(401).json({ message: 'Acesso negado. Token não fornecido.' });
     }
 
+    const secret = getJwtSecret();
     try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, secret, { algorithms: ['HS256'] });
         req.user = decoded;
         next();
     } catch {

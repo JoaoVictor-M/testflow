@@ -1,6 +1,14 @@
 const cluster = require('cluster');
 const os = require('os');
 const { logger } = require('./utils/logger');
+const { getJwtSecret } = require('./config/jwt');
+
+try {
+    getJwtSecret();
+} catch (error) {
+    logger.error(error.message, { code: error.code });
+    process.exit(1);
+}
 
 // Verifica se é o processo Mestre (Primary)
 if (cluster.isPrimary) {

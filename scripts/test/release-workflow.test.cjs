@@ -49,7 +49,39 @@ test('release uses main, safe dry-run, all checks, clean archived images and lea
     assert.match(job('release'), /gh release create "\$RELEASE_TAG" --target "\$GITHUB_SHA"[\s\S]*sbom\/\*.spdx.json/);
     assert.match(job('update-prod-repo'), /needs: \[validate, release\][\s\S]*secrets.PROD_REPO_TOKEN/);
     assert.match(job('update-prod-repo'), /testflow-backend:\$\{RELEASE_TAG}/);
-    assert.doesNotMatch(workflow, /continue-on-error|ignore-unfixed|ACTIONS_ALLOW_USE_UNSECURE|secrets: inherit/);
+    assert.doesNotMatch(workflow, /continue-on-error|ignore-unfixed|ACTIONS_ALLOW_USE_UNSECURE|secrets: inherit|JWT_SECRET/);
+});
+
+test('release DAST gives precedence to the runtime synthetic JWT_SECRET and never sets a default', (t) => {
+    const ciStack = read('scripts/lib/ci-stack.sh');
+    assert.match(read('scripts/ci-dast.sh'), /\. scripts\/lib\/ci-stack\.sh[\s\S]*open_ci_stack/);
+    assert.match(ciStack, /jwt_secret="\$\(openssl rand -hex 32\)"[\s\S]*mask_secret "\$jwt_secret"[\s\S]*"JWT_SECRET=\$jwt_secret"[\s\S]*> "\$TESTFLOW_CI_ENV"/);
+
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-release-jwt-'));
+    t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+    const synthetic = 'a'.repeat(64);
+    const envFile = path.join(directory, 'backend.env');
+    fs.writeFileSync(envFile, `MONGO_URI=mongodb://mongodb-service:27017/testflow\nJWT_SECRET=${synthetic}\nPORT=3000\n`);
+
+    const dastConfig = JSON.parse(execFileSync('docker', ['compose', '--env-file', '/dev/null', '-f', 'docker-compose.ci.yml', 'config', '--format', 'json'], {
+        cwd: root, encoding: 'utf8',
+        env: { ...process.env, TESTFLOW_CI_ENV: envFile, JWT_SECRET: 'caller-secret-must-not-override' },
+    }));
+    assert.equal(dastConfig.services['backend-service'].environment.JWT_SECRET, synthetic);
+
+    const e2eConfig = JSON.parse(execFileSync('docker', ['compose', '--env-file', '/dev/null', '-f', 'docker-compose.ci.yml', '-f', 'docker-compose.e2e.yml', 'config', '--format', 'json'], {
+        cwd: root, encoding: 'utf8',
+        env: { ...process.env, TESTFLOW_CI_ENV: envFile, TESTFLOW_CI_TLS: directory, JWT_SECRET: 'caller-secret-must-not-override' },
+    }));
+    assert.equal(e2eConfig.services['backend-service'].environment.JWT_SECRET, synthetic);
+
+    const withoutSecretFile = path.join(directory, 'no-secret.env');
+    fs.writeFileSync(withoutSecretFile, 'MONGO_URI=mongodb://mongodb-service:27017/testflow\nPORT=3000\n');
+    const noDefaultConfig = JSON.parse(execFileSync('docker', ['compose', '--env-file', '/dev/null', '-f', 'docker-compose.ci.yml', 'config', '--format', 'json'], {
+        cwd: root, encoding: 'utf8',
+        env: { ...process.env, TESTFLOW_CI_ENV: withoutSecretFile, JWT_SECRET: 'caller-secret-must-not-leak' },
+    }));
+    assert.equal(noDefaultConfig.services['backend-service'].environment.JWT_SECRET, undefined);
 });
 
 test('existing tags or releases and API failures refuse publication, while a fresh version passes', (t) => {
