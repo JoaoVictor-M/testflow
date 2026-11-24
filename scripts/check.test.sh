@@ -52,6 +52,14 @@ fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
 runs build 'npm run build' '-w /work/testflow-frontend'
 fails_when build 'npm run build'
+runs test 'compose -f docker-compose.teste.yml up -d --wait' '--network testflow-teste_default' \
+  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm test' 'compose -f docker-compose.teste.yml down'
+fails_when test 'up -d --wait'
+fails_when test '-w /work/testflow-app'
+fails_when test '-w /work/testflow-frontend'
+label="test tears the database down when the back tests fail"
+if FAIL_ON='-w /work/testflow-app' run_check test; then miss
+elif grep -qF -- 'compose -f docker-compose.teste.yml down' "$log"; then pass; else miss; fi
 runs secrets 'gitleaks' 'git .'
 fails_when secrets gitleaks
 runs secrets-staged 'gitleaks' '--staged'
@@ -67,8 +75,9 @@ runs iac 'hadolint' 'testflow-app/Dockerfile' 'config --quiet'
 fails_when iac 'hadolint'
 fails_when iac 'config --quiet'
 runs test-scripts 'test-scripts-ran'
-runs quality 'npm run lint' 'test-scripts-ran' 'npm run build'
+runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'npm run build'
 fails_when quality 'npm run lint'
+fails_when quality 'npm test'
 fails_when quality 'npm run build'
 runs all 'npm run lint' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'
 
