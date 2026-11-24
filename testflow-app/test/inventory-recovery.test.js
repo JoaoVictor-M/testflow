@@ -75,6 +75,17 @@ describe('inventário conjunto e verificação de restauração', () => {
                 size: 16
             }]
         });
+        const pendingDemanda = await Demanda.create({
+            demandaId: 'PND1',
+            nome: 'Demanda Pendente',
+            project: project._id,
+            evidences: [{
+                filename: '1700-efgh-pendente.txt',
+                originalName: 'pendente.txt',
+                mimetype: 'text/plain',
+                size: 16
+            }]
+        });
         await Scenario.create({
             title: 'Cenário Inventario',
             description: 'Descrição sintética',
@@ -88,35 +99,38 @@ describe('inventário conjunto e verificação de restauração', () => {
         });
         await CascadeDeletionJob.create({
             targetType: 'Demanda',
-            targetId: new mongoose.Types.ObjectId(),
+            targetId: pendingDemanda._id,
             requestedBy: user._id,
             status: 'failed',
             phase: 'deleting_demandas',
             failedPhase: 'deleting_demandas',
-            retentionState: 'retained',
-            retainedAttachments: [{
-                relativeDir: 'RET1_Demanda_Retida',
-                filename: '1700-efgh-retida.txt',
-                originalName: 'retida.txt',
-                size: 14
+            scope: { projectId: project._id, demandaIds: [pendingDemanda._id], demandaCount: 1, scenarioCount: 0 },
+            attachments: [{
+                demandaId: pendingDemanda._id,
+                demandaCode: 'PND1',
+                demandaName: 'Demanda Pendente',
+                relativeDir: 'PND1_Demanda_Pendente',
+                filename: '1700-efgh-pendente.txt',
+                originalName: 'pendente.txt',
+                size: 16
             }]
         });
 
         const activeDir = path.join(sourceEvidenceDir, 'INV1_Demanda_Ativa');
-        const retainedDir = path.join(sourceEvidenceDir, 'RET1_Demanda_Retida');
+        const pendingDir = path.join(sourceEvidenceDir, 'PND1_Demanda_Pendente');
         fs.mkdirSync(activeDir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
-        fs.mkdirSync(retainedDir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.mkdirSync(pendingDir, { recursive: true }); // eslint-disable-line security/detect-non-literal-fs-filename
         const activeFile = path.join(activeDir, '1700-abcd-prova.txt');
-        const retainedFile = path.join(retainedDir, '1700-efgh-retida.txt');
+        const pendingFile = path.join(pendingDir, '1700-efgh-pendente.txt');
         fs.writeFileSync(activeFile, 'evidencia-ativa!'); // eslint-disable-line security/detect-non-literal-fs-filename
-        fs.writeFileSync(retainedFile, 'anexo-retido!!'); // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.writeFileSync(pendingFile, 'anexo-pendente!!'); // eslint-disable-line security/detect-non-literal-fs-filename
         fs.chmodSync(activeFile, 0o640); // eslint-disable-line security/detect-non-literal-fs-filename
-        fs.chmodSync(retainedFile, 0o600); // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.chmodSync(pendingFile, 0o600); // eslint-disable-line security/detect-non-literal-fs-filename
 
         // Replica idêntica preservando conteúdo e permissões para simular restauração íntegra.
         fs.cpSync(sourceEvidenceDir, restoredEvidenceDir, { recursive: true, preserveTimestamps: true });
         fs.chmodSync(path.join(restoredEvidenceDir, 'INV1_Demanda_Ativa', '1700-abcd-prova.txt'), 0o640); // eslint-disable-line security/detect-non-literal-fs-filename
-        fs.chmodSync(path.join(restoredEvidenceDir, 'RET1_Demanda_Retida', '1700-efgh-retida.txt'), 0o600); // eslint-disable-line security/detect-non-literal-fs-filename
+        fs.chmodSync(path.join(restoredEvidenceDir, 'PND1_Demanda_Pendente', '1700-efgh-pendente.txt'), 0o600); // eslint-disable-line security/detect-non-literal-fs-filename
     };
 
     test('inventário une documentos, anexos com checksum/permissões, configurações sem segredos e versão', async () => {
@@ -139,10 +153,10 @@ describe('inventário conjunto e verificação de restauração', () => {
         assert.equal(JSON.stringify(inventory).includes('segredo-nao-vazar'), false);
 
         assert.equal(inventory.documents.collections.projects.count, 1);
-        assert.equal(inventory.documents.collections.demandas.count, 1);
+        assert.equal(inventory.documents.collections.demandas.count, 2);
         assert.equal(inventory.documents.collections.scenarios.count, 1);
         assert.equal(inventory.documents.cascadeJobs.failedCount, 1);
-        assert.equal(inventory.documents.cascadeJobs.retainedCount, 1);
+        assert.equal(inventory.documents.cascadeJobs.completedCount, 0);
 
         assert.equal(inventory.attachments.totalFiles, 2);
         const activeEntry = inventory.attachments.files.find((f) => f.relativePath === 'INV1_Demanda_Ativa/1700-abcd-prova.txt');
@@ -150,10 +164,8 @@ describe('inventário conjunto e verificação de restauração', () => {
         assert.equal(activeEntry.mode, '0640');
         assert.match(activeEntry.sha256, /^[a-f0-9]{64}$/);
 
-        assert.equal(inventory.links.activeLinkedCount, 1);
+        assert.equal(inventory.links.activeLinkedCount, 2);
         assert.equal(inventory.links.missingActiveFiles.length, 0);
-        assert.equal(inventory.links.retainedLinkedCount, 1);
-        assert.equal(inventory.links.missingRetainedFiles.length, 0);
         assert.equal(inventory.links.orphanFiles.length, 0);
         assert.equal(inventory.links.brokenDemandas.length, 0);
         assert.equal(inventory.links.brokenScenarios.length, 0);

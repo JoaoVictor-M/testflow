@@ -136,14 +136,13 @@ const collectDatabaseInventory = async (db) => {
         totalCount: cascadeDocs.length,
         pendingCount: cascadeDocs.filter((j) => j.status === 'pending' || j.status === 'in_progress').length,
         failedCount: cascadeDocs.filter((j) => j.status === 'failed').length,
-        retainedCount: cascadeDocs.filter((j) => j.retentionState === 'retained').length,
-        purgedCount: cascadeDocs.filter((j) => j.retentionState === 'purged').length
+        completedCount: cascadeDocs.filter((j) => j.status === 'completed').length
     };
 
-    return { names, collections, systemConfigs, cascadeDocs, cascadeJobs };
+    return { names, collections, systemConfigs, cascadeJobs };
 };
 
-const evaluateLinks = async (db, collectionNames, evidenceBaseDir, attachments, cascadeDocs) => {
+const evaluateLinks = async (db, collectionNames, evidenceBaseDir, attachments) => {
     const rootResolved = evidenceBaseDir ? path.resolve(evidenceBaseDir) : '';
     const diskSet = new Set(attachments.files.map((item) => item.relativePath));
     const referencedSet = new Set();
@@ -201,28 +200,6 @@ const evaluateLinks = async (db, collectionNames, evidenceBaseDir, attachments, 
         .filter((scenario) => !demandaIds.has(String(scenario.demanda)))
         .map((scenario) => String(scenario._id));
 
-    let retainedLinkedCount = 0;
-    const missingRetainedFiles = [];
-    for (const job of cascadeDocs) {
-        if (job.retentionState !== 'retained') continue;
-        const retained = Array.isArray(job.retainedAttachments) ? job.retainedAttachments : [];
-        for (const item of retained) {
-            const subdir = resolveEvidenceSubdir(rootResolved, item.relativeDir);
-            const full = subdir && resolveEvidenceFile(subdir, item.filename);
-            const rel = full ? `${item.relativeDir}/${item.filename}` : null;
-            if (rel && diskSet.has(rel)) {
-                retainedLinkedCount += 1;
-                referencedSet.add(rel);
-            } else {
-                missingRetainedFiles.push({
-                    jobId: String(job._id),
-                    relativeDir: item.relativeDir || '',
-                    filename: item.filename || ''
-                });
-            }
-        }
-    }
-
     const orphanFiles = attachments.files
         .map((item) => item.relativePath)
         .filter((rel) => !referencedSet.has(rel));
@@ -230,8 +207,6 @@ const evaluateLinks = async (db, collectionNames, evidenceBaseDir, attachments, 
     return {
         activeLinkedCount,
         missingActiveFiles,
-        retainedLinkedCount,
-        missingRetainedFiles,
         orphanFiles,
         brokenDemandas,
         brokenScenarios
@@ -248,9 +223,9 @@ const buildInventory = async ({
     const generatedAt = new Date().toISOString();
     const version = readVersionInfo(versionPath, packageJsonPath);
     const allowlist = readAllowlistInfo(allowlistPath);
-    const { names, collections, systemConfigs, cascadeDocs, cascadeJobs } = await collectDatabaseInventory(db);
+    const { names, collections, systemConfigs, cascadeJobs } = await collectDatabaseInventory(db);
     const attachments = scanEvidenceFiles(evidenceBaseDir);
-    const links = await evaluateLinks(db, names, evidenceBaseDir, attachments, cascadeDocs);
+    const links = await evaluateLinks(db, names, evidenceBaseDir, attachments);
 
     return {
         generatedAt,
@@ -329,14 +304,12 @@ const verifyRestoredInventory = (expected, restored) => {
 
     const linksIntact =
         restored.links.missingActiveFiles.length === 0 &&
-        restored.links.missingRetainedFiles.length === 0 &&
         restored.links.brokenDemandas.length === 0 &&
         restored.links.brokenScenarios.length === 0;
     if (!linksIntact) {
         discrepancies.push({
             code: 'broken_link',
             missingActiveFiles: restored.links.missingActiveFiles.length,
-            missingRetainedFiles: restored.links.missingRetainedFiles.length,
             brokenDemandas: restored.links.brokenDemandas.length,
             brokenScenarios: restored.links.brokenScenarios.length
         });

@@ -47,14 +47,14 @@ mkdir "$tmp/keys" "$tmp/backups" "$tmp/evidence" "$tmp/restored" "$tmp/wrong-res
 
 # Evidence with a marker (never allowed in the encrypted file), binary data, nesting, spaces and explicit modes.
 marker="marker-$(od -An -N8 -tx1 /dev/urandom | tr -d ' \n')"
-mkdir -p "$tmp/evidence/D1_Demanda_ativa" "$tmp/evidence/RET1_Demanda_retida" "$tmp/evidence/project-1/scenario 1"
+mkdir -p "$tmp/evidence/D1_Demanda_ativa" "$tmp/evidence/PND1_Demanda_pendente" "$tmp/evidence/project-1/scenario 1"
 printf 'evidence %s\n' "$marker" >"$tmp/evidence/D1_Demanda_ativa/1700-aaaa-prova.txt"
-printf 'retained %s\n' "$marker" >"$tmp/evidence/RET1_Demanda_retida/1700-bbbb-retida.txt"
+printf 'pending %s\n' "$marker" >"$tmp/evidence/PND1_Demanda_pendente/1700-bbbb-pendente.txt"
 printf 'note %s\n' "$marker" >"$tmp/evidence/project-1/scenario 1/note.txt"
 head -c 20000 /dev/urandom >"$tmp/evidence/project-1/shot.png"
 : >"$tmp/evidence/project-1/empty.txt"
 chmod 640 "$tmp/evidence/D1_Demanda_ativa/1700-aaaa-prova.txt"
-chmod 600 "$tmp/evidence/RET1_Demanda_retida/1700-bbbb-retida.txt"
+chmod 600 "$tmp/evidence/PND1_Demanda_pendente/1700-bbbb-pendente.txt"
 
 $test_mongo down --remove-orphans
 $test_mongo up -d --wait mongodb-service
@@ -87,8 +87,8 @@ mongo "const d = db.getSiblingDB('$database');
       evidences: [{ filename: '1700-aaaa-prova.txt', originalName: 'prova.txt', mimetype: 'text/plain', size: 32 }]
     },
     {
-      _id: dFailed, demandaId: 'RET1', nome: 'Demanda retida', project: pFailed, status: 'Pendente',
-      evidences: [{ filename: '1700-bbbb-retida.txt', originalName: 'retida.txt', mimetype: 'text/plain', size: 32 }]
+      _id: dFailed, demandaId: 'PND1', nome: 'Demanda pendente', project: pFailed, status: 'Pendente',
+      evidences: [{ filename: '1700-bbbb-pendente.txt', originalName: 'pendente.txt', mimetype: 'text/plain', size: 32 }]
     }
   ]);
   d.scenarios.insertOne({ _id: sActive, title: 'Cenario Ativo', description: 'Desc', steps: ['P1'], expectedResult: 'Ok', demanda: dActive, status: 'Aguardando' });
@@ -105,8 +105,7 @@ mongo "const d = db.getSiblingDB('$database');
     errorMessage: 'interrupcao sintetica',
     attempts: 1,
     scope: { projectId: pFailed, demandaIds: [dFailed], demandaCount: 1, scenarioCount: 0 },
-    retentionState: 'retained',
-    retainedAttachments: [{ demandaId: dFailed, demandaCode: 'RET1', demandaName: 'Demanda retida', relativeDir: 'RET1_Demanda_retida', filename: '1700-bbbb-retida.txt', originalName: 'retida.txt', size: 32 }],
+    attachments: [{ demandaId: dFailed, demandaCode: 'PND1', demandaName: 'Demanda pendente', relativeDir: 'PND1_Demanda_pendente', filename: '1700-bbbb-pendente.txt', originalName: 'pendente.txt', size: 32 }],
     auditSnapshot: { _id: pFailed, title: 'Projeto Cascata Interrompida' },
     createdAt: new Date(0),
     updatedAt: new Date(0)
@@ -195,9 +194,8 @@ const Project = require('./models/Project');
         const report = verifyRestoredInventory(sourceInv, restoredInv);
         assert.equal(report.ok, true, JSON.stringify(report.discrepancies));
         assert.equal(restoredInv.links.activeLinkedCount, 2);
-        assert.equal(restoredInv.links.retainedLinkedCount, 1);
         assert.equal(restoredInv.attachments.files.find((f) => f.relativePath.endsWith('1700-aaaa-prova.txt')).mode, '0640');
-        assert.equal(restoredInv.attachments.files.find((f) => f.relativePath.endsWith('1700-bbbb-retida.txt')).mode, '0600');
+        assert.equal(restoredInv.attachments.files.find((f) => f.relativePath.endsWith('1700-bbbb-pendente.txt')).mode, '0600');
 
         // Simula perda de arquivo e corrupção em cópias de verificação.
         const copyLoss = '/rehearsal/verify-loss';
@@ -215,7 +213,7 @@ const Project = require('./models/Project');
         assert.equal(corruptReport.ok, false);
         assert.ok(corruptReport.discrepancies.some((d) => d.code === 'checksum_mismatch'));
 
-        // Recupera a cascata interrompida no banco restaurado sem apagar o anexo físico retido.
+        // Recupera a cascata interrompida no banco restaurado removendo documentos e anexo físico pendente sem deixar órfão.
         const rec = await recoverPendingCascades({ evidenceBaseDir: '/rehearsal/restored' });
         assert.equal(rec.recovered.length, 1);
         assert.equal(rec.failed.length, 0);
@@ -223,8 +221,9 @@ const Project = require('./models/Project');
         assert.equal(await Demanda.exists({ _id: '650000000000000000000050' }), null);
         const recoveredJob = await CascadeDeletionJob.findById('650000000000000000000060').lean();
         assert.equal(recoveredJob.status, 'completed');
-        assert.equal(recoveredJob.retentionState, 'retained');
-        assert.equal(fs.existsSync('/rehearsal/restored/RET1_Demanda_retida/1700-bbbb-retida.txt'), true);
+        assert.equal(recoveredJob.fileCleanupSummary.removedFiles, 1);
+        assert.equal(fs.existsSync('/rehearsal/restored/PND1_Demanda_pendente/1700-bbbb-pendente.txt'), false);
+        assert.equal(fs.existsSync('/rehearsal/restored/D1_Demanda_ativa/1700-aaaa-prova.txt'), true);
     } finally {
         await mongoose.disconnect();
     }
