@@ -5,13 +5,13 @@
 set -eu
 cd "$(dirname "$0")/.."
 
-[ -f .env ] || { cp .env.example .env && echo 'dev.sh: created .env from .env.example'; }
-git config core.hooksPath scripts/git-hooks
-
 export COMPOSE_PROJECT_NAME='testflow'
 
 case ${1:-up} in
-  up) docker compose up -d --build --wait --remove-orphans ;;
+  up)
+    [ -f .env ] || { cp .env.example .env && echo 'dev.sh: created .env from .env.example'; }
+    git config core.hooksPath scripts/git-hooks
+    docker compose up -d --build --wait --remove-orphans ;;
   down) docker compose down --remove-orphans ;;
   logs) docker compose logs -f ;;
   *) echo 'usage: scripts/dev.sh [up|down|logs]' >&2; exit 2 ;;

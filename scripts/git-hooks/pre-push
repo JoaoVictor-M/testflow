@@ -4,4 +4,4 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 pushed=$(sh "$root/scripts/git-hooks/guard-push.sh")
 # develop only receives code that passes the quality checks.
-case "$pushed" in *develop*) "$root/scripts/check.sh" quality ;; esac
+case "$pushed" in *develop*) sh "$root/scripts/git-hooks/run-check.sh" quality ;; esac

@@ -78,4 +78,27 @@ label="non-fast-forward push is refused"; no push feat/a feat/a
 label="deleting develop is refused"; no delete develop
 label="deleting main is refused"; no delete main
 
+# pre-commit and pre-push call scripts/check.sh; without it they refuse, saying why, instead of passing.
+hookrepo="$tmp/hookrepo"
+git init -q -b feat/h "$hookrepo"
+mkdir -p "$hookrepo/scripts/git-hooks"
+cp "$hooks"/pre-commit "$hooks"/pre-push "$hooks"/run-check.sh "$hooks"/guard-commit.sh "$hooks"/guard-push.sh "$hookrepo/scripts/git-hooks/"
+git -C "$hookrepo" -c user.email=test@example.invalid -c user.name=test commit -q --allow-empty -m "chore: base"
+in_hookrepo() { (cd "$hookrepo" && "$@"); }
+pre_commit() { sh scripts/git-hooks/pre-commit; }
+push_of() { echo "refs/heads/$1 $(git rev-parse HEAD) refs/heads/$1 0000000000000000000000000000000000000000" | sh scripts/git-hooks/pre-push; }
+# Fails and mentions scripts/check.sh on stderr.
+refuses_saying_why() { out=$("$@" 2>&1) && return 1; case $out in *scripts/check.sh*) return 0 ;; *) return 1 ;; esac; }
+stub_check() { printf '#!/bin/sh\nexit %s\n' "$1" >"$hookrepo/scripts/check.sh"; chmod +x "$hookrepo/scripts/check.sh"; }
+
+label="pre-commit without check.sh refuses and says why"; ok refuses_saying_why in_hookrepo pre_commit
+label="pre-push of develop without check.sh refuses and says why"; ok refuses_saying_why in_hookrepo push_of develop
+label="pre-push of a feature branch does not need check.sh"; ok in_hookrepo push_of feat/h
+stub_check 0
+label="pre-commit passes when check.sh passes"; ok in_hookrepo pre_commit
+label="pre-push of develop passes when check.sh passes"; ok in_hookrepo push_of develop
+stub_check 1
+label="pre-commit refuses when check.sh fails"; no in_hookrepo pre_commit
+label="pre-push of develop refuses when check.sh fails"; no in_hookrepo push_of develop
+
 [ "$fails" -eq 0 ] && echo "guards: all passed" || { echo "guards: $fails failed" >&2; exit 1; }

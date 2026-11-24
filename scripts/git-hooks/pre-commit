@@ -3,4 +3,4 @@ set -eu
 root=$(git rev-parse --show-toplevel)
 sh "$root/scripts/git-hooks/guard-commit.sh"
 # A secret is blocked before it enters the history.
-"$root/scripts/check.sh" secrets-staged
+sh "$root/scripts/git-hooks/run-check.sh" secrets-staged
