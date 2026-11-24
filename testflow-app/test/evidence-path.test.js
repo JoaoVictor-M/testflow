@@ -42,8 +42,17 @@ describe('rotas de evidência com nome de arquivo malicioso', () => {
     const pastasCriadas = [];
     const arquivosCriados = [];
 
-    before(() => connectTo('testflow-test-evidence-path'));
-    after(dropAndDisconnect);
+    // A pasta de evidências não existe num checkout limpo: o teste a cria e só a remove se foi ele.
+    const baseDirJaExistia = fs.existsSync(baseDir);
+
+    before(() => {
+        fs.mkdirSync(baseDir, { recursive: true });
+        return connectTo('testflow-test-evidence-path');
+    });
+    after(async () => {
+        if (!baseDirJaExistia) fs.rmSync(baseDir, { recursive: true, force: true });
+        await dropAndDisconnect();
+    });
     afterEach(() => {
         for (const arquivo of arquivosCriados.splice(0)) fs.rmSync(arquivo, { force: true });
         for (const pasta of pastasCriadas.splice(0)) fs.rmSync(pasta, { recursive: true, force: true });
