@@ -9,9 +9,9 @@ FROM base AS dev
 RUN npm ci && chown -R node:node /app
 USER 1000:1000
 EXPOSE 3000
-# shortcut: a plain TCP check, until the health route of BASE-07 exists
+# Healthy once /ready answers 200: the server is up and MongoDB responds.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD ["node", "-e", "require('net').connect(process.env.PORT || 3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+  CMD ["node", "-e", "require('http').get({ host: '127.0.0.1', port: 3000, path: '/ready', timeout: 2500 }, (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1)).on('timeout', () => process.exit(1))"]
 # The source is a bind mount; node --watch restarts the server when it changes.
 CMD ["node", "--watch", "server.js"]
 
@@ -25,7 +25,7 @@ COPY --chown=node:node . .
 RUN mkdir -p /evidencias_testes && chown node:node /evidencias_testes /app
 USER 1000:1000
 EXPOSE 3000
-# shortcut: a plain TCP check, until the health route of BASE-07 exists
+# Healthy once /ready answers 200: the server is up and MongoDB responds.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
-  CMD ["node", "-e", "require('net').connect(process.env.PORT || 3000, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+  CMD ["node", "-e", "require('http').get({ host: '127.0.0.1', port: 3000, path: '/ready', timeout: 2500 }, (res) => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1)).on('timeout', () => process.exit(1))"]
 CMD [ "node", "index.js" ]
