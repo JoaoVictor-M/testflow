@@ -18,5 +18,5 @@ if (cluster.isPrimary) {
     });
 
 } else {
-    require('./server.js');
+    require('./server.js').start();
 }
