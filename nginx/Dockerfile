@@ -9,8 +9,10 @@ RUN apk upgrade --no-cache && \
 COPY nginx-http.conf.template /etc/nginx/nginx-http.conf.template
 COPY nginx-ssl.conf.template /etc/nginx/nginx-ssl.conf.template
 COPY entrypoint.sh /etc/nginx/entrypoint.sh
+COPY public-origin.sh /etc/nginx/public-origin.sh
 
-RUN chmod +x /etc/nginx/entrypoint.sh && sed -i 's/\r$//' /etc/nginx/entrypoint.sh
+RUN chmod +x /etc/nginx/entrypoint.sh /etc/nginx/public-origin.sh && \
+    sed -i 's/\r$//' /etc/nginx/entrypoint.sh /etc/nginx/public-origin.sh
 USER 101:101
 EXPOSE 8080
 EXPOSE 8443

@@ -62,9 +62,18 @@ async function main() {
         assert.equal(saved.evidences.length, 1);
         assert.equal(saved.evidences[0].size, Buffer.byteLength(evidence));
         assert.equal(fs.readFileSync(`/evidencias_testes/SMOKE_Evidence/${saved.evidences[0].filename}`, 'utf8'), evidence);
-        assert.equal(fs.readFileSync('/evidencias_testes/legacy/keep.txt', 'utf8'), 'existing evidence\n');
-        assert.equal(fs.statSync('/evidencias_testes/legacy/keep.txt').mode & 0o777, 0o600);
-        console.log('ok - login, non-root upload and preserved private legacy evidence');
+        if (process.argv[2] === 'fresh') {
+            assert.equal(fs.existsSync('/evidencias_testes/legacy'), false);
+        } else {
+            assert.equal(fs.readFileSync('/evidencias_testes/legacy/keep.txt', 'utf8'), 'existing evidence\n');
+            assert.equal(fs.statSync('/evidencias_testes/legacy/keep.txt').mode & 0o777, 0o600);
+        }
+        const removed = await fetch(`${base}/api/demandas/${demanda._id}/evidence/${saved.evidences[0]._id}`, {
+            method: 'DELETE', headers: { Authorization: `Bearer ${token}` }
+        });
+        assert.equal(removed.status, 200);
+        assert.equal(fs.existsSync(`/evidencias_testes/SMOKE_Evidence/${saved.evidences[0].filename}`), false);
+        console.log('ok - login and non-root upload/removal on fresh or migrated storage');
     } finally {
         await mongoose.disconnect();
     }

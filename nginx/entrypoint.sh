@@ -1,18 +1,8 @@
 #!/bin/sh
 set -eu
 
-# This deployment setting is the only source for absolute redirects.
-NGINX_PUBLIC_ORIGIN=${NGINX_PUBLIC_ORIGIN:-https://localhost}
-case "$NGINX_PUBLIC_ORIGIN" in
-    *[!a-zA-Z0-9.:/-]*)
-        echo 'NGINX_PUBLIC_ORIGIN contains unsupported characters.' >&2
-        exit 1
-        ;;
-esac
-if ! printf '%s\n' "$NGINX_PUBLIC_ORIGIN" | grep -Eq '^https://[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?(:[0-9]{1,5})?$'; then
-    echo 'NGINX_PUBLIC_ORIGIN must be an HTTPS origin with a hostname and optional port.' >&2
-    exit 1
-fi
+# Only deployment configuration supplies absolute redirect origins.
+NGINX_PUBLIC_ORIGIN=$(sh /etc/nginx/public-origin.sh)
 
 # Diretório onde os certificados devem estar
 CERT_DIR="/etc/nginx/ssl"
@@ -20,8 +10,25 @@ CERT_DIR="/etc/nginx/ssl"
 echo "Iniciando Nginx Entrypoint..."
 
 # Encontra o primeiro arquivo .crt e .key na pasta
-CERT_CRT=$(ls "$CERT_DIR"/*.crt 2>/dev/null | head -n 1)
-CERT_KEY=$(ls "$CERT_DIR"/*.key 2>/dev/null | head -n 1)
+if [ -d "$CERT_DIR" ] && { [ ! -r "$CERT_DIR" ] || [ ! -x "$CERT_DIR" ]; }; then
+    echo 'TLS certificate directory must be readable and searchable by nginx (GID 101).' >&2
+    exit 1
+fi
+CERT_CRT=
+CERT_KEY=
+for candidate in "$CERT_DIR"/*.crt; do [ ! -e "$candidate" ] || { CERT_CRT=$candidate; break; }; done
+for candidate in "$CERT_DIR"/*.key; do [ ! -e "$candidate" ] || { CERT_KEY=$candidate; break; }; done
+
+if [ -n "$CERT_CRT" ] || [ -n "$CERT_KEY" ]; then
+    if [ -z "$CERT_CRT" ] || [ -z "$CERT_KEY" ]; then
+        echo 'TLS requires both a .crt certificate and a .key private key.' >&2
+        exit 1
+    fi
+    if [ ! -r "$CERT_CRT" ] || [ ! -r "$CERT_KEY" ]; then
+        echo 'TLS certificate and private key must be readable by nginx (GID 101); migrate root:root 0600 files to root:101 0640.' >&2
+        exit 1
+    fi
+fi
 
 if [ -n "$CERT_CRT" ] && [ -n "$CERT_KEY" ]; then
     echo "Certificados SSL encontrados (HTTPS ativado)."
