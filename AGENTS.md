@@ -19,8 +19,11 @@ nesta ordem e nada além:
 3. A nota da sua tarefa (`.testflow-docs/tarefas/<ID>.md`) e só as notas que ela linka.
 
 `regras/`, `referencias/` e `decisions/`: busque o ID (`grep -n RN-41`), não leia o arquivo inteiro.
-Nunca leia `99-arquivo/`. Ao terminar a tarefa, atualize a nota dela: `status: feita` e a seção
-"Resultado" em até 5 linhas. Notas curtas, sem hashes, logs, caminhos absolutos ou segredos.
+Nunca leia `99-arquivo/`. Não existe Documentador: quem fecha a tarefa atualiza o cofre. A nota da
+tarefa recebe `status: feita` e até 5 linhas de decisões não óbvias. A nota de módulo só muda se
+algo mudou que o próximo agente precisa saber. A linha da tarefa na fila do Maestri também é sua.
+Nunca escreva lista de arquivos, diff, hashes, logs, diário ou ressalvas repetidas. Limites: nota de
+tarefa até ~30 linhas, nota de módulo até ~60. O revisor trata nota faltando ou inchada como achado.
 
 **O repositório é público.** Nada do cofre (auditoria, vulnerabilidades, regras internas) vai para
 código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudança, não a falha.
@@ -30,7 +33,11 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
 - Tudo roda em Docker. `docker compose up -d --build` sobe a aplicação. Nada de instalar linguagem
   ou ferramenta no host: comandos de Node rodam em container.
 - Segurança por padrão: OWASP ASVS nível 2 e OWASP Top 10.
-- Toda mudança vem com testes. Regra de negócio usa TDD.
+- Toda mudança vem com testes, escritos por quem escreve o código. Regra de negócio usa TDD. Não há
+  agente de QA: antes do merge, `check.sh quality`; `check.sh all` quando a mudança mexe em
+  segurança, dados ou infraestrutura.
+- Cada Dev trabalha só na própria worktree (sandbox `workspace-write`). Merge na `develop` e push
+  são do Orquestrador.
 - Código limpo: funções pequenas, nomes claros, sem código morto, sem abstração prematura.
 - Dependência nova só com justificativa.
 - Segredo nunca no Git: `.env` ignorado, só `.env.example` com placeholders.
