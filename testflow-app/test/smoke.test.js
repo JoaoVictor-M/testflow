@@ -8,7 +8,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 
 // Run only against the disposable MongoDB, on an isolated Docker network where
-// its alias is mongodb-service (the server currently uses that fixed hostname).
+// its alias is mongodb-service, using a database reserved for this smoke test.
 test('backend modules, persistence and authenticated HTTP work with the updated dependencies', { timeout: 45000 }, async (t) => {
     require('../models/AuditLog');
     require('../models/Demanda');
@@ -26,10 +26,21 @@ test('backend modules, persistence and authenticated HTTP work with the updated 
     require('../services/emailService');
     require('../utils/passwordUtils');
 
-    await mongoose.connect('mongodb://mongodb-service:27017/testflow-db', { serverSelectionTimeoutMS: 10000 });
-    t.after(() => mongoose.disconnect());
+    const mongoUri = 'mongodb://mongodb-service:27017/testflow-smoke';
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 10000 });
+    let user;
+    t.after(async () => {
+        try {
+            if (user) {
+                const result = await User.deleteOne({ _id: user._id });
+                assert.equal(result.deletedCount, 1);
+            }
+        } finally {
+            await mongoose.disconnect();
+        }
+    });
     const password = randomBytes(24).toString('hex');
-    const user = await User.create({
+    user = await User.create({
         name: 'Smoke Test', username: 'dependency-smoke',
         email: 'smoke@example.test', password, role: 'admin'
     });
@@ -39,7 +50,7 @@ test('backend modules, persistence and authenticated HTTP work with the updated 
 
     const server = spawn(process.execPath, ['server.js'], {
         cwd: require('node:path').join(__dirname, '..'),
-        env: { ...process.env, JWT_SECRET: randomBytes(32).toString('hex') },
+        env: { ...process.env, MONGO_URI: mongoUri, JWT_SECRET: randomBytes(32).toString('hex') },
         stdio: ['ignore', 'pipe', 'pipe']
     });
     t.after(async () => {
