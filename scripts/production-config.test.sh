@@ -35,7 +35,7 @@ assert.deepEqual(init.volumes, backend.volumes);
 assert.equal(services['nginx-service'].environment.NGINX_PUBLIC_ORIGIN, '');
 assert.equal(services['nginx-service'].environment.FRONTEND_URL, 'https://frontend.example.test/testflow');
 assert.equal(backend.environment.JWT_SECRET, '');
-assert.equal(backend.restart, 'on-failure:3');
+assert.equal(backend.restart, 'always');
 const backup = JSON.parse(fs.readFileSync('/fixture/config-tools.json', 'utf8')).services.backup;
 assert.ok(backup.build.context.endsWith('/prod/backup'), 'the backup image is built from the published folder');
 assert.equal(backup.image, 'testflow-backup:local');

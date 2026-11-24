@@ -35,7 +35,7 @@ services:
 
   backend-service:
     build: ./testflow-app
-    restart: on-failure:3
+    restart: always
     environment:
       - FRONTEND_URL=${FRONTEND_URL:-https://localhost/testflow}
       - JWT_SECRET=${JWT_SECRET:-}

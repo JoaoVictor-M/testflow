@@ -1,6 +1,6 @@
 #!/bin/sh
-# Verifies in Compose that backend-service stops instead of looping forever when JWT_SECRET is
-# missing or too short, and never prints the provided invalid secret in container logs.
+# Verifies in Compose that backend-service keeps restart: always, exits with code 1 when
+# JWT_SECRET is missing or too short, never becomes healthy and never prints the secret in logs.
 set -eu
 cd "$(dirname "$0")/.."
 mkdir -p .cache
@@ -26,7 +26,7 @@ EOF
 
 compose build backend-service >/dev/null
 
-assert_stops_without_loop() {
+assert_fails_without_healthy_or_leak() {
   label=$1
   forbidden=$2
 
@@ -34,42 +34,40 @@ assert_stops_without_loop() {
   container_id=$(compose ps -aq backend-service)
   [ -n "$container_id" ] || { echo "backend-jwt-startup ($label): container not created" >&2; exit 1; }
 
-  stopped=0
+  policy=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}' "$container_id")
+  if [ "$policy" != "always" ]; then
+    echo "backend-jwt-startup ($label): expected restart policy always, got $policy" >&2
+    exit 1
+  fi
+
+  failed=0
   for _ in $(seq 1 15); do
-    state=$(docker inspect --format '{{.State.Status}} {{.State.Running}} {{.State.Restarting}} {{.State.ExitCode}} {{.RestartCount}}' "$container_id")
-    case "$state" in
-      "exited false false 1 "*)
-        stopped=1
-        break
-        ;;
-    esac
+    health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")
+    if [ "$health" = "healthy" ]; then
+      echo "backend-jwt-startup ($label): container unexpectedly became healthy" >&2
+      exit 1
+    fi
+    exit_code=$(docker inspect --format '{{.State.ExitCode}}' "$container_id")
+    restarts=$(docker inspect --format '{{.RestartCount}}' "$container_id")
+    status=$(docker inspect --format '{{.State.Status}}' "$container_id")
+    if [ "$exit_code" = "1" ] && { [ "$restarts" -ge 1 ] || [ "$status" = "restarting" ] || [ "$status" = "exited" ]; }; then
+      failed=1
+      break
+    fi
     sleep 1
   done
 
-  if [ "$stopped" -ne 1 ]; then
-    echo "backend-jwt-startup ($label): container did not stop cleanly; state=$state" >&2
+  if [ "$failed" -ne 1 ]; then
+    echo "backend-jwt-startup ($label): expected exit code 1 failure; status=$status exit=$exit_code restarts=$restarts health=$health" >&2
     compose logs --no-color backend-service >&2 || true
     exit 1
   fi
 
-  restarts_before=$(docker inspect --format '{{.RestartCount}}' "$container_id")
-  sleep 2
-  state_after=$(docker inspect --format '{{.State.Status}} {{.State.Running}} {{.State.Restarting}} {{.State.ExitCode}} {{.RestartCount}}' "$container_id")
-  restarts_after=$(docker inspect --format '{{.RestartCount}}' "$container_id")
-  policy=$(docker inspect --format '{{.HostConfig.RestartPolicy.Name}}:{{.HostConfig.RestartPolicy.MaximumRetryCount}}' "$container_id")
-
-  if [ "$policy" != "on-failure:3" ] || [ "$restarts_after" != "$restarts_before" ] || [ "$restarts_after" -gt 3 ]; then
-    echo "backend-jwt-startup ($label): unexpected restart behavior policy=$policy before=$restarts_before after=$restarts_after state=$state_after" >&2
+  health_after=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")
+  if [ "$health_after" = "healthy" ]; then
+    echo "backend-jwt-startup ($label): container became healthy after failing" >&2
     exit 1
   fi
-
-  case "$state_after" in
-    "exited false false 1 "*) ;;
-    *)
-      echo "backend-jwt-startup ($label): container restarted after stopping; state=$state_after" >&2
-      exit 1
-      ;;
-  esac
 
   logs=$(compose logs --no-color backend-service 2>&1)
   printf '%s\n' "$logs" | grep -q '"code":"JWT_CONFIG_INVALID"' || {
@@ -85,11 +83,11 @@ assert_stops_without_loop() {
 }
 
 unset JWT_SECRET
-assert_stops_without_loop "missing secret" ""
+assert_fails_without_healthy_or_leak "missing secret" ""
 
 short_probe="curto-$(od -An -tx1 -N6 /dev/urandom | tr -d ' \n')"
 export JWT_SECRET="$short_probe"
-assert_stops_without_loop "short secret" "$short_probe"
+assert_fails_without_healthy_or_leak "short secret" "$short_probe"
 unset JWT_SECRET
 
-echo "backend-jwt-startup: missing and short JWT_SECRET stop cleanly without restart loop"
+echo "backend-jwt-startup: missing and short JWT_SECRET exit 1, never become healthy, leak nothing and keep restart: always"

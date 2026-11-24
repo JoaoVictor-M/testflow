@@ -131,10 +131,10 @@ test('.env.example leaves the backup key unset, so a copy of it never carries a 
     assert.ok(!lines.some((line) => line.startsWith('BACKUP_')));
 });
 
-test('Compose forwards JWT_SECRET without a default, bounds backend restarts and .env.example keeps it commented out', () => {
+test('Compose forwards JWT_SECRET without a default, keeps restart: always on backend and .env.example keeps it commented out', () => {
     const prodBackend = compose('docker-compose.yml').services['backend-service'];
     assert.equal(prodBackend.environment.JWT_SECRET, '', 'JWT_SECRET must come from the environment, never a literal default');
-    assert.equal(prodBackend.restart, 'on-failure:3', 'backend must stop after bounded retries on fatal config errors');
+    assert.equal(prodBackend.restart, 'always', 'backend keeps restart: always so host/daemon reboots recover production');
     const devBackend = compose('docker-compose.yml', 'docker-compose.dev.yml').services['backend-service'];
     assert.equal(devBackend.environment.JWT_SECRET, '', 'dev overlay inherits JWT_SECRET without a literal default');
     assert.equal(devBackend.restart, 'no', 'dev overlay keeps restart disabled');
