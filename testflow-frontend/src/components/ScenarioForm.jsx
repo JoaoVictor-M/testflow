@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 
 // 1. RECEBE 'demandaId'
 function ScenarioForm({ demandaId, scenarioToEdit, onSaveSuccess, onClose, isClone }) {

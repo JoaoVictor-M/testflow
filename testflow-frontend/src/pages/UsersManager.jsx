@@ -1,6 +1,6 @@
 import { useState, useEffect, Fragment } from 'react';
 import api from '../api';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast/headless';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import UserForm from '../components/UserForm';
 import ConfirmationModal from '../components/ConfirmationModal';

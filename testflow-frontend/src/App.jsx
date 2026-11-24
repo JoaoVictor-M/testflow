@@ -1,6 +1,6 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { Menu, Transition } from '@headlessui/react'
-import { Toaster } from 'react-hot-toast'
+import Toaster from './components/Toaster'
 import { useContext, Fragment, useState, lazy, Suspense } from 'react'
 
 import { AuthContext } from './context/AuthContext'
@@ -297,16 +297,7 @@ function AppContent() {
 
 
 
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-        }}
-      />
+      <Toaster />
 
     </div>
   );

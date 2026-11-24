@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api';
 import { Link, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import ProjectForm from '../components/ProjectForm';
 import ConfirmationModal from '../components/ConfirmationModal';

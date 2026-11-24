@@ -5,7 +5,7 @@ import api from '../api';
 import ScenarioForm from '../components/ScenarioForm';
 import MantisModal from '../components/MantisModal';
 import { Dialog, Transition, Popover } from '@headlessui/react';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 // --- ÍCONES ---
