@@ -30,7 +30,7 @@ describe('ajuda embutida descreve só o que a versão entrega', () => {
         }
         expect(text).not.toMatch(/Em Andamento|Finalizado|Não testável/);
         expect(text).not.toMatch(/Tags/);
-        expect(text).toMatch(/não permite marcar como "Testado" sem evidência/i);
+        expect(text).toMatch(/formulário da demanda não permite marcar como "Testado" sem evidência/i);
     });
 
     test('projetos listam os campos reais e dizem o que a duplicação copia', async () => {
@@ -78,6 +78,8 @@ describe('ajuda embutida descreve só o que a versão entrega', () => {
         expect(text).toMatch(/Criação/);
         expect(text).toMatch(/Exclusão/);
         expect(text).not.toMatch(/Duplicação/);
+        expect(text).toMatch(/projetos, demandas, cenários e usuários\./);
+        expect(text).not.toMatch(/usuários e configurações/i);
     });
 
     test('configurações incluem as URLs permitidas além do SMTP', async () => {

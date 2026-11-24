@@ -26,7 +26,7 @@ Testes e verificações: `scripts/check.sh quality` (veja o [guia de desenvolvim
 
 ## Autenticação
 
-`POST /api/auth/login` devolve um token JWT. As rotas de dados esperam o cabeçalho
+`POST /api/auth/login` devolve um token JWT, enviado depois no cabeçalho
 `Authorization: Bearer <token>`. Os perfis são `admin`, `analyst` e `viewer`; as rotas que
 criam, alteram ou excluem dados exigem `admin` ou `analyst`.
 

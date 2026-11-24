@@ -126,7 +126,7 @@ const DOC_CONTENT = {
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700/50">
                     <h5 className="font-bold text-yellow-800 dark:text-yellow-400 mb-1">Regra de Ouro do Analista</h5>
                     <p className="text-sm text-yellow-800/80 dark:text-yellow-500/80 text-justify">
-                        O sistema não permite marcar como <strong>"Testado"</strong> sem evidência anexada: crie a demanda, anexe as evidências e só então atualize o status. Se a última evidência de uma demanda Testado for excluída, ela volta para Pendente.
+                        O formulário da demanda não permite marcar como <strong>"Testado"</strong> sem evidência anexada: crie a demanda, anexe as evidências e só então atualize o status. Se a última evidência de uma demanda Testado for excluída, ela volta para Pendente.
                     </p>
                 </div>
             </div>
@@ -358,7 +358,7 @@ const DOC_CONTENT = {
                         <li>
                             <strong className="text-gray-800 dark:text-white block">Monitoramento Contínuo</strong>
                             <span className="text-gray-600 dark:text-gray-400 text-sm text-justify block mt-1">
-                                O sistema registra as operações de <i>Criação</i>, <i>Edição</i> e <i>Exclusão</i> de projetos, demandas, cenários, usuários e configurações. Itens duplicados aparecem como criação.
+                                O sistema registra as operações de <i>Criação</i>, <i>Edição</i> e <i>Exclusão</i> de projetos, demandas, cenários e usuários. Itens duplicados aparecem como criação.
                             </span>
                         </li>
                         <li>

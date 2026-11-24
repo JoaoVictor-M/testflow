@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import toast from 'react-hot-toast';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -31,6 +31,8 @@ describe('formulário de demanda: conclusão exige evidência', () => {
         const user = userEvent.setup();
         const handlers = { onSaveSuccess: vi.fn(), onClose: vi.fn(), onOpenEvidence: vi.fn() };
         render(<DemandaForm projectId="p1" isModalOpen {...handlers} {...props} />);
+        // Deixa a allowlist carregar antes de mexer no formulário: ela refaz o preenchimento dos campos.
+        await act(async () => {});
         if (!props.demandaToEdit) {
             await user.type(screen.getByLabelText('Número da Demanda (ID)'), 'PROJ-9');
             await user.type(screen.getByLabelText('Nome da Demanda'), 'Demanda nova');

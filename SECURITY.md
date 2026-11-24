@@ -7,7 +7,7 @@ Este documento detalha as configurações, middlewares e práticas de segurança
 ## 1. Segurança de Infraestrutura e Redes (Nginx e Docker)
 
 A borda da aplicação é protegida utilizando Nginx configurado com rigorosas políticas de criptografia:
-- **Redirecionamento Obrigatório HTTPS:** Todo o tráfego HTTP na porta 80 é forçado via código 301 para a porta 443 (HTTPS). (Mitigação para interceptação de dados pasivos).
+- **Redirecionamento para HTTPS:** quando há certificado TLS, o tráfego HTTP na porta 80 é redirecionado com código 301 para a porta 443 (HTTPS). Sem certificado, o Nginx serve apenas HTTP. (Mitigação para interceptação de dados passivos).
 - **HSTS (HTTP Strict Transport Security):** Adicionado `Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`. Impede ataques de *downgrade* de protocolo e força o navegador a lembrar de exigir HTTPS.
 - **Desativação de Protocolos Inseguros:** Somente `TLSv1.2` e `TLSv1.3` são aceitos. Protocolos antigos e vulneráveis (SSLv3, TLSv1.0, TLSv1.1) estão desativados (Proteção contra vulnerabilidades como *POODLE* e *BEAST*).
 - **Hardening de Ciphers:** Adotado `HIGH:!aNULL:!MD5` com preferência para ciphers do lado do servidor (`ssl_prefer_server_ciphers on`).
@@ -29,7 +29,7 @@ O servidor Backend atua primariamente mitigando os riscos listados no **OWASP To
 
 ### 2.3. Controle de Acesso e Auditoria
 - **Role-Based Access Control (RBAC):** Uso do `roleMiddleware(['admin', 'analyst'])` para as rotas que alteram dados; o perfil `viewer` é só leitura (Atende ao **OWASP A01:2021-Broken Access Control**).
-- **Logs de Auditoria (AuditLog):** As criações, edições e exclusões de Projetos, Demandas, Cenários, Usuários e das configurações do sistema são registradas no banco rastreando o `userId` de origem responsável, o dado "*novo*" gerado e o dado "*velho*". Isso é o alicerce para o **OWASP A09:2021-Security Logging and Monitoring Failures**. Se os dados são sensíveis, campos como senhas são deletados ativamente da cópia (`cleanAuditData`).
+- **Logs de Auditoria (AuditLog):** As criações, edições e exclusões de Projetos, Demandas, Cenários e Usuários são registradas no banco rastreando o `userId` de origem responsável, o dado "*novo*" gerado e o dado "*velho*". Isso é o alicerce para o **OWASP A09:2021-Security Logging and Monitoring Failures**. Se os dados são sensíveis, campos como senhas são deletados ativamente da cópia (`cleanAuditData`).
 
 ---
 
@@ -61,9 +61,9 @@ A esteira de segurança (workflow `develop`) aborda quatro pilares essenciais:
 
 Todas essas abordagens consolidam-se fortemente com as seguintes diretrizes de segurança modernas da indústria de engenharia de software:
 
-1. **Defense in Depth (Defesa em Profundidade):** O Frontend valida entradas, o Nginx redireciona HTTP para HTTPS, o middleware recusa acessos sem token ou sem o perfil exigido e as senhas ficam guardadas só como hash bcrypt.
+1. **Defense in Depth (Defesa em Profundidade):** O Frontend valida entradas, o Nginx redireciona HTTP para HTTPS quando há certificado, o middleware recusa acessos sem token ou sem o perfil exigido e as senhas ficam guardadas só como hash bcrypt.
 2. **Principle of Least Privilege (Princípio do Menor Privilégio):** O perfil Visualizador (`viewer`) não consegue chamar as rotas de escrita, porque o middleware exige `admin` ou `analyst`.
-3. **OWASP (Open Worldwide Application Security Project):** A implementação trata XSS (via CSP), configuração de CORS, armazenamento de senhas (bcrypt), configuração do Nginx (HSTS e TLS 1.2/1.3) e registro de auditoria.
+3. **OWASP (Open Worldwide Application Security Project):** A implementação trata XSS (via CSP), configuração de CORS, armazenamento de senhas (bcrypt), configuração do Nginx (HSTS e TLS 1.2/1.3) e registro de auditoria de projetos, demandas, cenários e usuários.
 
 ## 5. Resumo
 

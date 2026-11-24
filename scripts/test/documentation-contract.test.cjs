@@ -15,6 +15,7 @@ test('API README describes the stack that ships and how to run it', () => {
     assert.match(readme, /React/);
     assert.match(readme, /scripts\/dev\.sh up/);
     assert.match(readme, /Authorization: Bearer/);
+    assert.doesNotMatch(readme, /rotas de dados esperam/i);
 });
 
 test('API README documents the route groups that exist in server.js', () => {
@@ -37,6 +38,8 @@ test('root README and SECURITY describe what exists, without superlatives or unv
     assert.doesNotMatch(readme, /galeria integrada|Reversa por Nginx|em tempo real/i);
     assert.match(readme, /Administradores, Analistas e Visualizadores/);
     assert.match(readme, /descreve apenas o que a versão atual entrega/i);
+    assert.match(readme, /projetos, demandas, cenários e usuários, com a comparação/);
+    assert.doesNotMatch(readme, /usuários e configurações/);
 });
 
 test('SECURITY states the password and CSP facts as implemented', () => {
@@ -45,4 +48,9 @@ test('SECURITY states the password and CSP facts as implemented', () => {
     assert.doesNotMatch(security, /no frontend e backend/i);
     assert.doesNotMatch(security, /política estrita de \*\*Content Security Policy/i);
     assert.match(security, /redefinição de senha/i);
+    assert.match(security, /Projetos, Demandas, Cenários e Usuários são registradas/);
+    assert.doesNotMatch(security, /Usuários e das configurações/);
+    assert.match(security, /quando há certificado TLS/);
+    assert.match(security, /Sem certificado, o Nginx serve apenas HTTP/);
+    assert.doesNotMatch(security, /Todo o tráfego HTTP na porta 80 é forçado/);
 });
