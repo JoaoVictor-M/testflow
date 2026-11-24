@@ -68,6 +68,29 @@ services:
     volumes:
       - ./certificados:/etc/nginx/ssl:ro
 
+  # Encrypted backup of the database and the evidence files; not part of the stack (profile tools):
+  #   docker compose --profile tools run --rm backup
+  # Needs the age public key in BACKUP_AGE_RECIPIENT (.env). The private key stays off this machine.
+  # The file lands in BACKUP_DIR (default ./backups, created by you, writable by UID 1000).
+  # Restore: scripts/restore.sh.
+  backup:
+    profiles: [tools]
+    build: ./backup
+    image: testflow-backup:local
+    restart: "no"
+    user: "1000:1000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - BACKUP_AGE_RECIPIENT=${BACKUP_AGE_RECIPIENT:-}
+      - BACKUP_MONGO_URI=${BACKUP_MONGO_URI:-mongodb://mongodb-service:27017/testflow-db}
+    volumes:
+      - ${BACKUP_EVIDENCE_DIR:-./evidencias_testes}:/evidencias_testes:ro
+      - ${BACKUP_DIR:-./backups}:/backups
 
 volumes:
   mongo-data:

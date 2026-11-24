@@ -22,7 +22,11 @@ function stages(file) {
 }
 
 function compose(...files) {
-    const args = files.flatMap((file) => ['-f', file]);
+    return composeWith([], ...files);
+}
+
+function composeWith(profiles, ...files) {
+    const args = [...profiles.flatMap((profile) => ['--profile', profile]), ...files.flatMap((file) => ['-f', file])];
     return JSON.parse(execFileSync('docker', ['compose', ...args, 'config', '--format', 'json'], {
         cwd: root, encoding: 'utf8',
         env: { ...process.env, COMPOSE_PROJECT_NAME: 'testflow-config-test' },
@@ -99,6 +103,33 @@ test('development Compose builds the dev targets, publishes only to this machine
     assert.equal(services['mongodb-service'].ports, undefined);
     assert.equal(services['nginx-service'], undefined);
     assert.ok(services['backend-service'].volumes.some((volume) => volume.target === '/evidencias_testes'));
+});
+
+test('the backup service stays out of the stack, is hardened and ships no key', () => {
+    assert.equal(compose('docker-compose.yml').services.backup, undefined, 'only the tools profile starts it');
+    const backup = composeWith(['tools'], 'docker-compose.yml').services.backup;
+    assert.deepEqual(backup.profiles, ['tools']);
+    assert.equal(backup.ports, undefined);
+    assert.equal(backup.user, '1000:1000');
+    assert.equal(backup.read_only, true);
+    assert.deepEqual(backup.cap_drop, ['ALL']);
+    assert.ok(backup.security_opt.includes('no-new-privileges:true'));
+    assert.deepEqual(Object.keys(backup.environment).sort(), ['BACKUP_AGE_RECIPIENT', 'BACKUP_MONGO_URI']);
+    assert.equal(backup.environment.BACKUP_AGE_RECIPIENT, '', 'the public key comes from the environment, never from the file');
+    const evidence = backup.volumes.find((volume) => volume.target === '/evidencias_testes');
+    assert.equal(evidence.read_only, true);
+    assert.ok(backup.volumes.some((volume) => volume.target === '/backups' && !volume.read_only));
+    assert.ok(backup.volumes.every((volume) => volume.type === 'bind'), 'no named volume, so the database volume is never mounted');
+});
+
+test('the backup image pins its base by digest, runs as a regular user and installs pinned tools', () => {
+    const [stage] = stages('backup/Dockerfile');
+    assert.match(stage.from, /@sha256:[0-9a-f]{64}$/);
+    assert.ok(stage.lines.some((line) => /^USER\s+[1-9]\d*(:\d+)?$/.test(line)));
+    const install = stage.lines.find((line) => line.startsWith('RUN apk add'));
+    assert.match(install, /\bage=\S+/);
+    assert.match(install, /\bmongodb-tools=\S+/);
+    assert.match(install, /\btar=\S+/);
 });
 
 test('test Compose is disposable: no published port, named volume, container name or secret', () => {
