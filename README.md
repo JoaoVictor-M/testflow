@@ -65,7 +65,7 @@ docker compose down -v --rmi all ; cd .. ; Remove-Item -Recurse -Force testflow
 
 ## 🛠️ Desenvolvimento (Para Code Maintainers)
 
-Se você tem acesso a este código-fonte (origin/development) e deseja contribuir ou iterar nas rotas locais:
+Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou iterar nas rotas locais:
 
 1.  Clone este repositório matricial:
     ```bash
