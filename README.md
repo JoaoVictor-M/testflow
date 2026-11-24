@@ -71,10 +71,26 @@ Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou
     ```bash
     git clone git@github.com:JoaoVictor-M/testflow.git
     ```
-2.  Inicie forçando a compilação local das camadas lógicas NodeJS e Vite:
+2.  Prepare o diretório de evidências na primeira instalação ou ao migrar de uma imagem que
+    executava como root. Este comando pontual ajusta somente o dono dos arquivos do bind mount
+    existente, sem apagar conteúdo ou substituir volumes:
+    ```bash
+    sh scripts/prepare-evidence.sh
+    ```
+3.  Inicie forçando a compilação local das camadas lógicas NodeJS e Vite:
     ```bash
     docker compose up -d --build
     ```
+
+As três imagens da aplicação executam sem root. As portas públicas continuam 80 e 443; internamente,
+os servidores nginx usam 8080 e 8443. Para HTTPS, configure `NGINX_PUBLIC_ORIGIN` com a origem pública
+(exemplo: `https://testflow.example.com`) e disponibilize o certificado e a chave em `certificados/`,
+legíveis pelo usuário nginx (UID/GID 101; chave com grupo 101 e modo 640). O redirecionamento usa
+essa origem configurada e o proxy usa o nome do upstream. Na ausência de certificados, há fallback
+HTTP. O backend usa UID/GID 1000; montagens existentes precisam permitir escrita por esse usuário.
+
+O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,
+redirecionamento, fallback HTTP, login, upload e preservação de evidências existentes.
 
 ---
 

@@ -30,9 +30,11 @@ services:
     build: ./nginx
     container_name: nginx_testflow
     restart: always
+    environment:
+      - NGINX_PUBLIC_ORIGIN=${NGINX_PUBLIC_ORIGIN:-https://localhost}
     ports:
-      - "80:80"
-      - "443:443"
+      - "80:8080"
+      - "443:8443"
     depends_on:
       - frontend-service
       - backend-service

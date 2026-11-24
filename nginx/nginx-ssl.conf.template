@@ -1,11 +1,12 @@
 worker_processes auto;
+pid /tmp/nginx.pid;
 
 events {
     worker_connections 1024;
 }
 
 http {
-    include mime.types;
+    include /etc/nginx/mime.types;
     default_type application/octet-stream;
     
     # Oculta a versão do NGINX nos cabeçalhos e páginas de erro
@@ -19,22 +20,22 @@ http {
         server backend-service:3000;
     }
 
-    # Frontend React (Container Interno: 80)
+    # Frontend React (Container Interno: 8080)
     upstream testflow_frontend {
-        server frontend-service:80;
+        server frontend-service:8080;
     }
 
-    # Redirecionamento HTTP (80) para HTTPS (443)
+    # Redirecionamento HTTP (8080) para HTTPS (8443)
     server {
-        listen 80;
+        listen 8080;
         server_name _;
 
-        return 301 https://$host$request_uri;
+        return 301 __PUBLIC_ORIGIN__$request_uri;
     }
 
     # Bloco Principal HTTPS
     server {
-        listen 443 ssl;
+        listen 8443 ssl;
         server_name _;
 
         # Caminho dos Certificados (Mapeados no Docker-Compose)
@@ -59,7 +60,7 @@ http {
             proxy_http_version 1.1;
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection "upgrade";
-            proxy_set_header Host $host;
+            proxy_set_header Host $proxy_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
@@ -70,7 +71,7 @@ http {
         # Proxy para o Frontend (React / Vite)
         location / {
             proxy_pass http://testflow_frontend;
-            proxy_set_header Host $host;
+            proxy_set_header Host $proxy_host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
