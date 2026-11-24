@@ -2,7 +2,8 @@
 # Verify the published configuration, including the workflow's removal of development docs.
 set -eu
 cd "$(dirname "$0")/.."
-tmp=$(mktemp -d /tmp/testflow-production-config-XXXXXX)
+mkdir -p .cache
+tmp=$(mktemp -d "$PWD/.cache/testflow-production-config-XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 sh scripts/test/format-production.sh "$tmp" >/dev/null 2>&1
 cp docker-compose.yml "$tmp/source-compose.yml"
@@ -43,5 +44,7 @@ assert.match(readme, /root:root/);
 assert.match(readme, /640/);
 assert.doesNotMatch(readme, /prepare-evidence\.sh/);
 assert.doesNotMatch(readme, /## 🛠️ Desenvolvimento/);
+assert.doesNotMatch(readme, /\]\(CHANGELOG\.md\)/);
+assert.match(readme, /https:\/\/github\.com\/JoaoVictor-M\/testflow\/blob\/main\/CHANGELOG\.md/);
 console.log('production: automatic evidence initialization, backup files and TLS migration docs preserved');
 NODE
