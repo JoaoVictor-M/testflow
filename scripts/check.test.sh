@@ -16,6 +16,7 @@ miss() { echo "FAIL - $label"; fails=$((fails + 1)); }
 run_check() {
   : >"$log"
   (cd "$repo" && PATH="$tmp/bin:$PATH" FAKE_DOCKER_LOG="$log" FAKE_DOCKER_FAIL="${FAIL_ON:-@never@}" \
+    FAKE_DOCKER_SIGNAL_ON="${SIGNAL_ON:-@never@}" FAKE_DOCKER_SIGNAL="${SIGNAL:-TERM}" \
     sh scripts/check.sh "$@") >/dev/null 2>&1
 }
 # runs <target> <text>...: the target succeeds and the tools it called mention every text.
@@ -38,6 +39,8 @@ cat >"$tmp/bin/docker" <<'EOF'
 echo "$*" >>"$FAKE_DOCKER_LOG"
 printf 'argument=%s\n' "$@" >>"$FAKE_DOCKER_LOG"
 case "$*" in *"$FAKE_DOCKER_FAIL"*) exit 1 ;; esac
+# Simulates Ctrl-C or a kill reaching check.sh while this call is running.
+case "$*" in *"$FAKE_DOCKER_SIGNAL_ON"*) kill -"$FAKE_DOCKER_SIGNAL" "$PPID"; sleep 1 ;; esac
 EOF
 chmod +x "$tmp/bin/docker"
 cp "$here/check.sh" "$repo/scripts/check.sh"
@@ -53,6 +56,34 @@ fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
 runs build 'npm run build' '-w /work/testflow-frontend'
 fails_when build 'npm run build'
+runs test 'compose -p testflow-teste-' 'up -d --wait' '--network testflow-teste-' '_default' \
+  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm test' ' down'
+fails_when test 'up -d --wait'
+fails_when test '-w /work/testflow-app'
+fails_when test '-w /work/testflow-frontend'
+# tears_down <label> <text>: the throwaway database is removed after the call containing <text> failed.
+tears_down() {
+  label="test removes the database when $1"
+  if FAIL_ON=$2 run_check test; then miss
+  elif grep -qE -- 'compose -p testflow-teste-[0-9]+ -f docker-compose.teste.yml down' "$log"; then pass
+  else miss; fi
+}
+tears_down 'the back tests fail' '-w /work/testflow-app'
+tears_down 'the database does not start' 'up -d --wait'
+# interrupted <signal>: check.sh receives the signal while the back tests run and still removes the database.
+interrupted() {
+  label="test removes the database when $1 interrupts it"
+  if SIGNAL=$1 SIGNAL_ON='-w /work/testflow-app' run_check test; then miss
+  elif grep -qE -- 'compose -p testflow-teste-[0-9]+ -f docker-compose.teste.yml down' "$log" \
+    && ! grep -qF -- '-w /work/testflow-frontend' "$log"; then pass
+  else miss; fi
+}
+interrupted INT
+interrupted TERM
+label="parallel test runs use different Compose projects and networks"
+FAIL_ON= run_check test; first=$(grep -oE 'testflow-teste-[0-9]+' "$log" | sort -u)
+FAIL_ON= run_check test; second=$(grep -oE 'testflow-teste-[0-9]+' "$log" | sort -u)
+if [ -n "$first" ] && [ "$(printf '%s\n' "$first" | wc -l)" -eq 1 ] && [ "$first" != "$second" ]; then pass; else miss; fi
 runs secrets 'gitleaks' 'git .'
 fails_when secrets gitleaks
 runs secrets-staged 'gitleaks' '--staged'
@@ -90,8 +121,9 @@ if FAIL_ON= run_check iac; then miss; else pass; fi
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 
 runs test-scripts 'test-scripts-ran'
-runs quality 'npm run lint' 'test-scripts-ran' 'npm run build'
+runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'npm run build'
 fails_when quality 'npm run lint'
+fails_when quality 'npm test'
 fails_when quality 'npm run build'
 runs all 'npm run lint' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'
 

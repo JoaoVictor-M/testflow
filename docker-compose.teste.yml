@@ -1,0 +1,13 @@
+# Serviços descartáveis dos testes automatizados (scripts/check.sh test). Sem porta publicada, sem
+# volume nomeado e sem nome de projeto: o check.sh passa um projeto por execução, e o banco nasce
+# vazio e some junto com o contêiner.
+services:
+  mongodb-service:
+    image: mongo:7.0@sha256:8bb4442761a63a8dda452744082cdac9644b429807eb977b42324a63cef59ca4
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

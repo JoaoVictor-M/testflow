@@ -1,9 +1,10 @@
 #!/bin/sh
 # Every local check, each in a container pinned by tag and digest, so nothing is installed on the host.
 # Usage: scripts/check.sh <target>... | all
-#   quality  lint, test-scripts, build        secrets   Gitleaks over the whole history
+#   quality  lint, test, test-scripts, build  secrets   Gitleaks over the whole history
 #   sast     Semgrep                           sca       Trivy fs + npm audit
 #   iac      Hadolint + Trivy config           all       every target above
+#   test     unit and integration tests with coverage (back against a throwaway MongoDB, front in jsdom)
 # Targets for the stack (integration, e2e, DAST, load, release) arrive with the tasks that need them.
 set -eu
 cd "$(dirname "$0")/.."
@@ -39,12 +40,30 @@ node() { run -w "/work/$1" "$NODE_IMAGE" sh -c "$2"; }
 check() {
   case $1 in
     all) for target in quality secrets sast sca iac; do check "$target"; done ;;
-    quality) for target in lint test-scripts build; do check "$target"; done ;;
+    quality) for target in lint test test-scripts build; do check "$target"; done ;;
     # The project's own shell tests: git hooks, dev.sh and this script.
     test-scripts) for test in scripts/git-hooks/*.test.sh scripts/*.test.sh; do sh "$test"; done ;;
 
     lint) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm ci && npm run lint'; done ;;
     build) node "$FRONT" 'npm ci && npm run build' ;;
+
+    # Tests with coverage; the minimums live in testflow-app/.c8rc.json and the front vite.config.js.
+    test) check test-back; check test-front ;;
+    # Each run gets its own Compose project (and network), so parallel runs never tear down each other's
+    # MongoDB; the trap removes it on failure, Ctrl-C and normal exit. The back reaches the database by
+    # the service name on that network.
+    test-back)
+      project="testflow-teste-$$"
+      compose="docker compose -p $project -f docker-compose.teste.yml"
+      trap '$compose down' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      $compose up -d --wait
+      run --network "${project}_default" -w "/work/$BACK" "$NODE_IMAGE" sh -c 'npm ci && npm test'
+      $compose down
+      trap - EXIT INT TERM
+      ;;
+    test-front) node "$FRONT" 'npm ci && npm test' ;;
 
     # Gitleaks over the full git history.
     secrets)

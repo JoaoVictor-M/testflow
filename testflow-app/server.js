@@ -117,9 +117,6 @@ app.use(cors({
 }));
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb-service:27017/testflow-db';
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!')) // eslint-disable-line no-console
-    .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error)); // eslint-disable-line no-console
 
 
 
@@ -1598,6 +1595,17 @@ app.use((req, res) => {
     res.status(404).json({ message: 'Rota não encontrada ou não implementada na API.' });
 });
 
-app.listen(PORT, () => {
-    console.log(`Backend rodando na porta ${PORT}`); // eslint-disable-line no-console
-});
+// Conecta ao MongoDB e abre a porta; os testes importam só o app e controlam a conexão.
+const start = () => {
+    mongoose.connect(MONGO_URI)
+        .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!')) // eslint-disable-line no-console
+        .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error)); // eslint-disable-line no-console
+
+    return app.listen(PORT, () => {
+        console.log(`Backend rodando na porta ${PORT}`); // eslint-disable-line no-console
+    });
+};
+
+if (require.main === module) start();
+
+module.exports = { app, start };
