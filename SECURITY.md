@@ -35,9 +35,9 @@ O servidor Backend atua primariamente mitigando os riscos listados no **OWASP To
 
 ## 3. Segurança em CI/CD (DevSecOps)
 
-O projeto incorpora uma esteira de **Integração e Entrega Contínuas (CI/CD)** via *GitHub Actions* (`security.yml`), garantindo que testes de segurança rodem automaticamente a cada *push* (mudança) na branch de desenvolvimento. 
+O projeto incorpora uma esteira de **Integração e Entrega Contínuas (CI/CD)** via *GitHub Actions* (`develop.yml`), garantindo que testes de segurança rodem automaticamente a cada *push* (mudança) na branch de desenvolvimento. 
 
-A esteira de segurança (`Security Pipeline`) aborda quatro pilares essenciais:
+A esteira de segurança (workflow `develop`) aborda quatro pilares essenciais:
 
 ### 3.1. SCA (Software Composition Analysis)
 - **Dependency Scanning:** Utilizando validação nativa (`npm audit`) para o Backend e Frontend.

@@ -8,7 +8,9 @@
 #   build-inputs  compare isolated npm ci trees and record versions/digests; audit  npm audit (all severities)
 #   test     unit and integration tests with coverage (back against a throwaway MongoDB, front in jsdom)
 #   integration  backup, restore into a new database and comparison, on a throwaway MongoDB
-# Targets for the stack (e2e, DAST, load, release) arrive with the tasks that need them.
+# e2e, DAST baseline, load and release arrive with the tasks that need them.
+# image-scan and dast-full preserve the existing develop pipeline gates during the migration;
+# they are available separately until the stack targets join all.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -46,6 +48,21 @@ check() {
     quality) for target in build-inputs lint test test-scripts test-repository build; do check "$target"; done ;;
     build-inputs) run -e "TESTFLOW_NODE_IMAGE=$NODE_IMAGE" "$NODE_IMAGE" sh scripts/build-inputs.sh ;;
     audit) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm audit'; done ;;
+    image-scan)
+      docker build --target prod -t testflow-ci-backend:prod "$BACK"
+      mkdir -p .cache/trivy
+      # Scan a saved image instead of giving the scanner access to the Docker socket.
+      archive=$(mktemp "$PWD/.cache/testflow-image.XXXXXX.tar")
+      trap 'rm -f "$archive"' EXIT
+      trap 'exit 130' INT
+      trap 'exit 143' TERM
+      docker save -o "$archive" testflow-ci-backend:prod
+      run "$TRIVY_IMAGE" image --cache-dir /work/.cache/trivy --input "/work/.cache/$(basename "$archive")" \
+        --scanners vuln --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1
+      rm -f "$archive"
+      trap - EXIT INT TERM
+      ;;
+    dast-full) sh scripts/ci-dast.sh ;;
     # The project's own shell tests: git hooks, dev.sh and this script.
     # backup.test.sh needs the Docker daemon, so it runs in integration instead.
     test-scripts)

@@ -49,6 +49,8 @@ for stub in scripts/git-hooks/guards.test.sh scripts/dev.test.sh; do
 done
 # The integration test needs the Docker daemon; the stub records that it ran and can fail.
 printf '#!/bin/sh\necho backup-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BACKUP:-}" ]\n' >"$repo/scripts/backup.test.sh"
+# The full DAST gate needs the Docker daemon too; the stub records that it ran and can fail.
+printf '#!/bin/sh\necho dast-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_DAST:-}" ]\n' >"$repo/scripts/ci-dast.sh"
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
@@ -59,6 +61,11 @@ fails_when build-inputs 'sh scripts/build-inputs.sh'
 runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend'
 fails_when audit '-w /work/testflow-app'
 fails_when audit '-w /work/testflow-frontend'
+runs image-scan 'build --target prod' 'save -o' 'image --cache-dir' '--input /work/.cache/testflow-image.' \
+  '--severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1'
+fails_when image-scan 'build --target prod'
+fails_when image-scan 'save -o'
+fails_when image-scan 'image --cache-dir'
 fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
 runs build 'npm ci --engine-strict' 'npm run build' '-w /work/testflow-frontend'
@@ -144,6 +151,11 @@ FAIL_ON= run_check test-scripts && ! grep -qF backup-ran "$log" && pass || miss
 runs integration 'backup-ran'
 label="integration fails when the backup test fails"
 if FAIL_BACKUP=1 FAIL_ON= run_check integration; then miss; else pass; fi
+runs dast-full 'dast-ran'
+label="dast-full fails when the DAST script fails"
+if FAIL_DAST=1 FAIL_ON= run_check dast-full; then miss; else pass; fi
+label="dast-full stays out of quality and all until the stack targets join them"
+if FAIL_ON= run_check quality && ! grep -qF dast-ran "$log" && FAIL_ON= run_check all && ! grep -qF dast-ran "$log"; then pass; else miss; fi
 runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'node --test' 'npm run build'
 fails_when quality 'npm run lint'
 fails_when quality 'sh scripts/build-inputs.sh'

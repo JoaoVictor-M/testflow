@@ -1,0 +1,83 @@
+name: develop
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-develop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    strategy:
+      fail-fast: false
+      matrix:
+        # audit preserves the existing gate on every dependency severity.
+        target: [quality, sast, sca, iac, audit]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Check
+        env:
+          CHECK_TARGET: ${{ matrix.target }}
+        run: scripts/check.sh "$CHECK_TARGET"
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: ${{ matrix.target }}
+          path: reports/
+          if-no-files-found: ignore
+
+  secrets:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - run: scripts/check.sh secrets
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: secrets
+          path: reports/
+          if-no-files-found: ignore
+
+  integration:
+    needs: [static, secrets]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      # The backup/restore work supplies this target; an unavailable check must fail.
+      - run: scripts/check.sh integration
+
+  dynamic:
+    needs: [static, secrets]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - run: scripts/check.sh image-scan
+      # Preserve the existing full scan while baseline and end-to-end checks are added.
+      - run: scripts/check.sh dast-full
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always()
+        with:
+          name: dynamic
+          path: reports/zap/
+          if-no-files-found: ignore
