@@ -15,7 +15,7 @@ export default defineConfig({
       include: ['src/**/*.{js,jsx}'],
       reporter: ['text-summary', 'json-summary'],
       // Piso de cobertura de linhas: começa no valor medido e só sobe.
-      thresholds: { lines: 2 },
+      thresholds: { lines: 9 },
     },
   },
 })
