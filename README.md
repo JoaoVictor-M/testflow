@@ -142,6 +142,7 @@ evidências e a configuração TLS são as mesmas da seção de produção.
 
 Antes de enviar alterações, rode `scripts/check.sh quality` e, para infraestrutura, `scripts/check.sh all`.
 `scripts/check.sh integration` faz um backup, restaura num banco descartável e compara.
+`scripts/check.sh e2e` roda o Playwright (login, projeto, demanda e cenário, mais os contratos da API) e `scripts/check.sh dast` roda o ZAP baseline (`.zap/baseline.yaml`, falha em alerta Medium ou acima); os dois sobem uma stack descartável com as imagens de produção e HTTPS num certificado gerado a cada execução.
 Consulte a [política de versões e entradas de build](docs/build-inputs.md) para atualizar dependências e imagens.
 
 O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,

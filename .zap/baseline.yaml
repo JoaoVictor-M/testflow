@@ -1,0 +1,48 @@
+# ZAP baseline plan: crawl the production stack (nginx with TLS in front) and apply the passive rules only; nothing attacks it.
+# The run fails on any alert of Medium risk or higher; the threshold never moves. An alert is accepted
+# only by an alertFilter for that one rule (its alertRef) with the reason beside it.
+env:
+  contexts:
+    - name: testflow
+      urls:
+        - https://nginx-service:8443/testflow/
+      includePaths:
+        - https://nginx-service:8443/.*
+  parameters:
+    failOnError: true
+    progressToStdout: true
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+  # Policy-quality rules of the CSP that nginx sends with the SPA, accepted one by one: the page shell
+  # keeps an inline script and the UI libraries inject inline styles. Delete an entry as soon as the
+  # policy stops raising it.
+  - type: alertFilter
+    alertFilters:
+      - ruleId: 10055-4    # CSP: Wildcard Directive
+        newRisk: False Positive
+      - ruleId: 10055-5    # CSP: script-src unsafe-inline
+        newRisk: False Positive
+      - ruleId: 10055-6    # CSP: style-src unsafe-inline
+        newRisk: False Positive
+      - ruleId: 10055-10   # CSP: script-src unsafe-eval
+        newRisk: False Positive
+      - ruleId: 10055-13   # CSP: Failure to Define Directive with No Fallback
+        newRisk: False Positive
+  - type: spider
+    parameters:
+      context: testflow
+      maxDuration: 2
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk
+      reportFile: baseline
+  - type: exitStatus
+    parameters:
+      errorLevel: Medium
+      warnLevel: Medium
