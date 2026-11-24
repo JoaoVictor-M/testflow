@@ -31,6 +31,7 @@ describe('formulário de demanda: conclusão exige evidência', () => {
         const user = userEvent.setup();
         const handlers = { onSaveSuccess: vi.fn(), onClose: vi.fn(), onOpenEvidence: vi.fn() };
         render(<DemandaForm projectId="p1" isModalOpen {...handlers} {...props} />);
+        await act(async () => {});
         if (!props.demandaToEdit) {
             await user.type(screen.getByLabelText('Número da Demanda (ID)'), 'PROJ-9');
             await user.type(screen.getByLabelText('Nome da Demanda'), 'Demanda nova');

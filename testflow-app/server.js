@@ -948,7 +948,7 @@ app.get('/api/scenarios', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'O demandaId é inválido' });
         }
         const demandaObjId = new mongoose.Types.ObjectId(demandaId);
-        const scenarios = await Scenario.find({ demanda: demandaObjId }).lean();
+        const scenarios = await Scenario.find({ demanda: demandaObjId }).sort({ createdAt: 1, _id: 1 }).lean();
         res.status(200).json(scenarios);
     } catch (error) {
         logger.error('Erro na rota GET /api/scenarios', { err: error });
