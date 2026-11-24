@@ -152,6 +152,92 @@ describe('exclusão em cascata, retenção de anexos e recuperação', () => {
         assert.equal((await AuditLog.countDocuments({ entity: 'Project', entityId: project._id, action: 'DELETE' })), 1);
     });
 
+    test('retomada de cascata reconcilia escopo e anexos quando nova demanda e cenário são criados após falha', async () => {
+        const { project, demanda, scenario, uploaded, filePath, expectedSha256 } = await createHierarchyWithEvidence({
+            fileContent: 'evidencia-inicial-projeto'
+        });
+
+        const failOnce = mock.method(Demanda, 'deleteMany', async () => {
+            throw new Error('falha simulada antes da remoção das demandas');
+        });
+        let response;
+        try {
+            response = await call('delete', `/api/projects/${project._id}`, analyst.token);
+        } finally {
+            failOnce.mock.restore();
+        }
+        assert.equal(response.status, 500);
+        assert.equal(await Scenario.exists({ _id: scenario._id }), null);
+
+        // Após a falha, cria nova demanda, anexo e cenário no mesmo projeto e novo anexo/cenário na demanda remanescente.
+        const extraDemanda = await Demanda.create({
+            demandaId: `REC${evidence.prefix}${counter}`,
+            nome: 'Demanda pós falha',
+            project: project._id
+        });
+        evidence.track(folderOf(extraDemanda));
+        const extraUpload = await call('post', `/api/demandas/${extraDemanda._id}/evidence`, analyst.token)
+            .attach('file', Buffer.from('evidencia-pos-falha'), { filename: 'pos-falha.txt', contentType: 'text/plain' });
+        assert.equal(extraUpload.status, 201);
+        const extraUploaded = extraUpload.body.evidences[0];
+        const extraFilePath = path.join(folderOf(extraDemanda), extraUploaded.filename);
+        const extraSha256 = crypto.createHash('sha256').update('evidencia-pos-falha').digest('hex');
+
+        const extraScenario = await Scenario.create({
+            title: 'Cenário pós falha',
+            description: 'Não pode ficar órfão na retomada',
+            steps: ['Passo 1'],
+            expectedResult: 'Removido na retomada',
+            demanda: extraDemanda._id
+        });
+
+        const lateUpload = await call('post', `/api/demandas/${demanda._id}/evidence`, analyst.token)
+            .attach('file', Buffer.from('evidencia-tardia'), { filename: 'tardia.txt', contentType: 'text/plain' });
+        assert.equal(lateUpload.status, 201);
+        const lateUploaded = lateUpload.body.evidences[1];
+        const lateFilePath = path.join(folderOf(demanda), lateUploaded.filename);
+        const lateSha256 = crypto.createHash('sha256').update('evidencia-tardia').digest('hex');
+
+        const lateScenario = await Scenario.create({
+            title: 'Cenário tardio na demanda original',
+            description: 'Também deve ser removido na retomada',
+            steps: ['Passo 1'],
+            expectedResult: 'Removido na retomada',
+            demanda: demanda._id
+        });
+
+        const failedJob = await CascadeDeletionJob.findOne({ targetType: 'Project', targetId: project._id }).lean();
+        const recovery = await recoverPendingCascades({ userId: admin.user._id, evidenceBaseDir: evidenceRoot });
+        assert.ok(recovery.recovered.some((id) => id.toString() === failedJob._id.toString()));
+        assert.equal(recovery.failed.length, 0);
+
+        assert.equal(await Project.exists({ _id: project._id }), null);
+        assert.equal(await Demanda.exists({ _id: demanda._id }), null);
+        assert.equal(await Demanda.exists({ _id: extraDemanda._id }), null);
+        assert.equal(await Scenario.exists({ _id: extraScenario._id }), null);
+        assert.equal(await Scenario.exists({ _id: lateScenario._id }), null);
+        assert.equal(fs.existsSync(filePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
+        assert.equal(fs.existsSync(extraFilePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
+        assert.equal(fs.existsSync(lateFilePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
+
+        const recoveredJob = await CascadeDeletionJob.findById(failedJob._id).lean();
+        assert.equal(recoveredJob.status, 'completed');
+        assert.equal(recoveredJob.scope.demandaCount, 2);
+        assert.deepEqual(
+            recoveredJob.scope.demandaIds.map(String).sort(),
+            [demanda._id.toString(), extraDemanda._id.toString()].sort()
+        );
+        const byFilename = new Map(recoveredJob.retainedAttachments.map((item) => [item.filename, item]));
+        assert.equal(byFilename.size, 3);
+        assert.equal(byFilename.get(uploaded.filename)?.sha256, expectedSha256);
+        assert.equal(byFilename.get(extraUploaded.filename)?.sha256, extraSha256);
+        assert.equal(byFilename.get(lateUploaded.filename)?.sha256, lateSha256);
+
+        const audit = await AuditLog.findOne({ entity: 'Project', entityId: project._id, action: 'DELETE' }).lean();
+        assert.equal(audit.details.retainedAttachmentsCount, 3);
+        assert.equal(audit.details.recovered, true);
+    });
+
     test('eliminação física recusa job retido sem aprovação e só remove arquivos não compartilhados após aprovação', async () => {
         const sharedCode = `SHR${evidence.prefix}`;
         const sharedName = 'Pasta compartilhada';
@@ -207,6 +293,90 @@ describe('exclusão em cascata, retenção de anexos e recuperação', () => {
         assert.equal(fs.existsSync(first.filePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
 
         await Demanda.deleteOne({ _id: activeDemanda._id });
+        await Project.deleteOne({ _id: first.project._id });
+    });
+
+    test('eliminação física protege arquivo compartilhado com outro job retido ou incompleto e libera após aprovação de ambos', async () => {
+        const sharedCode = `SHJ${evidence.prefix}`;
+        const sharedName = 'Pasta compartilhada entre jobs';
+        const first = await createHierarchyWithEvidence({
+            demandaCode: sharedCode,
+            demandaName: sharedName,
+            fileContent: 'evidencia-compartilhada-dois-jobs'
+        });
+
+        const exclusiveUpload = await call('post', `/api/demandas/${first.demanda._id}/evidence`, analyst.token)
+            .attach('file', Buffer.from('somente-primeiro-job'), { filename: 'exclusivo-a.txt', contentType: 'text/plain' });
+        assert.equal(exclusiveUpload.status, 201);
+        const exclusivePath = path.join(folderOf(first.demanda), exclusiveUpload.body.evidences[1].filename);
+
+        const secondDemanda = await Demanda.create({
+            demandaId: sharedCode,
+            nome: sharedName,
+            project: first.project._id,
+            evidences: [{
+                filename: first.uploaded.filename,
+                originalName: first.uploaded.originalName,
+                mimetype: 'text/plain',
+                size: first.uploaded.size
+            }]
+        });
+
+        assert.equal((await call('delete', `/api/demandas/${first.demanda._id}`, analyst.token)).status, 200);
+        assert.equal((await call('delete', `/api/demandas/${secondDemanda._id}`, analyst.token)).status, 200);
+
+        const jobA = await CascadeDeletionJob.findOne({ targetType: 'Demanda', targetId: first.demanda._id });
+        const jobB = await CascadeDeletionJob.findOne({ targetType: 'Demanda', targetId: secondDemanda._id });
+        assert.equal(jobA.retentionState, 'retained');
+        assert.equal(jobB.retentionState, 'retained');
+
+        // Purgar jobA enquanto jobB permanece retained deve remover só o exclusivo e preservar o compartilhado.
+        await approvePhysicalPurge(jobA._id);
+        const purgeA = await purgeRetainedAttachments(jobA._id, {
+            evidenceBaseDir: evidenceRoot,
+            userId: admin.user._id
+        });
+        assert.equal(purgeA.retentionState, 'purged');
+        assert.equal(purgeA.purgeSummary.removedFiles, 1);
+        assert.equal(purgeA.purgeSummary.skippedSharedFiles, 1);
+        assert.equal(fs.existsSync(exclusivePath), false); // eslint-disable-line security/detect-non-literal-fs-filename
+        assert.equal(fs.existsSync(first.filePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
+
+        // Outro job incompleto (mesmo marcado como aprovado) também deve impedir a remoção física.
+        const incompleteBlocker = await CascadeDeletionJob.create({
+            targetType: 'Demanda',
+            targetId: new mongoose.Types.ObjectId(),
+            requestedBy: analyst.user._id,
+            status: 'failed',
+            phase: 'deleting_demandas',
+            retentionState: 'approved_for_purge',
+            retainedAttachments: [{
+                relativeDir: jobB.retainedAttachments[0].relativeDir,
+                filename: first.uploaded.filename
+            }]
+        });
+
+        await approvePhysicalPurge(jobB._id);
+        const purgeBBlocked = await purgeRetainedAttachments(jobB._id, {
+            evidenceBaseDir: evidenceRoot,
+            userId: admin.user._id
+        });
+        assert.equal(purgeBBlocked.purgeSummary.removedFiles, 0);
+        assert.equal(purgeBBlocked.purgeSummary.skippedSharedFiles, 1);
+        assert.equal(fs.existsSync(first.filePath), true); // eslint-disable-line security/detect-non-literal-fs-filename
+
+        // Quando o job bloqueador também conclui e tem purga aprovada, o arquivo compartilhado pode ser removido.
+        incompleteBlocker.status = 'completed';
+        incompleteBlocker.phase = 'completed';
+        await incompleteBlocker.save();
+        const purgeFinal = await purgeRetainedAttachments(incompleteBlocker._id, {
+            evidenceBaseDir: evidenceRoot,
+            userId: admin.user._id
+        });
+        assert.equal(purgeFinal.purgeSummary.removedFiles, 1);
+        assert.equal(purgeFinal.purgeSummary.skippedSharedFiles, 0);
+        assert.equal(fs.existsSync(first.filePath), false); // eslint-disable-line security/detect-non-literal-fs-filename
+
         await Project.deleteOne({ _id: first.project._id });
     });
 
