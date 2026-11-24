@@ -1,7 +1,8 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useRef } from 'react';
 import { Popover, Transition } from '@headlessui/react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
+import { isRequestCanceled } from '../utils/asyncList';
 
 // --- ÍCONES ---
 const FilterIcon = () => (
@@ -16,20 +17,33 @@ const SortIcon = () => (
 );
 // --- FIM DOS ÍCONES ---
 
+const INITIAL_FILTERS = {
+    actionFilter: 'Todos',
+    menuFilter: 'Todos',
+    startDate: '',
+    endDate: '',
+    startTime: '00:00',
+    endTime: '23:59',
+    userFilter: '',
+};
+
 function AuditLogsPage() {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [reloadCount, setReloadCount] = useState(0);
 
-    // Filtros
-    const [actionFilter, setActionFilter] = useState('Todos');
-    const [menuFilter, setMenuFilter] = useState('Todos');
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-    const [startTime, setStartTime] = useState('00:00');
-    const [endTime, setEndTime] = useState('23:59');
-    const [userFilter, setUserFilter] = useState('');
+    // Filtros em edição e aplicados
+    const [actionFilter, setActionFilter] = useState(INITIAL_FILTERS.actionFilter);
+    const [menuFilter, setMenuFilter] = useState(INITIAL_FILTERS.menuFilter);
+    const [startDate, setStartDate] = useState(INITIAL_FILTERS.startDate);
+    const [endDate, setEndDate] = useState(INITIAL_FILTERS.endDate);
+    const [startTime, setStartTime] = useState(INITIAL_FILTERS.startTime);
+    const [endTime, setEndTime] = useState(INITIAL_FILTERS.endTime);
+    const [userFilter, setUserFilter] = useState(INITIAL_FILTERS.userFilter);
+    const [appliedFilters, setAppliedFilters] = useState(INITIAL_FILTERS);
     const [usersList, setUsersList] = useState([]);
 
     // Ordenação
@@ -39,50 +53,81 @@ function AuditLogsPage() {
     // Detalhes Modal
     const [selectedDetails, setSelectedDetails] = useState(null);
 
-    const fetchLogs = async () => {
-        setLoading(true);
-        try {
-            const params = { page, limit: 15 };
-            if (actionFilter !== 'Todos') params.action = actionFilter;
-            if (menuFilter !== 'Todos') params.menu = menuFilter;
-            if (startDate) params.startDate = startDate;
-            if (endDate) params.endDate = endDate;
-            if (startTime) params.startTime = startTime;
-            if (endTime) params.endTime = endTime;
-            if (userFilter) params.user = userFilter;
-
-            params.sortBy = sortBy;
-            params.order = sortOrder;
-
-            const response = await api.get('/audit', { params });
-            setLogs(response.data.data);
-            setTotalPages(response.data.pages);
-        } catch (error) {
-            toast.error('Erro ao carregar logs: ' + (error.response?.data?.message || error.message));
-        } finally {
-            setLoading(false);
-        }
-    };
+    const logsRequestIdRef = useRef(0);
 
     useEffect(() => {
+        const controller = new AbortController();
+        const requestId = ++logsRequestIdRef.current;
+
+        const fetchLogs = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const params = { page, limit: 15 };
+                if (appliedFilters.actionFilter !== 'Todos') params.action = appliedFilters.actionFilter;
+                if (appliedFilters.menuFilter !== 'Todos') params.menu = appliedFilters.menuFilter;
+                if (appliedFilters.startDate) params.startDate = appliedFilters.startDate;
+                if (appliedFilters.endDate) params.endDate = appliedFilters.endDate;
+                if (appliedFilters.startTime) params.startTime = appliedFilters.startTime;
+                if (appliedFilters.endTime) params.endTime = appliedFilters.endTime;
+                if (appliedFilters.userFilter) params.user = appliedFilters.userFilter;
+
+                params.sortBy = sortBy;
+                params.order = sortOrder;
+
+                const response = await api.get('/audit', { params, signal: controller.signal });
+                if (requestId !== logsRequestIdRef.current || controller.signal.aborted) return;
+
+                const nextPages = Math.max(1, Number(response.data?.pages) || 1);
+                setLogs(Array.isArray(response.data?.data) ? response.data.data : []);
+                setTotalPages(nextPages);
+                if (page > nextPages) {
+                    setPage(nextPages);
+                }
+            } catch (err) {
+                if (requestId !== logsRequestIdRef.current || isRequestCanceled(err, controller.signal)) return;
+                const msg = 'Erro ao carregar logs: ' + (err.response?.data?.message || err.message);
+                setError(msg);
+                toast.error(msg);
+            } finally {
+                if (requestId === logsRequestIdRef.current) {
+                    setLoading(false);
+                }
+            }
+        };
+
         fetchLogs();
-    }, [page, sortBy, sortOrder]); // Refresh fetches automatically on page or sort change
+        return () => controller.abort();
+    }, [page, sortBy, sortOrder, appliedFilters, reloadCount]);
 
     useEffect(() => {
+        const controller = new AbortController();
         const fetchUsersList = async () => {
             try {
-                const response = await api.get('/users/all');
-                setUsersList(response.data);
+                const response = await api.get('/users/all', { signal: controller.signal });
+                if (controller.signal.aborted) return;
+                setUsersList(Array.isArray(response.data) ? response.data : []);
             } catch (err) {
+                if (isRequestCanceled(err, controller.signal)) return;
                 console.error("Erro ao buscar usuários para filtro:", err);
             }
         };
         fetchUsersList();
+        return () => controller.abort();
     }, []);
 
     const applyFilters = () => {
         setPage(1);
-        fetchLogs();
+        setAppliedFilters({
+            actionFilter,
+            menuFilter,
+            startDate,
+            endDate,
+            startTime,
+            endTime,
+            userFilter,
+        });
+        setReloadCount(c => c + 1);
     };
 
     const toggleSortOrder = () => {
@@ -176,7 +221,6 @@ function AuditLogsPage() {
             const oldValRaw = oldData && oldData[key] !== undefined ? oldData[key] : undefined;
             const newValRaw = newData && newData[key] !== undefined ? newData[key] : undefined;
 
-            // Compara os strings JSON para lidar com objetos/arrays
             if (JSON.stringify(oldValRaw) !== JSON.stringify(newValRaw)) {
                 diffs.push({
                     key,
@@ -309,9 +353,28 @@ function AuditLogsPage() {
                 </Popover>
             </div>
 
+            {error && (
+                <div
+                    role="alert"
+                    className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+                >
+                    <span>
+                        {error}
+                        {logs.length > 0 ? ' Exibindo dados anteriores.' : ''}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => setReloadCount(c => c + 1)}
+                        className="px-3 py-1.5 font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+                    >
+                        Tentar novamente
+                    </button>
+                </div>
+            )}
+
             <div className="bg-white dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 shadow-sm rounded-xl overflow-hidden relative min-h-[400px]">
                 {loading && (
-                    <div className="absolute inset-0 z-10 bg-white/50 dark:bg-neutral-900/50 flex justify-center items-center backdrop-blur-[1px]">
+                    <div role="status" className="absolute inset-0 z-10 bg-white/50 dark:bg-neutral-900/50 flex justify-center items-center backdrop-blur-[1px]">
                         <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -330,7 +393,7 @@ function AuditLogsPage() {
                             </tr>
                         </thead>
                         <tbody className={`bg-white dark:bg-neutral-900 divide-y divide-gray-200 dark:divide-neutral-800 transition-opacity duration-200 ${loading ? 'opacity-50' : 'opacity-100'}`}>
-                            {logs.length === 0 && !loading ? (
+                            {logs.length === 0 && !loading && !error ? (
                                 <tr>
                                     <td colSpan="5" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">Nenhum registro encontrado.</td>
                                 </tr>
@@ -402,11 +465,9 @@ function AuditLogsPage() {
             {selectedDetails && (
                 <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
                     <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-                        {/* Background overlay */}
                         <div className="fixed inset-0 bg-gray-500/75 dark:bg-neutral-900/80 backdrop-blur-sm transition-opacity" aria-hidden="true" onClick={() => setSelectedDetails(null)}></div>
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
-                        {/* Modal panel */}
                         <div className="relative inline-block align-bottom bg-white dark:bg-neutral-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full border border-gray-200 dark:border-neutral-700">
                             <div className="bg-white dark:bg-neutral-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                                 <div className="sm:flex sm:items-start">
@@ -432,7 +493,6 @@ function AuditLogsPage() {
                                                 {selectedDetails.details?.old && selectedDetails.details?.new ? (
                                                     renderDifferences(selectedDetails.details.old, selectedDetails.details.new)
                                                 ) : selectedDetails.details?.new ? (
-                                                    // CREATE state
                                                     <div>
                                                         <p className="text-sm text-green-700 dark:text-green-400 font-semibold mb-2">Registro Criado:</p>
                                                         <p className="text-sm text-gray-700 dark:text-gray-300">
@@ -440,7 +500,6 @@ function AuditLogsPage() {
                                                         </p>
                                                     </div>
                                                 ) : selectedDetails.details?.old && selectedDetails.action === 'DELETE' ? (
-                                                    // DELETE state
                                                     <div>
                                                         <p className="text-sm text-red-700 dark:text-red-400 font-semibold mb-2">Registro Removido:</p>
                                                         <p className="text-sm text-gray-700 dark:text-gray-300">

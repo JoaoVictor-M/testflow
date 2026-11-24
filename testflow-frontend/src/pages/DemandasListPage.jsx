@@ -1,12 +1,15 @@
-import { useState, useEffect, Fragment, useContext } from 'react';
+import { useState, useEffect, Fragment, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import DemandaForm from '../components/DemandaForm';
 import ConfirmationModal from '../components/ConfirmationModal';
 import EvidenceModal from '../components/EvidenceModal';
+import { clampPage, isRequestCanceled, loadViewContext, saveViewContext } from '../utils/asyncList';
+
+const ITEMS_PER_PAGE = 10;
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -34,18 +37,11 @@ const ArrowRightIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
   </svg>
 );
-
-const ListIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
 const SortIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
   </svg>
 );
-// 2. NOVO ÍCONE DE LIXEIRA
 const TrashIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -64,7 +60,6 @@ const DuplicateIcon = () => (
 );
 // --- FIM DOS ÍCONES ---
 
-// Funções de Cor
 const getDemandaStatusClasses = (status) => {
   switch (status) {
     case 'Testado':
@@ -77,34 +72,40 @@ const getDemandaStatusClasses = (status) => {
       return 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-gray-300';
   }
 };
-function DemandasListPage() {
+
+function DemandasListContent({ projectId }) {
+  const contextKey = `demandas:${projectId}`;
+  const initialContext = loadViewContext(contextKey, {
+    searchTerm: '',
+    statusFilter: 'Todos',
+    responsavelFilter: 'Todos',
+    sortOrder: localStorage.getItem('demandasSortOrder') || 'creation',
+    currentPage: 1,
+  });
+
   const [demandas, setDemandas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadCount, setReloadCount] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [demandaToEdit, setDemandaToEdit] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [responsavelFilter, setResponsavelFilter] = useState('Todos');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState(() => localStorage.getItem('demandasSortOrder') || 'creation');
+  const [searchTerm, setSearchTerm] = useState(initialContext.searchTerm);
+  const [statusFilter, setStatusFilter] = useState(initialContext.statusFilter);
+  const [responsavelFilter, setResponsavelFilter] = useState(initialContext.responsavelFilter);
+  const [currentPage, setCurrentPage] = useState(initialContext.currentPage);
+  const [sortOrder, setSortOrder] = useState(initialContext.sortOrder);
   const [isClone, setIsClone] = useState(false);
 
-  // Estados para o modal de deleção
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [demandaToDelete, setDemandaToDelete] = useState(null);
 
-  // --- EVIDENCE MODAL STATE ---
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
   const [demandaForEvidence, setDemandaForEvidence] = useState(null);
 
-  const { user } = useContext(AuthContext); // [NEW]
-
-  const ITEMS_PER_PAGE = 10;
-  const { projectId } = useParams();
+  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
+  const requestIdRef = useRef(0);
 
-  // Funções do Modal (Formulário)
   const closeModal = () => {
     setIsModalOpen(false);
   };
@@ -124,24 +125,12 @@ function DemandasListPage() {
     setIsModalOpen(true);
   };
 
-  // Funções do Modal de Deleção
   const openDeleteModal = (demanda) => {
     setDemandaToDelete(demanda);
     setIsDeleteModalOpen(true);
   };
   const closeDeleteModal = () => {
     setIsDeleteModalOpen(false);
-  };
-  const handleConfirmDelete = async () => {
-    if (!demandaToDelete) return;
-    try {
-      await api.delete(`/demandas/${demandaToDelete._id}`);
-      setDemandas(prev => prev.filter(d => d._id !== demandaToDelete._id));
-      toast.success('Demanda deletada com sucesso!');
-    } catch (err) {
-      toast.error('Erro ao deletar a demanda.');
-      console.error(err);
-    }
   };
 
   const openEvidenceModal = (demanda) => {
@@ -150,50 +139,119 @@ function DemandasListPage() {
   };
 
   const handleEvidenceUpdate = (updatedDemanda) => {
-    // Update local state when evidence changes
     setDemandas(prev => prev.map(d => d._id === updatedDemanda._id ? updatedDemanda : d));
     setDemandaForEvidence(updatedDemanda);
 
-    // [FIX] Update demandaToEdit if it matches, so DemandaForm sees the new evidence immediately
     if (demandaToEdit && demandaToEdit._id === updatedDemanda._id) {
       setDemandaToEdit(updatedDemanda);
     }
   };
 
-  // Função para buscar dados
-  const fetchDemandas = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get(`/demandas?projectId=${projectId}`);
-      setDemandas(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Não foi possível carregar as demandas.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+
+    const fetchDemandas = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await api.get(`/demandas?projectId=${projectId}`, { signal: controller.signal });
+        if (requestId !== requestIdRef.current || controller.signal.aborted) return;
+        setDemandas(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        if (requestId !== requestIdRef.current || isRequestCanceled(err, controller.signal)) return;
+        setError('Não foi possível carregar as demandas.');
+        console.error(err);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     fetchDemandas();
-  }, [projectId]);
-
-  // Hooks de Efeito
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, responsavelFilter, sortOrder]);
+    return () => controller.abort();
+  }, [projectId, reloadCount]);
 
   useEffect(() => {
     localStorage.setItem('demandasSortOrder', sortOrder);
   }, [sortOrder]);
 
-  // Função para alternar a ordenação
+  const allResponsaveis = [...new Set(demandas.flatMap(d => (Array.isArray(d.responsaveis) ? d.responsaveis.map(r => r.name) : [])))].sort();
+  const allStatus = ['Pendente', 'Testando', 'Aguardando Correção', 'Testado'];
+
+  const filteredDemandas = demandas.filter(demanda => {
+    const term = searchTerm.toLowerCase();
+    const idMatch = demanda.demandaId && demanda.demandaId.toLowerCase().includes(term);
+    const nomeMatch = demanda.nome && demanda.nome.toLowerCase().includes(term);
+    const statusMatch = statusFilter === 'Todos' || demanda.status === statusFilter;
+    const responsavelMatch = responsavelFilter === 'Todos' || (Array.isArray(demanda.responsaveis) && demanda.responsaveis.some(r => r.name === responsavelFilter));
+    return (idMatch || nomeMatch) && statusMatch && responsavelMatch;
+  });
+
+  const sortedDemandas = [...filteredDemandas].sort((a, b) => {
+    if (sortOrder === 'alpha') {
+      return (a.nome || '').localeCompare(b.nome || '');
+    }
+    return (b._id || '').localeCompare(a._id || '');
+  });
+
+  const pageCount = Math.ceil(sortedDemandas.length / ITEMS_PER_PAGE);
+  const effectivePage = (isLoading || (error && demandas.length === 0))
+    ? currentPage
+    : clampPage(currentPage, sortedDemandas.length, ITEMS_PER_PAGE);
+  const startIndex = (effectivePage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedDemandas = sortedDemandas.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    saveViewContext(contextKey, {
+      searchTerm,
+      statusFilter,
+      responsavelFilter,
+      sortOrder,
+      currentPage: effectivePage,
+    });
+  }, [contextKey, searchTerm, statusFilter, responsavelFilter, sortOrder, effectivePage]);
+
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+  const handleResponsavelFilterChange = (value) => {
+    setResponsavelFilter(value);
+    setCurrentPage(1);
+  };
   const toggleSortOrder = () => {
     setSortOrder(current => (current === 'alpha' ? 'creation' : 'alpha'));
+    setCurrentPage(1);
+  };
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('Todos');
+    setResponsavelFilter('Todos');
+    setCurrentPage(1);
   };
 
-  // Função de callback pós-salvar
+  const handleConfirmDelete = async () => {
+    if (!demandaToDelete) return;
+    try {
+      await api.delete(`/demandas/${demandaToDelete._id}`);
+      const nextFilteredCount = Math.max(0, filteredDemandas.length - 1);
+      setDemandas(prev => prev.filter(d => d._id !== demandaToDelete._id));
+      setCurrentPage(prev => clampPage(prev, nextFilteredCount, ITEMS_PER_PAGE));
+      toast.success('Demanda deletada com sucesso!');
+    } catch (err) {
+      toast.error('Erro ao deletar a demanda.');
+      console.error(err);
+      throw err;
+    }
+  };
+
   const handleSaveSuccess = (savedDemanda, mode) => {
     if (mode === 'create') {
       setDemandas(prev => [savedDemanda, ...prev]);
@@ -204,52 +262,71 @@ function DemandasListPage() {
     }
   };
 
-  if (isLoading) {
+  const handleNextPage = () => {
+    setCurrentPage(Math.min(effectivePage + 1, Math.max(1, pageCount)));
+  };
+  const handlePrevPage = () => {
+    setCurrentPage(Math.max(effectivePage - 1, 1));
+  };
+
+  const activePopoverFilters = [
+    statusFilter !== 'Todos' && `Status: ${statusFilter}`,
+    responsavelFilter !== 'Todos' && `Analista: ${responsavelFilter}`,
+  ].filter(Boolean);
+  const hasAnyFilter = Boolean(searchTerm.trim()) || activePopoverFilters.length > 0;
+
+  if (isLoading && demandas.length === 0) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+      <div>
+        <nav className="mb-6 flex items-center justify-between">
+          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <Link to="/projects" className="hover:text-blue-600 dark:hover:text-blue-400">Projetos</Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-800 dark:text-gray-200">Demandas</span>
+          </div>
+        </nav>
+        <div role="status" className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+        </div>
       </div>
     );
   }
 
-  if (error) {
+  if (error && demandas.length === 0) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-        <span className="block sm:inline">{error}</span>
+      <div>
+        <nav className="mb-6 flex items-center justify-between">
+          <div className="text-sm font-medium text-gray-600 dark:text-gray-400">
+            <Link to="/projects" className="hover:text-blue-600 dark:hover:text-blue-400">Projetos</Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-800 dark:text-gray-200">Demandas</span>
+          </div>
+        </nav>
+        <div
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-red-100 dark:bg-red-900/20 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded"
+          role="alert"
+        >
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setReloadCount(c => c + 1)}
+            className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+          >
+            Tentar novamente
+          </button>
+        </div>
+        <div className="mt-6">
+          <button
+            onClick={() => navigate('/projects')}
+            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 rounded-md border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+          >
+            <ArrowLeftIcon />
+            Voltar
+          </button>
+        </div>
       </div>
     );
   }
-
-  // Preparando dados para os filtros
-  const allResponsaveis = [...new Set(demandas.flatMap(d => (Array.isArray(d.responsaveis) ? d.responsaveis.map(r => r.name) : [])))].sort();
-  const allStatus = ['Pendente', 'Testando', 'Aguardando Correção', 'Testado'];
-
-  // Lógica de Filtro
-  const filteredDemandas = demandas.filter(demanda => {
-    const term = searchTerm.toLowerCase();
-    const idMatch = demanda.demandaId && demanda.demandaId.toLowerCase().includes(term);
-    const nomeMatch = demanda.nome && demanda.nome.toLowerCase().includes(term);
-    const statusMatch = statusFilter === 'Todos' || demanda.status === statusFilter;
-    const responsavelMatch = responsavelFilter === 'Todos' || (Array.isArray(demanda.responsaveis) && demanda.responsaveis.some(r => r.name === responsavelFilter));
-    return (idMatch || nomeMatch) && statusMatch && responsavelMatch;
-  });
-
-  // Lógica de Ordenação
-  const sortedDemandas = [...filteredDemandas].sort((a, b) => {
-    if (sortOrder === 'alpha') {
-      return (a.nome || '').localeCompare(b.nome || '');
-    }
-    return (b._id || '').localeCompare(a._id || '');
-  });
-
-  // Lógica de Paginação
-  const pageCount = Math.ceil(sortedDemandas.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = startIndex + ITEMS_PER_PAGE;
-  const paginatedDemandas = sortedDemandas.slice(startIndex, endIndex);
-
-  const handleNextPage = () => { setCurrentPage(prev => Math.min(prev + 1, pageCount)); };
-  const handlePrevPage = () => { setCurrentPage(prev => Math.max(prev - 1, 1)); };
 
   return (
     <div>
@@ -262,27 +339,21 @@ function DemandasListPage() {
         </div>
       </nav>
 
-      {/* --- CÁBEÇALHO --- */}
+      {/* --- CABEÇALHO --- */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Demandas</h1>
 
       {/* --- BARRA DE AÇÕES --- */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
-
-        {/* Pesquisa */}
         <div className="w-full md:w-1/2">
           <input
             type="text"
             placeholder="Pesquisar por ID ou nome..."
             className="w-full input-style"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
         </div>
 
-        {/* Seletor de Visualização (Grid/Lista) */}
-        {/* Seletor de Visualização removido */}
-
-        {/* Botão de Ordenação */}
         <button
           onClick={toggleSortOrder}
           title={sortOrder === 'alpha' ? 'Ordenado por A-Z (clique para ordenar por criação)' : 'Ordenado por Criação (clique para ordenar por A-Z)'}
@@ -291,26 +362,30 @@ function DemandasListPage() {
           <SortIcon />
         </button>
 
-        {/* Popover de Filtros */}
         <Popover className="relative w-full md:w-auto">
           {({ open }) => (
             <>
-              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-neutral-800 dark:text-gray-200 dark:border-neutral-600 dark:hover:bg-neutral-700'}`}>
+              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open || activePopoverFilters.length > 0 ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-neutral-800 dark:text-gray-200 dark:border-neutral-600 dark:hover:bg-neutral-700'}`}>
                 <FilterIcon /> Filtros
+                {activePopoverFilters.length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    {activePopoverFilters.length}
+                  </span>
+                )}
               </Popover.Button>
               <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
                 <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-neutral-800 shadow-lg rounded-lg border border-gray-200 dark:border-neutral-700">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                      <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                      <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => handleStatusFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allStatus.map(status => (<option key={status} value={status}>{status}</option>))}
                       </select>
                     </div>
                     <div>
                       <label htmlFor="filter-responsavel" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Analista</label>
-                      <select id="filter-responsavel" className="w-full input-style" value={responsavelFilter} onChange={(e) => setResponsavelFilter(e.target.value)}>
+                      <select id="filter-responsavel" className="w-full input-style" value={responsavelFilter} onChange={(e) => handleResponsavelFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allResponsaveis.map(resp => (<option key={resp} value={resp}>{resp}</option>))}
                       </select>
@@ -322,7 +397,6 @@ function DemandasListPage() {
           )}
         </Popover>
 
-        {/* Botão + Nova Demanda */}
         {(user?.role === 'admin' || user?.role === 'analyst') && (
           <button
             onClick={openCreateModal}
@@ -333,24 +407,55 @@ function DemandasListPage() {
         )}
       </div>
 
-      {/* --- RENDERIZAÇÃO CONDICIONAL (GRID vs LISTA) --- */}
+      {hasAnyFilter && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          {searchTerm.trim() && (
+            <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-blue-700 dark:text-blue-300">
+              Busca: {searchTerm.trim()}
+            </span>
+          )}
+          {activePopoverFilters.map(label => (
+            <span key={label} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-blue-700 dark:text-blue-300">
+              {label}
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
 
-      {isLoading && <p>Carregando...</p>}
-      {!isLoading && demandas.length === 0 && (
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-red-700 dark:text-red-300"
+        >
+          <span>{error} Exibindo dados anteriores.</span>
+          <button
+            type="button"
+            onClick={() => setReloadCount(c => c + 1)}
+            className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !error && demandas.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">
           {(user?.role === 'admin' || user?.role === 'analyst')
             ? 'Nenhuma demanda encontrada. Clique em "Nova Demanda" para começar.'
             : 'Nenhuma Demanda Encontrada.'}
         </p>
       )}
-      {!isLoading && demandas.length > 0 && filteredDemandas.length === 0 && (
+      {!isLoading && !error && demandas.length > 0 && filteredDemandas.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">Nenhuma demanda encontrada para os filtros aplicados.</p>
       )}
 
-      {/* Renderização em Grade */}
-
-
-      {/* Renderização em Lista */}
       {filteredDemandas.length > 0 && (
         <div className="bg-white dark:bg-neutral-900 shadow border border-gray-200 dark:border-neutral-800 rounded-lg overflow-hidden transition-colors">
           <div className="overflow-x-auto">
@@ -450,7 +555,7 @@ function DemandasListPage() {
           {pageCount > 1 && (
             <button
               onClick={handlePrevPage}
-              disabled={currentPage === 1}
+              disabled={effectivePage === 1}
               className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               Anterior
@@ -460,14 +565,14 @@ function DemandasListPage() {
 
         {pageCount > 1 && (
           <span className="text-sm text-gray-700 dark:text-gray-400">
-            Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
+            Página <span className="font-semibold">{effectivePage}</span> de <span className="font-semibold">{pageCount}</span>
           </span>
         )}
 
         {pageCount > 1 && (
           <button
             onClick={handleNextPage}
-            disabled={currentPage === pageCount}
+            disabled={effectivePage === pageCount}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Próxima <ArrowRightIcon />
@@ -504,7 +609,7 @@ function DemandasListPage() {
         </Dialog>
       </Transition>
 
-      {/* --- MODAL DE DELEÇÃO (NOVO) --- */}
+      {/* --- MODAL DE DELEÇÃO --- */}
       <ConfirmationModal
         isOpen={isDeleteModalOpen}
         onClose={closeDeleteModal}
@@ -523,6 +628,11 @@ function DemandasListPage() {
       />
     </div>
   );
+}
+
+function DemandasListPage() {
+  const { projectId } = useParams();
+  return <DemandasListContent key={projectId} projectId={projectId} />;
 }
 
 export default DemandasListPage;

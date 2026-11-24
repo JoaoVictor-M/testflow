@@ -33,7 +33,7 @@ fails_when() {
   if FAIL_ON=$2 run_check "$1"; then miss; else pass; fi
 }
 
-mkdir -p "$tmp/bin" "$repo/scripts/git-hooks" "$repo/testflow-app" "$repo/testflow-frontend"
+mkdir -p "$tmp/bin" "$repo/scripts/git-hooks" "$repo/scripts/ci" "$repo/testflow-app" "$repo/testflow-frontend" "$repo/e2e"
 cat >"$tmp/bin/docker" <<'EOF'
 #!/bin/sh
 echo "$*" >>"$FAKE_DOCKER_LOG"
@@ -51,6 +51,11 @@ done
 printf '#!/bin/sh\necho backup-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BACKUP:-}" ]\n' >"$repo/scripts/backup.test.sh"
 # The full DAST gate needs the Docker daemon too; the stub records that it ran and can fail.
 printf '#!/bin/sh\necho dast-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_DAST:-}" ]\n' >"$repo/scripts/ci-dast.sh"
+# The e2e and DAST baseline gates start a stack, so they need the daemon too.
+printf '#!/bin/sh\necho e2e-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_E2E:-}" ]\n' >"$repo/scripts/ci-e2e.sh"
+printf '#!/bin/sh\necho baseline-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BASELINE:-}" ]\n' >"$repo/scripts/ci-dast-baseline.sh"
+printf '#!/bin/sh\necho build-prod-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BUILD_PROD:-}" ]\n' >"$repo/scripts/ci/build-prod.sh"
+printf '#!/bin/sh\necho "scan-prod-ran $TRIVY_IMAGE" >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_SCAN_PROD:-}" ]\n' >"$repo/scripts/ci/scan-prod.sh"
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
@@ -58,9 +63,10 @@ git -C "$repo" add .
 runs lint 'npm ci --engine-strict' 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
 runs build-inputs 'TESTFLOW_NODE_IMAGE=node:' 'sh scripts/build-inputs.sh'
 fails_when build-inputs 'sh scripts/build-inputs.sh'
-runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend'
+runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend' '-w /work/e2e'
 fails_when audit '-w /work/testflow-app'
 fails_when audit '-w /work/testflow-frontend'
+fails_when audit '-w /work/e2e'
 runs image-scan 'build --target prod' 'save -o' 'image --cache-dir' '--input /work/.cache/testflow-image.' \
   '--severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL --exit-code 1'
 fails_when image-scan 'build --target prod'
@@ -120,6 +126,7 @@ runs sca 'trivy' 'fs' '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm 
 fails_when sca 'trivy'
 fails_when sca '-w /work/testflow-app'
 fails_when sca '-w /work/testflow-frontend'
+fails_when sca '-w /work/e2e'
 runs iac 'hadolint' 'testflow-app/Dockerfile' 'config --quiet'
 fails_when iac 'hadolint'
 fails_when iac 'config --quiet'
@@ -152,10 +159,25 @@ runs integration 'backup-ran'
 label="integration fails when the backup test fails"
 if FAIL_BACKUP=1 FAIL_ON= run_check integration; then miss; else pass; fi
 runs dast-full 'dast-ran'
+runs build-prod 'build-prod-ran'
+runs scan-prod 'scan-prod-ran aquasec/trivy:'
+label="production build and scan targets propagate failures"
+if FAIL_BUILD_PROD=1 FAIL_ON= run_check build-prod; then miss
+elif FAIL_SCAN_PROD=1 FAIL_ON= run_check scan-prod; then miss
+else pass; fi
 label="dast-full fails when the DAST script fails"
 if FAIL_DAST=1 FAIL_ON= run_check dast-full; then miss; else pass; fi
-label="dast-full stays out of quality and all until the stack targets join them"
+label="dast-full stays out of quality and all: the release runs it"
 if FAIL_ON= run_check quality && ! grep -qF dast-ran "$log" && FAIL_ON= run_check all && ! grep -qF dast-ran "$log"; then pass; else miss; fi
+runs e2e 'e2e-ran'
+label="e2e fails when the browser tests fail"
+if FAIL_E2E=1 FAIL_ON= run_check e2e; then miss; else pass; fi
+runs dast 'baseline-ran'
+label="dast fails when the baseline fails"
+if FAIL_BASELINE=1 FAIL_ON= run_check dast; then miss; else pass; fi
+label="all runs e2e and the DAST baseline; quality runs neither"
+if FAIL_ON= run_check quality && ! grep -qF e2e-ran "$log" && ! grep -qF baseline-ran "$log" &&
+  FAIL_ON= run_check all && grep -qF e2e-ran "$log" && grep -qF baseline-ran "$log"; then pass; else miss; fi
 runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'node --test' 'npm run build'
 fails_when quality 'npm run lint'
 fails_when quality 'sh scripts/build-inputs.sh'

@@ -5,7 +5,7 @@ import api from '../api';
 import ScenarioForm from '../components/ScenarioForm';
 import MantisModal from '../components/MantisModal';
 import { Dialog, Transition, Popover } from '@headlessui/react';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 // --- ÍCONES ---
@@ -145,7 +145,7 @@ function ScenariosListPage() {
     setIsDeleteModalOpen(false);
   };
   const handleConfirmDelete = async () => {
-    if (!scenarioToDelete) return;
+    if (!scenarioToDelete) return false;
     try {
       await api.delete(`/scenarios/${scenarioToDelete._id}`);
       setScenarios(prev => prev.filter(s => s._id !== scenarioToDelete._id));
@@ -153,12 +153,13 @@ function ScenariosListPage() {
     } catch (err) {
       toast.error('Erro ao deletar o cenário.');
       console.error(err);
+      throw err;
     }
   };
 
   const handleScenarioSaveSuccess = (savedScenario, mode) => {
     if (mode === 'create') {
-      setScenarios((prev) => [savedScenario, ...prev]);
+      fetchData();
     } else if (mode === 'update') {
       setScenarios((prev) =>
         prev.map((s) => (s._id === savedScenario._id ? savedScenario : s))
@@ -181,7 +182,7 @@ function ScenariosListPage() {
     }
   };
   const handleMantisSubmit = async (mantisLink) => {
-    if (!scenarioEmExecucao) return;
+    if (!scenarioEmExecucao) return false;
     try {
       const response = await api.patch(`/scenarios/${scenarioEmExecucao}/status`, {
         status: 'Com Erro',
@@ -194,6 +195,7 @@ function ScenariosListPage() {
     } catch (err) {
       toast.error('Erro ao salvar o link do Mantis.');
       console.error(err);
+      throw err;
     }
   };
   const toggleScenarioExpand = (scenarioId) => {

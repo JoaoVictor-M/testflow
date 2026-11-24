@@ -1,6 +1,6 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import api from '../src/api';
 import DemandaForm from '../src/components/DemandaForm';
@@ -31,6 +31,7 @@ describe('formulário de demanda: conclusão exige evidência', () => {
         const user = userEvent.setup();
         const handlers = { onSaveSuccess: vi.fn(), onClose: vi.fn(), onOpenEvidence: vi.fn() };
         render(<DemandaForm projectId="p1" isModalOpen {...handlers} {...props} />);
+        await act(async () => {});
         if (!props.demandaToEdit) {
             await user.type(screen.getByLabelText('Número da Demanda (ID)'), 'PROJ-9');
             await user.type(screen.getByLabelText('Nome da Demanda'), 'Demanda nova');
@@ -54,6 +55,23 @@ describe('formulário de demanda: conclusão exige evidência', () => {
 
         await waitFor(() => expect(handlers.onSaveSuccess).toHaveBeenCalledOnce());
         expect(put).toHaveBeenCalledWith('/demandas/d1', expect.objectContaining({ status: 'Testado', demandaId: 'PROJ-1' }));
+    });
+
+    test('a lista de plataformas que chega depois não desfaz o status escolhido', async () => {
+        let release;
+        api.get.mockImplementation((url) => (url === '/config/allowlist'
+            ? new Promise((resolve) => { release = () => resolve({ data: {} }); })
+            : Promise.resolve({ data: [] })));
+        const user = userEvent.setup();
+        render(<DemandaForm projectId="p1" isModalOpen onSaveSuccess={vi.fn()} onClose={vi.fn()}
+            demandaToEdit={demanda({ evidences: [evidence] })} />);
+
+        await user.selectOptions(screen.getByLabelText('Status'), 'Testado');
+        await act(async () => release());
+        await user.click(screen.getByRole('button', { name: /Demanda$/ }));
+
+        await waitFor(() => expect(put).toHaveBeenCalledOnce());
+        expect(put).toHaveBeenCalledWith('/demandas/d1', expect.objectContaining({ status: 'Testado' }));
     });
 
     test('uma demanda nova não nasce Testado', async () => {

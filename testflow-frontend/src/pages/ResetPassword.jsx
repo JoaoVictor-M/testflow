@@ -1,47 +1,74 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
+import HelpTooltip from '../components/HelpTooltip';
+
+const APP_BASE_PATH = (import.meta.env.BASE_URL || '/testflow/').replace(/\/+$/, '') || '/testflow';
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 function ResetPassword() {
     const { token: paramToken } = useParams();
     const navigate = useNavigate();
+    const mountedRef = useRef(true);
 
-    // Store token in state so we can clear URL
-    const [token, setToken] = useState(paramToken);
+    const [token] = useState(paramToken || '');
+    const [validationState, setValidationState] = useState(paramToken ? 'validating' : 'invalid');
+    const [validationMessage, setValidationMessage] = useState('');
 
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [showTooltip, setShowTooltip] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showCreditsModal, setShowCreditsModal] = useState(false);
 
     const [userData, setUserData] = useState(null);
 
-    useEffect(() => {
-        const validateToken = async () => {
-            if (!paramToken) return;
-            try {
-                const response = await api.get(`/auth/validate-reset-token/${paramToken}`);
-                if (response.data.valid) {
-                    setUserData({ name: response.data.name, username: response.data.username });
-                    // Only set token in state if valid
-                    setToken(paramToken);
-                    // Clear URL
-                    window.history.replaceState(null, '', '/reset-password');
-                }
-            } catch (error) {
-                console.error("Token validation failed:", error);
-                // If validation fails, token remains null (or we set an error state)
-                setToken(null);
+    const validateToken = useCallback(async () => {
+        if (!token) {
+            setValidationState('invalid');
+            return;
+        }
+        setValidationState('validating');
+        setValidationMessage('');
+        try {
+            const response = await api.get(`/auth/validate-reset-token/${encodeURIComponent(token)}`);
+            if (!mountedRef.current) return;
+            if (response.data?.valid) {
+                setUserData({ name: response.data.name, username: response.data.username });
+                setValidationState('valid');
+                window.history.replaceState(null, '', `${APP_BASE_PATH}/reset-password`);
+            } else {
+                setValidationState('invalid');
             }
-        };
-        validateToken();
-    }, [paramToken]);
+        } catch (error) {
+            if (!mountedRef.current) return;
+            const status = error?.response?.status;
+            if (status === 400 || status === 404) {
+                setValidationState('invalid');
+            } else if (status === 429) {
+                setValidationState('rate_limited');
+                setValidationMessage(error.response?.data?.message || 'Muitas tentativas. Aguarde alguns instantes e tente novamente.');
+            } else {
+                setValidationState('network_error');
+                setValidationMessage('Não foi possível validar o link no momento. Verifique sua conexão e tente novamente.');
+            }
+        }
+    }, [token]);
 
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    useEffect(() => {
+        mountedRef.current = true;
+        validateToken();
+        return () => {
+            mountedRef.current = false;
+        };
+    }, [validateToken]);
+
+    const goToLogin = (state) => {
+        window.history.replaceState(null, '', APP_BASE_PATH);
+        navigate('/login', { replace: true, state });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -51,7 +78,7 @@ function ResetPassword() {
             return;
         }
 
-        if (!passwordRegex.test(password)) {
+        if (!PASSWORD_REGEX.test(password)) {
             toast.error('A senha não atende aos requisitos de segurança.');
             return;
         }
@@ -67,20 +94,76 @@ function ResetPassword() {
                 token,
                 newPassword: password
             });
-            toast.success('Senha definida com sucesso!');
-            // Force reload to clear URL and memory history
-            window.location.href = '/testflow';
+            goToLogin({ resetSuccessMessage: 'Senha redefinida com sucesso. Faça login com sua nova senha.' });
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Erro ao redefinir a senha.');
+            if (!error.response) {
+                toast.error('Não foi possível conectar ao servidor. Tente novamente.');
+            } else if (error.response.status === 400) {
+                toast.error(error.response?.data?.message || 'Token inválido ou expirado');
+                setValidationState('invalid');
+            } else {
+                toast.error(error.response?.data?.message || 'Erro ao redefinir a senha.');
+            }
         } finally {
-            setIsSubmitting(false);
+            if (mountedRef.current) {
+                setIsSubmitting(false);
+            }
         }
     };
 
-    // If no token, don't show the form (or show error state)
-    if (!token) {
+    if (validationState === 'validating') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 overflow-hidden transition-colors">
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 overflow-hidden transition-colors p-4">
+                <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-lg shadow-md border border-gray-100 dark:border-neutral-800 p-8 text-center transition-colors">
+                    <div className="flex justify-center mb-4">
+                        <div className="w-10 h-10 border-4 border-blue-200 dark:border-blue-900 border-t-blue-600 dark:border-t-blue-500 rounded-full animate-spin" />
+                    </div>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm">Validando link de redefinição...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (validationState === 'network_error' || validationState === 'rate_limited') {
+        const heading = validationState === 'rate_limited'
+            ? 'Limite temporário atingido'
+            : 'Não foi possível validar o link';
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 overflow-hidden transition-colors p-4">
+                <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-lg shadow-md border border-gray-100 dark:border-neutral-800 p-8 text-center transition-colors">
+                    <div className="flex justify-center mb-6">
+                        <div className="w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{heading}</h2>
+                    <p role="alert" className="text-gray-600 dark:text-gray-300 mb-6">{validationMessage}</p>
+                    <div className="flex flex-col gap-3">
+                        <button
+                            type="button"
+                            onClick={validateToken}
+                            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors"
+                        >
+                            Tentar novamente
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => goToLogin()}
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium text-sm"
+                        >
+                            Voltar para Login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (validationState !== 'valid') {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-950 overflow-hidden transition-colors p-4">
                 <div className="max-w-md w-full bg-white dark:bg-neutral-900 rounded-lg shadow-md border border-gray-100 dark:border-neutral-800 p-8 text-center transition-colors">
                     <div className="flex justify-center mb-6">
                         <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-600 dark:text-red-400">
@@ -91,10 +174,16 @@ function ResetPassword() {
                     </div>
                     <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Link Inválido ou Expirado</h2>
                     <p className="text-gray-600 dark:text-gray-300 mb-6">Não foi possível verificar a solicitação de redefinição de senha.</p>
-                    <button onClick={() => navigate('/login')} className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium">Voltar para Login</button>
+                    <button
+                        type="button"
+                        onClick={() => goToLogin()}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
+                    >
+                        Voltar para Login
+                    </button>
                 </div>
             </div>
-        )
+        );
     }
 
     return (
@@ -119,44 +208,30 @@ function ResetPassword() {
                     <div className="relative group">
                         <div className="flex justify-between items-center mb-2">
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-200">Nova Senha</label>
-                            <div className="relative">
-                                <span
-                                    className="cursor-help text-gray-400 hover:text-blue-500 transition-colors"
-                                    onMouseEnter={() => setShowTooltip(true)}
-                                    onMouseLeave={() => setShowTooltip(false)}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                </span>
-                                {/* Tooltip */}
-                                {showTooltip && (
-                                    <div className="absolute right-0 bottom-full mb-2 w-72 p-4 bg-gray-900 dark:bg-neutral-900 text-white text-xs rounded-lg shadow-xl z-50 border border-gray-700 dark:border-neutral-700">
-                                        <p className="font-bold mb-2 text-sm text-blue-200">Sua senha deve conter:</p>
-                                        <ul className="space-y-1 text-gray-300">
-                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Mínimo 8 caracteres</li>
-                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Uma letra maiúscula</li>
-                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Uma letra minúscula</li>
-                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Um número</li>
-                                            <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Um caractere especial (@$!%*?&)</li>
-                                        </ul>
-                                    </div>
-                                )}
-                            </div>
+                            <HelpTooltip label="Requisitos da senha">
+                                <p className="font-bold mb-2 text-sm text-blue-200">Sua senha deve conter:</p>
+                                <ul className="space-y-1 text-gray-300">
+                                    <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Mínimo 8 caracteres</li>
+                                    <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Uma letra maiúscula</li>
+                                    <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Uma letra minúscula</li>
+                                    <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Um número</li>
+                                    <li className="flex items-center gap-2"><div className="w-1 h-1 bg-blue-400 rounded-full"></div>Um caractere especial (@$!%*?&)</li>
+                                </ul>
+                            </HelpTooltip>
                         </div>
 
                         <div className="relative">
                             <input
                                 type={showPassword ? "text" : "password"}
                                 required
-                                className={`w-full input-style pr-10 py-3 ${password && !passwordRegex.test(password) ? 'border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10' : ''}`}
+                                className={`w-full input-style pr-10 py-3 ${password && !PASSWORD_REGEX.test(password) ? 'border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-900/10' : ''}`}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="Digite sua nova senha"
                             />
                             <button
                                 type="button"
-                                tabIndex={-1}
+                                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none transition-colors"
                                 onClick={() => setShowPassword(!showPassword)}
                             >
@@ -208,6 +283,7 @@ function ResetPassword() {
                     <p>
                         Developed by{' '}
                         <button
+                            type="button"
                             onClick={() => setShowCreditsModal(true)}
                             className="text-blue-500 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors focus:outline-none"
                         >
@@ -221,7 +297,7 @@ function ResetPassword() {
                 isOpen={showCreditsModal}
                 onClose={() => setShowCreditsModal(false)}
             />
-        </div >
+        </div>
     );
 }
 

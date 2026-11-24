@@ -1,11 +1,15 @@
-import { useState, useEffect, Fragment, useContext } from 'react';
+import { useState, useEffect, Fragment, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api';
-import { Link, useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast/headless';
 import { Dialog, Transition, Popover } from '@headlessui/react';
 import ProjectForm from '../components/ProjectForm';
 import ConfirmationModal from '../components/ConfirmationModal';
+import { clampPage, isRequestCanceled, loadViewContext, saveViewContext } from '../utils/asyncList';
+
+const PROJECTS_CONTEXT_KEY = 'projects';
+const ITEMS_PER_PAGE = 10;
 
 // --- ÍCONES ---
 const EditIcon = () => (
@@ -28,18 +32,11 @@ const ArrowRightIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
   </svg>
 );
-
-const ListIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-  </svg>
-);
 const SortIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
   </svg>
 );
-// 2. NOVO ÍCONE DE LIXEIRA
 const TrashIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
     <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -53,7 +50,6 @@ const DuplicateIcon = () => (
 );
 // --- FIM DOS ÍCONES ---
 
-// Funções de Cor
 const getProjectStatusClasses = (status) => {
   switch (status) {
     case 'Concluído':
@@ -66,32 +62,41 @@ const getProjectStatusClasses = (status) => {
       return 'bg-gray-100 text-gray-800 dark:bg-neutral-700 dark:text-gray-300';
   }
 };
+
 function ProjectsListPage() {
   const navigate = useNavigate();
+  const initialContext = loadViewContext(PROJECTS_CONTEXT_KEY, {
+    searchTerm: '',
+    statusFilter: 'Todos',
+    tagFilter: 'Todos',
+    versionFilter: 'Todos',
+    serverFilter: 'Todos',
+    sortOrder: localStorage.getItem('projectsSortOrder') || 'creation',
+    currentPage: 1,
+  });
+
   const [projects, setProjects] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reloadCount, setReloadCount] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [projectToEdit, setProjectToEdit] = useState(null);
   const [isClone, setIsClone] = useState(false);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('Todos');
-  const [tagFilter, setTagFilter] = useState('Todos');
-  const [versionFilter, setVersionFilter] = useState('Todos');
-  const [serverFilter, setServerFilter] = useState('Todos');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortOrder, setSortOrder] = useState(() => localStorage.getItem('projectsSortOrder') || 'creation');
+  const [searchTerm, setSearchTerm] = useState(initialContext.searchTerm);
+  const [statusFilter, setStatusFilter] = useState(initialContext.statusFilter);
+  const [tagFilter, setTagFilter] = useState(initialContext.tagFilter);
+  const [versionFilter, setVersionFilter] = useState(initialContext.versionFilter);
+  const [serverFilter, setServerFilter] = useState(initialContext.serverFilter);
+  const [currentPage, setCurrentPage] = useState(initialContext.currentPage);
+  const [sortOrder, setSortOrder] = useState(initialContext.sortOrder);
 
-  // --- 3. ESTADOS PARA O MODAL DE DELEÇÃO ---
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
 
-  const { user } = useContext(AuthContext); // [NEW] Contexto Auth
+  const { user } = useContext(AuthContext);
+  const requestIdRef = useRef(0);
 
-  const ITEMS_PER_PAGE = 10;
-
-  // Funções do Modal (Formulário)
   const closeModal = () => {
     setIsModalOpen(false);
   };
@@ -111,7 +116,6 @@ function ProjectsListPage() {
     setIsModalOpen(true);
   };
 
-  // --- 4. FUNÇÕES DO MODAL DE DELEÇÃO ---
   const openDeleteModal = (project) => {
     setProjectToDelete(project);
     setIsDeleteModalOpen(true);
@@ -119,64 +123,36 @@ function ProjectsListPage() {
   const closeDeleteModal = () => {
     setIsDeleteModalOpen(false);
   };
-  const handleConfirmDelete = async () => {
-    if (!projectToDelete) return;
-    try {
-      await api.delete(`/projects/${projectToDelete._id}`);
-      // Remove o projeto da lista na tela
-      setProjects(prev => prev.filter(p => p._id !== projectToDelete._id));
-      toast.success('Projeto deletado com sucesso!');
-    } catch (err) {
-      toast.error('Erro ao deletar o projeto.');
-      console.error(err);
-    }
-    // O modal já é fechado pelo onConfirm no JSX
-  };
-
-  // --- FIM DAS FUNÇÕES DE DELEÇÃO ---
-
-  const fetchProjects = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get('/projects');
-      setProjects(response.data);
-      setError(null);
-    } catch (err) {
-      setError('Não foi possível carregar os projetos.');
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   useEffect(() => {
+    const controller = new AbortController();
+    const requestId = ++requestIdRef.current;
+
+    const fetchProjects = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        const response = await api.get('/projects', { signal: controller.signal });
+        if (requestId !== requestIdRef.current || controller.signal.aborted) return;
+        setProjects(Array.isArray(response.data) ? response.data : []);
+      } catch (err) {
+        if (requestId !== requestIdRef.current || isRequestCanceled(err, controller.signal)) return;
+        setError('Não foi possível carregar os projetos.');
+        console.error(err);
+      } finally {
+        if (requestId === requestIdRef.current) {
+          setIsLoading(false);
+        }
+      }
+    };
+
     fetchProjects();
-  }, []);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, tagFilter, versionFilter, serverFilter, sortOrder]);
+    return () => controller.abort();
+  }, [reloadCount]);
 
   useEffect(() => {
     localStorage.setItem('projectsSortOrder', sortOrder);
   }, [sortOrder]);
-
-  const toggleSortOrder = () => {
-    setSortOrder(current => (current === 'alpha' ? 'creation' : 'alpha'));
-  };
-
-  const handleSaveSuccess = (savedProject, mode) => {
-    if (mode === 'create') {
-      setProjects(prevProjects => [savedProject, ...prevProjects]);
-    } else if (mode === 'update') {
-      setProjects(prevProjects =>
-        prevProjects.map(p => (p._id === savedProject._id ? savedProject : p))
-      );
-    }
-  };
-
-  if (isLoading) { /* ... (Spinner) ... */ }
-  if (error) { /* ... (Erro) ... */ }
 
   const allTags = [...new Set(projects.flatMap(p => (Array.isArray(p.tags) ? p.tags.map(t => t.name) : [])))].sort();
   const allVersions = [...new Set(projects.flatMap(p => (Array.isArray(p.versions) ? p.versions.map(v => v.name) : [])))].sort();
@@ -201,33 +177,113 @@ function ProjectsListPage() {
   });
 
   const pageCount = Math.ceil(sortedProjects.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const effectivePage = (isLoading || (error && projects.length === 0))
+    ? currentPage
+    : clampPage(currentPage, sortedProjects.length, ITEMS_PER_PAGE);
+  const startIndex = (effectivePage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedProjects = sortedProjects.slice(startIndex, endIndex);
 
-  const handleNextPage = () => { setCurrentPage(prev => Math.min(prev + 1, pageCount)); };
-  const handlePrevPage = () => { setCurrentPage(prev => Math.max(prev - 1, 1)); };
+  useEffect(() => {
+    saveViewContext(PROJECTS_CONTEXT_KEY, {
+      searchTerm,
+      statusFilter,
+      tagFilter,
+      versionFilter,
+      serverFilter,
+      sortOrder,
+      currentPage: effectivePage,
+    });
+  }, [searchTerm, statusFilter, tagFilter, versionFilter, serverFilter, sortOrder, effectivePage]);
+
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+  const handleTagFilterChange = (value) => {
+    setTagFilter(value);
+    setCurrentPage(1);
+  };
+  const handleVersionFilterChange = (value) => {
+    setVersionFilter(value);
+    setCurrentPage(1);
+  };
+  const handleServerFilterChange = (value) => {
+    setServerFilter(value);
+    setCurrentPage(1);
+  };
+  const toggleSortOrder = () => {
+    setSortOrder(current => (current === 'alpha' ? 'creation' : 'alpha'));
+    setCurrentPage(1);
+  };
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('Todos');
+    setTagFilter('Todos');
+    setVersionFilter('Todos');
+    setServerFilter('Todos');
+    setCurrentPage(1);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!projectToDelete) return;
+    try {
+      await api.delete(`/projects/${projectToDelete._id}`);
+      const nextFilteredCount = Math.max(0, filteredProjects.length - 1);
+      setProjects(prev => prev.filter(p => p._id !== projectToDelete._id));
+      setCurrentPage(prev => clampPage(prev, nextFilteredCount, ITEMS_PER_PAGE));
+      toast.success('Projeto deletado com sucesso!');
+    } catch (err) {
+      toast.error('Erro ao deletar o projeto.');
+      console.error(err);
+      throw err;
+    }
+  };
+
+  const handleSaveSuccess = (savedProject, mode) => {
+    if (mode === 'create') {
+      setProjects(prevProjects => [savedProject, ...prevProjects]);
+    } else if (mode === 'update') {
+      setProjects(prevProjects =>
+        prevProjects.map(p => (p._id === savedProject._id ? savedProject : p))
+      );
+    }
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage(Math.min(effectivePage + 1, Math.max(1, pageCount)));
+  };
+  const handlePrevPage = () => {
+    setCurrentPage(Math.max(effectivePage - 1, 1));
+  };
+
+  const activePopoverFilters = [
+    statusFilter !== 'Todos' && `Status: ${statusFilter}`,
+    tagFilter !== 'Todos' && `Tag: ${tagFilter}`,
+    versionFilter !== 'Todos' && `Versão: ${versionFilter}`,
+    serverFilter !== 'Todos' && `Servidor: ${serverFilter}`,
+  ].filter(Boolean);
+  const hasAnyFilter = Boolean(searchTerm.trim()) || activePopoverFilters.length > 0;
 
   return (
     <div>
-      {/* --- CÁBEÇALHO --- */}
+      {/* --- CABEÇALHO --- */}
       <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-6">Projetos</h1>
 
       {/* --- BARRA DE AÇÕES --- */}
       <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
-
         <div className="w-full md:w-1/2">
           <input
             type="text"
             placeholder="Pesquisar por Título..."
             className="w-full input-style"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
           />
-        </div>
-
-        <div className="flex items-center shadow-sm rounded-lg overflow-hidden">
-          {/* Botões de Visualização removidos */}
         </div>
 
         <button
@@ -241,15 +297,20 @@ function ProjectsListPage() {
         <Popover className="relative w-full md:w-auto">
           {({ open }) => (
             <>
-              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-neutral-800 dark:text-gray-200 dark:border-neutral-600 dark:hover:bg-neutral-700'}`}>
+              <Popover.Button className={`flex w-full md:w-auto items-center justify-center gap-2 px-4 py-2 border rounded-lg shadow-sm text-sm font-medium transition-colors ${open || activePopoverFilters.length > 0 ? 'bg-blue-50 text-blue-700 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 dark:bg-neutral-800 dark:text-gray-200 dark:border-neutral-600 dark:hover:bg-neutral-700'}`}>
                 <FilterIcon /> Filtros
+                {activePopoverFilters.length > 0 && (
+                  <span className="ml-1 inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    {activePopoverFilters.length}
+                  </span>
+                )}
               </Popover.Button>
               <Transition as={Fragment} enter="transition ease-out duration-200" enterFrom="opacity-0 translate-y-1" enterTo="opacity-100 translate-y-0" leave="transition ease-in duration-150" leaveFrom="opacity-100 translate-y-0" leaveTo="opacity-0 translate-y-1">
                 <Popover.Panel className="absolute z-10 right-0 mt-2 w-72 p-4 bg-white dark:bg-neutral-800 shadow-lg rounded-lg border border-gray-200 dark:border-neutral-700">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
                       <label htmlFor="filter-status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                      <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                      <select id="filter-status" className="w-full input-style" value={statusFilter} onChange={(e) => handleStatusFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allStatus.map(status => (<option key={status} value={status}>{status}</option>))}
                       </select>
@@ -257,7 +318,7 @@ function ProjectsListPage() {
 
                     <div>
                       <label htmlFor="filter-tag" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tag</label>
-                      <select id="filter-tag" className="w-full input-style" value={tagFilter} onChange={(e) => setTagFilter(e.target.value)}>
+                      <select id="filter-tag" className="w-full input-style" value={tagFilter} onChange={(e) => handleTagFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allTags.map(tag => (<option key={tag} value={tag}>{tag}</option>))}
                       </select>
@@ -265,7 +326,7 @@ function ProjectsListPage() {
 
                     <div>
                       <label htmlFor="filter-version" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Versão</label>
-                      <select id="filter-version" className="w-full input-style" value={versionFilter} onChange={(e) => setVersionFilter(e.target.value)}>
+                      <select id="filter-version" className="w-full input-style" value={versionFilter} onChange={(e) => handleVersionFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allVersions.map(v => (<option key={v} value={v}>{v}</option>))}
                       </select>
@@ -273,7 +334,7 @@ function ProjectsListPage() {
 
                     <div>
                       <label htmlFor="filter-server" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Servidor</label>
-                      <select id="filter-server" className="w-full input-style" value={serverFilter} onChange={(e) => setServerFilter(e.target.value)}>
+                      <select id="filter-server" className="w-full input-style" value={serverFilter} onChange={(e) => handleServerFilterChange(e.target.value)}>
                         <option>Todos</option>
                         {allServers.map(s => (<option key={s} value={s}>{s}</option>))}
                       </select>
@@ -292,21 +353,64 @@ function ProjectsListPage() {
         )}
       </div>
 
-      {/* --- RENDERIZAÇÃO (GRID vs LISTA) --- */}
+      {hasAnyFilter && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          {searchTerm.trim() && (
+            <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-blue-700 dark:text-blue-300">
+              Busca: {searchTerm.trim()}
+            </span>
+          )}
+          {activePopoverFilters.map(label => (
+            <span key={label} className="inline-flex items-center rounded-full bg-blue-50 dark:bg-blue-900/30 px-3 py-1 text-blue-700 dark:text-blue-300">
+              {label}
+            </span>
+          ))}
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
+          >
+            Limpar filtros
+          </button>
+        </div>
+      )}
 
-      {isLoading && <p>Carregando...</p>}
-      {!isLoading && projects.length === 0 && (
+      {/* --- ESTADOS ASSÍNCRONOS --- */}
+      {isLoading && projects.length === 0 && (
+        <div role="status" className="flex items-center justify-center py-12 text-gray-600 dark:text-gray-400">
+          Carregando projetos...
+        </div>
+      )}
+
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-red-700 dark:text-red-300"
+        >
+          <span>
+            {error}
+            {projects.length > 0 ? ' Exibindo dados anteriores.' : ''}
+          </span>
+          <button
+            type="button"
+            onClick={() => setReloadCount(c => c + 1)}
+            className="px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+          >
+            Tentar novamente
+          </button>
+        </div>
+      )}
+
+      {!isLoading && !error && projects.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">
           {(user?.role === 'admin' || user?.role === 'analyst')
             ? 'Nenhum projeto encontrado. Clique em "Novo Projeto" para começar.'
             : 'Nenhum Projeto Encontrado.'}
         </p>
       )}
-      {!isLoading && projects.length > 0 && filteredProjects.length === 0 && (
+      {!isLoading && !error && projects.length > 0 && filteredProjects.length === 0 && (
         <p className="text-gray-600 dark:text-gray-400 col-span-3">Nenhum projeto encontrado para os filtros aplicados.</p>
       )}
-
-
 
       {filteredProjects.length > 0 && (
         <div className="bg-white dark:bg-neutral-900 shadow border border-gray-200 dark:border-neutral-800 rounded-lg overflow-hidden transition-colors">
@@ -326,7 +430,7 @@ function ProjectsListPage() {
                 {paginatedProjects.map((project) => (
                   <tr
                     key={project._id}
-                    onClick={() => navigate(`/project/${project._id}/demandas`)}
+                    onClick={() => navigate(`/project/${project._id}/demandas`, { state: { projectTitle: project.title } })}
                     className="hover:bg-gray-50 dark:hover:bg-neutral-800/50 transition-colors group cursor-pointer"
                   >
                     <td className="px-6 py-4 text-center">
@@ -339,7 +443,6 @@ function ProjectsListPage() {
                         {project.title}
                       </span>
                     </td>
-                    {/* Versões */}
                     <td className="px-6 py-4 text-center">
                       {Array.isArray(project.versions) && project.versions.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-center">
@@ -353,8 +456,6 @@ function ProjectsListPage() {
                         <span className="text-sm text-gray-400">-</span>
                       )}
                     </td>
-
-                    {/* Servidores */}
                     <td className="px-6 py-4 text-center">
                       {Array.isArray(project.servers) && project.servers.length > 0 ? (
                         <div className="flex flex-wrap gap-1 justify-center">
@@ -412,7 +513,7 @@ function ProjectsListPage() {
         <div className="flex items-center justify-between mt-8">
           <button
             onClick={handlePrevPage}
-            disabled={currentPage === 1}
+            disabled={effectivePage === 1}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <ArrowLeftIcon />
@@ -420,12 +521,12 @@ function ProjectsListPage() {
           </button>
 
           <span className="text-sm text-gray-700 dark:text-gray-400">
-            Página <span className="font-semibold">{currentPage}</span> de <span className="font-semibold">{pageCount}</span>
+            Página <span className="font-semibold">{effectivePage}</span> de <span className="font-semibold">{pageCount}</span>
           </span>
 
           <button
             onClick={handleNextPage}
-            disabled={currentPage === pageCount}
+            disabled={effectivePage === pageCount}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-lg border border-gray-300 dark:border-neutral-600 hover:bg-gray-50 dark:hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             Próxima

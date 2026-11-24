@@ -150,6 +150,8 @@ O `scripts/dev.sh` usa um projeto Compose isolado (`testflow-dev`), prepara `.en
 
 Consulte o [guia de desenvolvimento](docs/desenvolvimento.md) (pastas, comandos, alvos do `check.sh` e pipelines) e a [política de entradas de build](docs/build-inputs.md).
 
+`scripts/check.sh e2e` roda o Playwright (login, projeto, demanda e cenário, mais os contratos da API) e `scripts/check.sh dast` roda o ZAP baseline (`.zap/baseline.yaml`, falha em alerta Medium ou acima); os dois sobem uma stack descartável com as imagens de produção e HTTPS num certificado gerado a cada execução.
+
 ---
 
 ## 📜 Licença e Termos de Uso (Open Source)

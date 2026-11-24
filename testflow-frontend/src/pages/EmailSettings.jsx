@@ -1,9 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
+import { isRequestCanceled } from '../utils/asyncList';
 
 function EmailSettings() {
     const [loading, setLoading] = useState(true);
+    const [hasLoaded, setHasLoaded] = useState(false);
+    const [loadError, setLoadError] = useState(null);
+    const [reloadCount, setReloadCount] = useState(0);
     const [saving, setSaving] = useState(false);
 
     const [showPassword, setShowPassword] = useState(false);
@@ -19,28 +23,49 @@ function EmailSettings() {
 
     const [allowlist, setAllowlist] = useState([]);
     const [savingAllowlist, setSavingAllowlist] = useState(false);
+    const requestIdRef = useRef(0);
 
     useEffect(() => {
-        fetchSettings().finally(() => setLoading(false));
-    }, []);
+        const controller = new AbortController();
+        const requestId = ++requestIdRef.current;
 
-    const fetchSettings = async () => {
-        try {
-            const [emailRes, allowlistRes] = await Promise.all([
-                api.get('/config/email', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } }),
-                api.get('/config/allowlist', { headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } })
-            ]);
-            setFormData(emailRes.data);
-            
-            if (allowlistRes.data) {
-                const list = Object.entries(allowlistRes.data).map(([k, v]) => ({ key: k, value: v }));
-                setAllowlist(list);
+        const fetchSettings = async () => {
+            try {
+                setLoading(true);
+                setLoadError(null);
+                const authConfig = {
+                    headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+                    signal: controller.signal
+                };
+                const [emailRes, allowlistRes] = await Promise.all([
+                    api.get('/config/email', authConfig),
+                    api.get('/config/allowlist', authConfig)
+                ]);
+                if (requestId !== requestIdRef.current || controller.signal.aborted) return;
+
+                setFormData(emailRes.data);
+                if (allowlistRes.data) {
+                    const list = Object.entries(allowlistRes.data).map(([k, v]) => ({ key: k, value: v }));
+                    setAllowlist(list);
+                } else {
+                    setAllowlist([]);
+                }
+                setHasLoaded(true);
+            } catch (error) {
+                if (requestId !== requestIdRef.current || isRequestCanceled(error, controller.signal)) return;
+                console.error('Erro ao buscar configurações:', error);
+                setLoadError('Não foi possível carregar as configurações globais.');
+                toast.error('Erro ao carregar configurações globais.');
+            } finally {
+                if (requestId === requestIdRef.current) {
+                    setLoading(false);
+                }
             }
-        } catch (error) {
-            console.error('Erro ao buscar configurações:', error);
-            toast.error('Erro ao carregar configurações globais.');
-        }
-    };
+        };
+
+        fetchSettings();
+        return () => controller.abort();
+    }, [reloadCount]);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -109,13 +134,50 @@ function EmailSettings() {
         }
     };
 
-    if (loading) {
-        return <div className="text-center mt-10">Carregando...</div>;
+    if (loading && !hasLoaded) {
+        return <div role="status" className="text-center mt-10">Carregando...</div>;
+    }
+
+    if (loadError && !hasLoaded) {
+        return (
+            <div className="max-w-4xl mx-auto space-y-6">
+                <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-neutral-100">Configurações Globais</h1>
+                <div
+                    role="alert"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-4 text-red-700 dark:text-red-300"
+                >
+                    <span>{loadError}</span>
+                    <button
+                        type="button"
+                        onClick={() => setReloadCount(c => c + 1)}
+                        className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+                    >
+                        Tentar novamente
+                    </button>
+                </div>
+            </div>
+        );
     }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <h1 className="text-2xl font-bold mb-6 text-gray-800 dark:text-neutral-100">Configurações Globais</h1>
+
+            {loadError && (
+                <div
+                    role="alert"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-lg border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+                >
+                    <span>{loadError} Exibindo dados anteriores.</span>
+                    <button
+                        type="button"
+                        onClick={() => setReloadCount(c => c + 1)}
+                        className="px-3 py-1.5 font-medium bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors self-start sm:self-auto"
+                    >
+                        Tentar novamente
+                    </button>
+                </div>
+            )}
 
             <div className="bg-white dark:bg-neutral-900 rounded-lg shadow p-6 transition-colors border border-gray-200 dark:border-neutral-800">
                 <h2 className="text-lg font-semibold mb-6 text-gray-800 dark:text-neutral-200 border-b pb-2 dark:border-neutral-800">Email (SMTP)</h2>

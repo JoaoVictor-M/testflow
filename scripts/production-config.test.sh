@@ -7,8 +7,8 @@ tmp=$(mktemp -d "$PWD/.cache/testflow-production-config-XXXXXX")
 trap 'rm -rf "$tmp"' EXIT
 sh scripts/test/format-production.sh "$tmp" >/dev/null 2>&1
 cp docker-compose.yml "$tmp/source-compose.yml"
-FRONTEND_URL=https://frontend.example.test/testflow NGINX_PUBLIC_ORIGIN= \
-  docker compose -f "$tmp/prod/docker-compose.yml" config --format json >"$tmp/config.json"
+FRONTEND_URL=https://frontend.example.test/testflow NGINX_PUBLIC_ORIGIN= JWT_SECRET= \
+  docker compose --env-file /dev/null -f "$tmp/prod/docker-compose.yml" config --format json >"$tmp/config.json"
 # The backup service and the restore script reach production together with the Compose file.
 [ -f "$tmp/prod/backup/Dockerfile" ] && [ -x "$tmp/prod/scripts/restore.sh" ] \
   || { echo 'production: backup/ and scripts/restore.sh must be published' >&2; exit 1; }
@@ -25,6 +25,10 @@ assert.equal(services['mongodb-service'].image, source.match(/image: (mongo:[^\s
 assert.equal(init.image, backend.image);
 assert.equal(init.build, undefined);
 assert.equal(backend.build, undefined);
+assert.match(backend.image, /testflow-backend:v0\.0\.0$/);
+assert.match(services['frontend-service'].image, /testflow-frontend:v0\.0\.0$/);
+assert.match(services['nginx-service'].image, /testflow-nginx:v0\.0\.0$/);
+assert.equal(JSON.parse(fs.readFileSync('/fixture/prod/version.json', 'utf8')).version, 'v0.0.0');
 assert.equal(init.user, '0:0');
 assert.deepEqual(init.entrypoint, ['chown']);
 assert.deepEqual(init.command, ['-Rh', '1000:1000', '/evidencias_testes']);

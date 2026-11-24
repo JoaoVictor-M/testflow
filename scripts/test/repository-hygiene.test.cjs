@@ -47,7 +47,7 @@ test('Git ignores secrets and local artifacts while allowing public configuratio
         ...['', 'testflow-app/', 'testflow-frontend/'].flatMap((prefix) =>
             localPaths.filter((name) => prefix !== 'testflow-frontend/' || name !== '.env.development')
                 .map((name) => prefix + name)),
-        'reports/scan.json', '.testflow-docs', '.testflow-docs/tarefas/example.md',
+        'reports/scan.json', 'prod-images.tar', '.testflow-docs', '.testflow-docs/tarefas/example.md',
         'Cenarios_de_Teste_TestFlow.md',
     ];
     const allowed = [
@@ -66,7 +66,7 @@ test('Git ignores secrets and local artifacts while allowing public configuratio
     assert.match(publicEnvironment.trim(), /^VITE_API_URL=https?:\/\/[^\s]+$/);
 });
 
-for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-prod.yml']) {
+for (const workflow of ['scripts/lib/ci-stack.sh']) {
     test(`${workflow} creates a fresh, masked JWT secret in a private environment file`, (t) => {
         const content = fs.readFileSync(path.join(root, workflow), 'utf8');
         const script = workflowScript(content, 'Create .env for testing');
@@ -75,7 +75,7 @@ for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-pro
         const secrets = [];
         for (let run = 0; run < 2; run += 1) {
             const output = execFileSync('bash', ['--noprofile', '--norc', '-e', '-c', script], {
-                cwd: directory, encoding: 'utf8',
+                cwd: directory, encoding: 'utf8', env: { ...process.env, GITHUB_ACTIONS: 'true' },
             });
             const envPath = path.join(directory, 'testflow-app/.env');
             const lines = fs.readFileSync(envPath, 'utf8').trim().split('\n');
@@ -90,6 +90,23 @@ for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-pro
         }
         assert.notEqual(secrets[0], secrets[1]);
     });
+
+    if (workflow.endsWith('ci-stack.sh')) {
+        test('scripts/lib/ci-stack.sh asks GitHub to mask the secret only when running there', (t) => {
+            const content = fs.readFileSync(path.join(root, workflow), 'utf8');
+            const script = workflowScript(content, 'Create .env for testing');
+            const directory = temporaryDirectory(t);
+            fs.mkdirSync(path.join(directory, 'testflow-app'));
+            const environment = { ...process.env };
+            delete environment.GITHUB_ACTIONS;
+
+            const output = execFileSync('bash', ['--noprofile', '--norc', '-e', '-c', script], {
+                cwd: directory, encoding: 'utf8', env: environment,
+            });
+
+            assert.equal(output, '');
+        });
+    }
 
     test(`${workflow} passes the generated JWT and database URI to the Compose backend`, (t) => {
         const content = fs.readFileSync(path.join(root, workflow), 'utf8');
@@ -128,17 +145,16 @@ for (const workflow of ['scripts/lib/ci-stack.sh', '.github/workflows/deploy-pro
     });
 }
 
-test('production workflow readiness failure logs the Compose service and still fails if logs fail', (t) => {
+test('shared release/develop readiness failure logs the Compose service and still fails if logs fail', (t) => {
     const directory = temporaryDirectory(t);
     const bin = path.join(directory, 'bin');
     fs.mkdirSync(bin);
-    fs.writeFileSync(path.join(bin, 'timeout'), '#!/bin/sh\nexit 1\n', { mode: 0o700 });
     fs.writeFileSync(path.join(bin, 'docker'), '#!/bin/sh\nprintf "%s\\n" "$@" > docker-arguments\nexit 1\n', { mode: 0o700 });
-    const content = fs.readFileSync(path.join(root, '.github/workflows/deploy-prod.yml'), 'utf8');
-    assert.throws(() => execFileSync('bash', ['-e', '-c', workflowScript(content, 'Wait for Application to be Ready')], {
+    const content = fs.readFileSync(path.join(root, 'scripts/lib/ci-stack.sh'), 'utf8');
+    assert.throws(() => execFileSync('bash', ['-e', '-c', workflowScript(content, 'Build and Start Application')], {
         cwd: directory, env: { ...process.env, PATH: `${bin}:${process.env.PATH}` }, stdio: 'pipe',
     }), { status: 1 });
     assert.deepEqual(fs.readFileSync(path.join(directory, 'docker-arguments'), 'utf8').trim().split('\n'), [
-        'compose', '-f', 'docker-compose.yml', '-f', 'docker-compose.ci.yml', 'logs', 'backend-service',
+        'compose', '-p', 'testflow-ci-fixture', '-f', 'docker-compose.ci.yml', 'logs', 'backend-service', 'mongodb-service',
     ]);
 });

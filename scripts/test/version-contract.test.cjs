@@ -64,7 +64,7 @@ test('docs/desenvolvimento.md documents folders, commands, check.sh targets and 
         'dast-full',
         'all',
         'develop.yml',
-        'deploy-prod.yml',
+        'release.yml',
     ]) {
         assert.ok(guide.includes(entry), `docs/desenvolvimento.md must mention ${entry}`);
     }

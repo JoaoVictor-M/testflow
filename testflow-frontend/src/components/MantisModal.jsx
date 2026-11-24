@@ -1,19 +1,41 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { extractErrorMessage } from '../utils/asyncList';
 
 function MantisModal({ isOpen, onClose, onSubmit }) {
   const [link, setLink] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSubmit(link); // Envia o link (mesmo que esteja vazio)
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setError(null);
     setLink('');
     onClose();
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await onSubmit(link);
+      if (result === false) {
+        setError('Não foi possível salvar o link do Mantis.');
+        return;
+      }
+      setLink('');
+      onClose();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Não foi possível salvar o link do Mantis.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <Transition appear show={isOpen} as={Fragment}>
+    <Transition appear show={isOpen} as={Fragment} afterLeave={() => setError(null)}>
       <Dialog as="div" className="relative z-10" onClose={() => { }}>
         <Transition.Child
           as={Fragment}
@@ -57,23 +79,35 @@ function MantisModal({ isOpen, onClose, onSubmit }) {
                       placeholder="https://mantis.suaempresa.com/view.php?id=123"
                       value={link}
                       onChange={(e) => setLink(e.target.value)}
+                      disabled={isSubmitting}
                       required
                     />
                   </div>
 
+                  {error && (
+                    <div
+                      role="alert"
+                      className="mt-4 rounded-md border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+                    >
+                      {error}
+                    </div>
+                  )}
+
                   <div className="mt-6 flex justify-end gap-3">
                     <button
                       type="button"
-                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-neutral-700 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
-                      onClick={onClose}
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-neutral-700 rounded-md hover:bg-gray-200 dark:hover:bg-neutral-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                      onClick={handleClose}
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
+                      disabled={isSubmitting}
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Salvar Erro
+                      {isSubmitting ? 'Salvando...' : 'Salvar Erro'}
                     </button>
                   </div>
                 </form>

@@ -1,6 +1,6 @@
 import { useState, useRef, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import api from '../api';
 import ConfirmationModal from './ConfirmationModal';
 

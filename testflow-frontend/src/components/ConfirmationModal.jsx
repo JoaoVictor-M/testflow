@@ -1,5 +1,6 @@
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment } from 'react';
+import { Fragment, useState } from 'react';
+import { extractErrorMessage } from '../utils/asyncList';
 
 // Ícone de Alerta
 const WarningIcon = ({ className }) => (
@@ -17,9 +18,12 @@ function ConfirmationModal({
   confirmText,
   cancelText,
   afterLeave,
-  confirmButtonClass, // Nova prop
+  confirmButtonClass,
   variant = 'danger' // danger | warning
 }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+
   const styles = {
     danger: {
       iconBg: 'bg-red-100 dark:bg-red-900/30',
@@ -35,8 +39,37 @@ function ConfirmationModal({
 
   const currentStyle = styles[variant] || styles.danger;
 
+  const handleClose = () => {
+    if (isSubmitting) return;
+    setError(null);
+    onClose();
+  };
+
+  const handleAfterLeave = () => {
+    setError(null);
+    if (afterLeave) afterLeave();
+  };
+
+  const handleConfirm = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const result = await onConfirm();
+      if (result === false) {
+        setError('Não foi possível concluir a operação.');
+        return;
+      }
+      onClose();
+    } catch (err) {
+      setError(extractErrorMessage(err, 'Não foi possível concluir a operação.'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <Transition appear show={isOpen} as={Fragment} afterLeave={afterLeave}>
+    <Transition appear show={isOpen} as={Fragment} afterLeave={handleAfterLeave}>
       <Dialog as="div" className="relative z-10" onClose={() => { }}>
         {/* Overlay */}
         <Transition.Child
@@ -82,22 +115,30 @@ function ConfirmationModal({
                   </div>
                 </div>
 
+                {error && (
+                  <div
+                    role="alert"
+                    className="mt-4 rounded-md border border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300"
+                  >
+                    {error}
+                  </div>
+                )}
+
                 {/* Botões */}
                 <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse gap-3">
                   <button
                     type="button"
-                    className={`inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:w-auto sm:text-sm ${confirmButtonClass || currentStyle.defaultButton}`}
-                    onClick={() => {
-                      onConfirm();
-                      onClose();
-                    }}
+                    disabled={isSubmitting}
+                    className={`inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white sm:w-auto sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed ${confirmButtonClass || currentStyle.defaultButton}`}
+                    onClick={handleConfirm}
                   >
-                    {confirmText || 'Deletar'}
+                    {isSubmitting ? 'Processando...' : (confirmText || 'Deletar')}
                   </button>
                   <button
                     type="button"
-                    className="mt-3 inline-flex justify-center w-full rounded-md border border-gray-300 dark:border-neutral-600 shadow-sm px-4 py-2 bg-white dark:bg-neutral-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-neutral-600 transition-colors sm:mt-0 sm:w-auto sm:text-sm"
-                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="mt-3 inline-flex justify-center w-full rounded-md border border-gray-300 dark:border-neutral-600 shadow-sm px-4 py-2 bg-white dark:bg-neutral-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-neutral-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors sm:mt-0 sm:w-auto sm:text-sm"
+                    onClick={handleClose}
                   >
                     {cancelText || 'Cancelar'}
                   </button>

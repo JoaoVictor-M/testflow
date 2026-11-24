@@ -8,9 +8,12 @@
 #   build-inputs  compare isolated npm ci trees and record versions/digests; audit  npm audit (all severities)
 #   test     unit and integration tests with coverage (back against a throwaway MongoDB, front in jsdom)
 #   integration  backup, restore into a new database and comparison, on a throwaway MongoDB
-# e2e, DAST baseline, load and release arrive with the tasks that need them.
-# image-scan and dast-full preserve the existing develop pipeline gates during the migration;
-# they are available separately until the stack targets join all.
+#   e2e      Playwright (login, project, demand, scenario and API contracts) against the production images
+#   dast     ZAP baseline against the same stack; fails on Medium or higher
+#   build-prod  clean production images and content checks; scan-prod  Trivy + SPDX from prod-images.tar
+# load and release-local arrive with the tasks that need them.
+# image-scan and dast-full preserve the existing develop pipeline gates and run the release checks;
+# they are available separately.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -23,6 +26,7 @@ TRIVY_IMAGE=aquasec/trivy:0.76.2@sha256:8f6bb947dbc528902e11f2f5be52f7b519f6a39d
 
 BACK=testflow-app
 FRONT=testflow-frontend
+E2E=e2e
 REPORTS=reports
 SEMGREP_RULES='p/owasp-top-ten p/nodejs p/javascript p/react p/secrets'
 
@@ -44,10 +48,10 @@ node() { run -w "/work/$1" "$NODE_IMAGE" sh -c "$2"; }
 
 check() {
   case $1 in
-    all) for target in quality integration secrets sast sca iac; do check "$target"; done ;;
+    all) for target in quality integration e2e secrets sast sca iac dast; do check "$target"; done ;;
     quality) for target in build-inputs lint test test-scripts test-repository build; do check "$target"; done ;;
     build-inputs) run -e "TESTFLOW_NODE_IMAGE=$NODE_IMAGE" "$NODE_IMAGE" sh scripts/build-inputs.sh ;;
-    audit) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm audit'; done ;;
+    audit) for dir in "$BACK" "$FRONT" "$E2E"; do node "$dir" 'npm audit'; done ;;
     image-scan)
       docker build --target prod -t testflow-ci-backend:prod "$BACK"
       mkdir -p .cache/trivy
@@ -63,6 +67,11 @@ check() {
       trap - EXIT INT TERM
       ;;
     dast-full) sh scripts/ci-dast.sh ;;
+    build-prod) sh scripts/ci/build-prod.sh ;;
+    scan-prod) TRIVY_IMAGE="$TRIVY_IMAGE" sh scripts/ci/scan-prod.sh ;;
+    # Both start a disposable stack of the production images; they need the Docker daemon.
+    e2e) sh scripts/ci-e2e.sh ;;
+    dast) sh scripts/ci-dast-baseline.sh ;;
     # The project's own shell tests: git hooks, dev.sh and this script.
     # backup.test.sh needs the Docker daemon, so it runs in integration instead.
     test-scripts)
@@ -128,7 +137,7 @@ check() {
       mkdir -p "$REPORTS" .cache/trivy
       run "$TRIVY_IMAGE" fs --quiet --cache-dir /work/.cache/trivy --scanners vuln \
         --severity HIGH,CRITICAL --exit-code 1 --skip-dirs '**/node_modules' .
-      for dir in "$BACK" "$FRONT"; do node "$dir" 'npm audit --audit-level=high'; done
+      for dir in "$BACK" "$FRONT" "$E2E"; do node "$dir" 'npm audit --audit-level=high'; done
       ;;
     # Hadolint and Trivy config scan of the Dockerfiles and compose files; both run, so one report
     # shows every finding.

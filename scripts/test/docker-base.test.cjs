@@ -28,11 +28,17 @@ function compose(...files) {
 // Renders the configuration from the files alone: no ./.env (dev.sh creates one from .env.example) and
 // no BACKUP_* or JWT_SECRET variable of the caller's shell may leak into the result.
 function composeWith(profiles, ...files) {
+    return composeWithEnv({}, profiles, ...files);
+}
+
+function composeWithEnv(overrides, profiles, ...files) {
     const args = [...profiles.flatMap((profile) => ['--profile', profile]), ...files.flatMap((file) => ['-f', file])];
-    const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith('BACKUP_') && name !== 'JWT_SECRET'));
+    const env = Object.fromEntries(
+        Object.entries(process.env).filter(([name]) => !name.startsWith('BACKUP_') && name !== 'JWT_SECRET' && !name.startsWith('RECOVERY_') && name !== 'TRUST_PROXY_HOPS')
+    );
     return JSON.parse(execFileSync('docker', ['compose', '--env-file', '/dev/null', ...args, 'config', '--format', 'json'], {
         cwd: root, encoding: 'utf8',
-        env: { ...env, COMPOSE_PROJECT_NAME: 'testflow-config-test' },
+        env: { ...env, ...overrides, COMPOSE_PROJECT_NAME: 'testflow-config-test' },
     }));
 }
 
@@ -176,4 +182,36 @@ test('production, development and disposable tests resolve the same pinned Mongo
     assert.match(image, /^mongo:9\.0\.4@sha256:[a-f0-9]{64}$/);
     assert.equal(compose('docker-compose.yml', 'docker-compose.dev.yml').services['mongodb-service'].image, image);
     assert.equal(compose('docker-compose.teste.yml').services['mongodb-service'].image, image);
+});
+
+test('production Compose sets TRUST_PROXY_HOPS=1 behind nginx, dev sets 0, and both forward RECOVERY_*', () => {
+    const recoveryKeys = [
+        'RECOVERY_RATE_LIMIT_WINDOW_MS',
+        'RECOVERY_FORGOT_IDENTITY_MAX',
+        'RECOVERY_FORGOT_IP_MAX',
+        'RECOVERY_RESET_IP_MAX',
+        'RECOVERY_RESET_TOKEN_MAX',
+    ];
+    const prodEnv = compose('docker-compose.yml').services['backend-service'].environment;
+    assert.equal(prodEnv.TRUST_PROXY_HOPS, '1');
+    for (const key of recoveryKeys) assert.equal(prodEnv[key], '', `${key} must be declared in production Compose`);
+
+    const devEnv = compose('docker-compose.yml', 'docker-compose.dev.yml').services['backend-service'].environment;
+    assert.equal(devEnv.TRUST_PROXY_HOPS, '0');
+    for (const key of recoveryKeys) assert.equal(devEnv[key], '', `${key} must remain forwarded in development Compose`);
+
+    const customEnv = composeWithEnv({
+        TRUST_PROXY_HOPS: '2',
+        RECOVERY_RATE_LIMIT_WINDOW_MS: '600000',
+        RECOVERY_FORGOT_IDENTITY_MAX: '3',
+        RECOVERY_FORGOT_IP_MAX: '15',
+        RECOVERY_RESET_IP_MAX: '12',
+        RECOVERY_RESET_TOKEN_MAX: '6',
+    }, [], 'docker-compose.yml').services['backend-service'].environment;
+    assert.equal(customEnv.TRUST_PROXY_HOPS, '2');
+    assert.equal(customEnv.RECOVERY_RATE_LIMIT_WINDOW_MS, '600000');
+    assert.equal(customEnv.RECOVERY_FORGOT_IDENTITY_MAX, '3');
+    assert.equal(customEnv.RECOVERY_FORGOT_IP_MAX, '15');
+    assert.equal(customEnv.RECOVERY_RESET_IP_MAX, '12');
+    assert.equal(customEnv.RECOVERY_RESET_TOKEN_MAX, '6');
 });
