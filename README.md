@@ -8,11 +8,13 @@ O **TestFlow** é uma plataforma completa e containerizada para gerenciamento de
 
 ## 🚀 Funcionalidades
 *   **Gestão de Projetos e Demandas**: Controle total do ciclo de vida, agrupando funcionalidades em níveis lógicos e organizados.
-*   **Evidências Inteligentes**: Upload múltiplo simultâneo, visualização em galeria integrada e separação sistêmica entre testes.
-*   **Deep Clone**: Duplicação imediata e profunda de projetos para cenários de teste de regressão versão-a-versão.
-*   **Segurança e RBAC**: Autenticação restrita JWT. Diferenciação lógica estrita entre Administradores (Gestor Total) e Analistas (Executores operacionais). *Admins só podem ser criados por admins.*
-*   **Auditoria Transparente**: Painel silencioso interativo para administradores rastrearem quem criou, apagou ou editou cada campo do software em tempo real (Comparação de Diff).
-*   **Infraestrutura Otimizada**: Reversa por Nginx estritamente tipado e MongoDB persistindo relatórios locais e artefatos de mídia.
+*   **Evidências**: Envio de vários arquivos de uma vez (até 50 MB cada, em 14 tipos permitidos), pré-visualização no navegador e uma pasta por demanda no servidor.
+*   **Duplicação**: Cópia de projetos com suas demandas e cenários (sem as evidências), útil para o teste de regressão de uma nova versão; demandas e cenários também podem ser duplicados.
+*   **Perfis de acesso**: Autenticação por JWT e três perfis: Administradores, Analistas e Visualizadores (só leitura). *Administradores só são criados e editados por administradores.*
+*   **Auditoria**: Painel para administradores consultarem quem criou, editou ou excluiu projetos, demandas, cenários, usuários e configurações, com a comparação do antes e do depois.
+*   **Infraestrutura**: Nginx como proxy reverso, MongoDB para os dados e um volume para os arquivos de evidência.
+
+Este README descreve apenas o que a versão atual entrega. Funcionalidades planejadas só entram aqui depois de entregues.
 
 Consulte o histórico de versões em [CHANGELOG.md](https://github.com/JoaoVictor-M/testflow/blob/main/CHANGELOG.md).
 
