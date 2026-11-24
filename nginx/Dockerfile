@@ -1,4 +1,5 @@
 FROM nginx:alpine@sha256:b50897d5c7b1aa08067c3d90c5e8b3e47ec4e3c91c91446f67820228f7b41e34
+WORKDIR /etc/nginx
 
 # Create directory for SSL certs
 RUN apk upgrade --no-cache && \

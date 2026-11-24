@@ -11,7 +11,7 @@ awk '
   step && /^      - name:/ { exit }
   step && /^        run: \|/ { script=1; next }
   script && /^          / { sub(/^          /, ""); print }
-' "$root/.github/workflows/deploy-prod.yml" | sed \
+' "$root/.github/workflows/release.yml" | sed \
   -e 's|${{ env.REGISTRY }}|${REGISTRY}|g' \
   -e 's|${{ env.IMAGE_OWNER }}|${IMAGE_OWNER}|g' \
   -e 's|${{ github.ref_name }}|${RELEASE_TAG}|g' >"$destination/format.sh"

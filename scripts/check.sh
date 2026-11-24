@@ -10,7 +10,8 @@
 #   integration  backup, restore into a new database and comparison, on a throwaway MongoDB
 #   e2e      Playwright (login, project, demand, scenario and API contracts) against the production images
 #   dast     ZAP baseline against the same stack; fails on Medium or higher
-# load and release arrive with the tasks that need them.
+#   build-prod  clean production images and content checks; scan-prod  Trivy + SPDX from prod-images.tar
+# load and release-local arrive with the tasks that need them.
 # image-scan and dast-full preserve the existing develop pipeline gates and run the release checks;
 # they are available separately.
 set -eu
@@ -66,6 +67,8 @@ check() {
       trap - EXIT INT TERM
       ;;
     dast-full) sh scripts/ci-dast.sh ;;
+    build-prod) sh scripts/ci/build-prod.sh ;;
+    scan-prod) TRIVY_IMAGE="$TRIVY_IMAGE" sh scripts/ci/scan-prod.sh ;;
     # Both start a disposable stack of the production images; they need the Docker daemon.
     e2e) sh scripts/ci-e2e.sh ;;
     dast) sh scripts/ci-dast-baseline.sh ;;

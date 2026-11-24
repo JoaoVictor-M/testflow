@@ -13,7 +13,7 @@ Todo o fluxo de desenvolvimento, testes e verificação roda em Docker. Não é 
 | `install/` | Script de inicialização do MongoDB (`mongo-init.js`). |
 | `scripts/` | Automação local (`dev.sh`, `check.sh`, `restore.sh`, `build-inputs.sh`), git hooks (`scripts/git-hooks/`) e testes de repositório/infraestrutura (`scripts/test/`). |
 | `docs/` | Documentação técnica do repositório (este guia e [build-inputs.md](build-inputs.md)). |
-| `.github/workflows/` | Pipelines de CI e publicação (`develop.yml` e `deploy-prod.yml`). |
+| `.github/workflows/` | Pipelines de CI e publicação (`develop.yml` e `release.yml`). |
 | `docker-compose.yml` | Pilha base/produção (Nginx, frontend, backend, MongoDB e serviço de backup no perfil `tools`). |
 | `docker-compose.dev.yml` | Sobreposição de desenvolvimento (recarga automática, portas locais `3000` e `5173`). |
 | `docker-compose.teste.yml` | Serviços descartáveis para testes do backend (MongoDB e Mailpit sem portas no host). |
@@ -81,6 +81,8 @@ Todas as verificações rodam em imagens fixadas por tag e digest em `scripts/ch
 | `sca` | Executa Trivy fs (`HIGH,CRITICAL`) nos lockfiles e `npm audit --audit-level=high` no backend e frontend. |
 | `audit` | Executa `npm audit` em todas as severidades no backend e no frontend. |
 | `iac` | Executa Hadolint em todos os Dockerfiles e Trivy config (`HIGH,CRITICAL`) nos arquivos de infraestrutura. |
+| `build-prod` | Constrói do zero e verifica o conteúdo das três imagens de produção. |
+| `scan-prod` | Lê `prod-images.tar`, aplica Trivy e gera os SBOMs em `reports/release-sbom/`. |
 | `image-scan` | Compila o alvo `prod` do backend e executa Trivy image em todas as severidades. |
 | `dast-full` | Sobe a pilha isolada via `scripts/ci-dast.sh` e executa varredura dinâmica OWASP ZAP. |
 
@@ -94,12 +96,13 @@ Todas as verificações rodam em imagens fixadas por tag e digest em `scripts/ch
 - **Job `integration`:** após `static` e `secrets`, executa `scripts/check.sh integration`.
 - **Job `dynamic`:** após `static` e `secrets`, executa `scripts/check.sh image-scan` e `scripts/check.sh dast-full`, publicando o relatório do ZAP.
 
-### `deploy-prod.yml`
+### `release.yml`
 
-- **Gatilho:** `push` de tags no padrão `v*.*.*`.
-- **Verificações:** `dependency-scan` (`scripts/check.sh build-inputs audit`), `sast-eslint` (`scripts/check.sh lint`) e `dast-zap` (Trivy na imagem do backend e ZAP full scan).
-- **Publicação (`build-and-push-images`):** compila e publica no `ghcr.io` as imagens `testflow-backend`, `testflow-frontend` e `testflow-nginx` com a tag da release e `latest`.
-- **Repositório de produção (`update-prod-repo`):** atualiza `testflow-prod` com `docker-compose.yml` adaptado para as imagens publicadas, `mongo-init.js`, `.env.example`, `backup/`, `scripts/restore.sh`, `version.json`, `LICENSE`, `SECURITY.md` e `README.md` (sem a seção de desenvolvimento).
+- **Gatilhos:** push na `main` após o OK do dono, ou despacho manual com `dry_run: true` por padrão. Só a `main`, com publicação habilitada, altera GHCR, tags, Releases e produção. A primeira execução manual também exige o OK do dono.
+- **Gates:** reutiliza todos os jobs de `develop.yml`, executa DAST completo e constrói do zero (`scripts/check.sh build-prod`), rejeitando testes, fixtures, ferramentas de desenvolvimento, source maps e segredos nas imagens.
+- **Artefatos:** `scripts/check.sh scan-prod` aplica Trivy a backend, frontend e nginx em todas as severidades (inclusive sem correção) e gera um SBOM SPDX por imagem. As mesmas imagens aprovadas são publicadas, sem recompilar.
+- **Publicação:** valida `VERSION` e as notas do `CHANGELOG.md`; recusa tag ou release existente e falha se não conseguir consultar o GitHub. Publica tags `vX.Y.Z`, SHA e `latest` no GHCR com `GHCR_PAT`, assina os digests com Cosign/OIDC e cria a tag e a GitHub Release com os SBOMs.
+- **Produção:** após a Release, atualiza `testflow-prod` usando `PROD_REPO_TOKEN`, preservando configuração, documentação, backup e restauração. O Compose referencia a tag versionada aprovada.
 
 ## Versionamento
 

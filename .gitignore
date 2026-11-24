@@ -29,6 +29,7 @@ Thumbs.db
 
 # Resultados de testes, cobertura e verificações de segurança
 /reports/
+/prod-images.tar
 coverage/
 playwright-report/
 test-results/
