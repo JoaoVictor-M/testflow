@@ -1,3 +1,16 @@
+const { logger } = require('./utils/logger');
+const { getJwtSecret } = require('./config/jwt');
+
+try {
+    getJwtSecret();
+} catch (error) {
+    if (require.main === module) {
+        logger.error(error.message, { code: error.code });
+        process.exit(1);
+    }
+    throw error;
+}
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -20,11 +33,9 @@ const fs = require('fs');
 const path = require('path');
 const { logAudit } = require('./services/auditService');
 const AuditLog = require('./models/AuditLog');
-const { logger } = require('./utils/logger');
 const { resolveEvidenceFile } = require('./utils/evidencePath');
 const requestLogger = require('./middleware/requestLogger');
 const { isDatabaseReady } = require('./services/healthService');
-require('dotenv').config({ quiet: true }); // o aviso do dotenv não é JSON
 
 const cleanAuditData = (doc) => {
     if (!doc) return doc;
@@ -36,8 +47,6 @@ const cleanAuditData = (doc) => {
     delete clone.evidences; // Optional, can save DB space
     return clone;
 };
-
-const JWT_SECRET = process.env.JWT_SECRET || 'testflow_secret_key_12345';
 
 const ALLOWLIST_PATH = path.join(__dirname, 'config', 'allowlist.json');
 
@@ -208,7 +217,7 @@ app.post('/api/auth/login', async (req, res) => {
             name: user.name, // Add name to token
             role: user.role
         };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: '8h' });
+        const token = jwt.sign(payload, getJwtSecret(), { expiresIn: '8h', algorithm: 'HS256' });
 
         res.json({ token, user: { username: user.username, name: user.name, role: user.role } });
     } catch (error) {
@@ -1599,6 +1608,7 @@ app.use((err, req, res, next) => {
 
 // Conecta ao MongoDB e abre a porta; os testes importam só o app e controlam a conexão.
 const start = () => {
+    getJwtSecret();
     mongoose.connect(MONGO_URI)
         .then(() => logger.info('Conexão com o MongoDB estabelecida'))
         .catch((error) => logger.error('Erro ao conectar no MongoDB', { err: error }));
