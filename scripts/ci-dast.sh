@@ -20,8 +20,9 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 prepare_ci_stack
 start_ci_stack
-# Runners may use a UID absent from the image's passwd file. Keep Java and Python in a writable home.
-docker run --rm --init --name "${TESTFLOW_CI_PROJECT}-zap" --user "$(id -u):$(id -g)" \
+# Runners may use a UID absent from the image's passwd file. Keep Java and Python in a writable home
+# and start in the report folder: the scan script writes its log to the working directory.
+docker run --rm --init --name "${TESTFLOW_CI_PROJECT}-zap" --user "$(id -u):$(id -g)" -w /zap/wrk \
   -e HOME=/tmp -e USER=zap -e JAVA_TOOL_OPTIONS=-Duser.home=/tmp \
   --network "${TESTFLOW_CI_PROJECT}_default" \
   -v "$PWD/reports/zap:/zap/wrk:rw" "$ZAP_IMAGE" \

@@ -30,7 +30,7 @@ run_dast @never@
 first_project=$(cat "$tmp/project")
 grep -q 'up -d --build --wait --wait-timeout 180' "$tmp/docker.log"
 grep -q -- '--network testflow-ci-' "$tmp/docker.log"
-grep -q -- '--user 1001:1001 -e HOME=/tmp -e USER=zap -e JAVA_TOOL_OPTIONS=-Duser.home=/tmp' "$tmp/docker.log"
+grep -q -- '--user 1001:1001 -w /zap/wrk -e HOME=/tmp -e USER=zap -e JAVA_TOOL_OPTIONS=-Duser.home=/tmp' "$tmp/docker.log"
 grep -q 'zap-full-scan.py -t http://backend-service:3000 -r report_html.html' "$tmp/docker.log"
 grep -q 'down --remove-orphans' "$tmp/docker.log"
 [ -z "$(ls -A "$tmp/repo/.cache")" ]
