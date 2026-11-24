@@ -54,12 +54,19 @@ password=$(sed -n 's/^TESTFLOW_E2E_PASSWORD=//p' "$tmp/env.copy")
 cleaned
 echo 'ok - e2e starts the production stack with a seeded administrator and keeps the password off the command line'
 
-for leak in report output; do
-  if TESTFLOW_LEAK=$leak run_target ci-e2e.sh @never@; then echo "FAIL - e2e accepted a password in the $leak" >&2; exit 1; fi
-  grep -q 'password appears' "$tmp/output"
-  cleaned
-  echo "ok - e2e fails when the generated password shows up in the $leak"
-done
+# A report would be published with the browser steps, which carry the typed password.
+if TESTFLOW_LEAK=report run_target ci-e2e.sh @never@; then echo 'FAIL - e2e accepted a report to publish' >&2; exit 1; fi
+grep -q 'left a report' "$tmp/output"
+cleaned
+echo 'ok - e2e fails when the run leaves a report to publish'
+
+# The output goes to the CI log: it fails the run and is printed without the password.
+if TESTFLOW_LEAK=output run_target ci-e2e.sh @never@; then echo 'FAIL - e2e accepted a password in the output' >&2; exit 1; fi
+grep -q 'password appears' "$tmp/output"
+password=$(sed -n 's/^TESTFLOW_E2E_PASSWORD=//p' "$tmp/env.copy")
+! grep -qF "$password" "$tmp/output"
+cleaned
+echo 'ok - e2e fails when the password shows up in the output and never prints it'
 
 run_target ci-dast-baseline.sh @never@
 grep -q -- '-f docker-compose.ci.yml -f docker-compose.e2e.yml up -d --build --wait --wait-timeout 180' "$tmp/docker.log"

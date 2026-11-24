@@ -185,6 +185,16 @@ test('the Playwright image matches the locked test runner and the images are pin
     assert.match(read('scripts/ci-dast-baseline.sh'), /^ZAP_IMAGE=ghcr.io\/zaproxy\/zaproxy:[\w.]+@sha256:[a-f0-9]{64}$/m);
 });
 
+test('the e2e run writes no file report and the pipeline publishes none', () => {
+    const config = read('e2e/playwright.config.js');
+    const reporters = config.match(/reporter: (\[\[.*?]]),/)[1];
+
+    assert.equal(reporters, "[['list']]");
+    assert.match(config, /trace: 'off'[\s\S]*video: 'off'[\s\S]*screenshot: 'off'/);
+    assert.doesNotMatch(config, /reports\//);
+    assert.doesNotMatch(develop, /name: e2e\n|path: reports\/e2e/);
+});
+
 test('the DAST baseline plan fails on Medium or higher and filters only single rules, with a reason', () => {
     const plan = read('.zap/baseline.yaml');
     const exitStatus = plan.split('- type: exitStatus')[1];

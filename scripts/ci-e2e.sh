@@ -15,12 +15,17 @@ docker run --rm --init --shm-size=1g --user "$(id -u):$(id -g)" -e HOME=/tmp -e 
   -e npm_config_cache=/work/.cache/npm --env-file "$ci_directory/e2e.env" \
   --network "${TESTFLOW_CI_PROJECT}_default" -v "$PWD":/work -w /work/e2e "$PLAYWRIGHT_IMAGE" \
   sh -c 'npm ci --ignore-scripts --no-audit --no-fund && npx playwright test' > "$output" 2>&1 || status=$?
-cat "$output"
-# The report is published as an artifact and the output goes to the CI log: neither may carry the
-# administrator's generated password.
+# The CI log shows the output, so it is printed without the administrator's generated password, and
+# the run publishes no report: the browser steps carry the typed values, and a report embeds them in a
+# form no text search sees.
 password=$(sed -n 's/^TESTFLOW_E2E_PASSWORD=//p' "$ci_directory/e2e.env")
-if grep -rqF -- "$password" reports/e2e "$output"; then
-  echo 'ci-e2e: the generated password appears in the e2e report or output' >&2
+sed "s/$password/***/g" "$output"
+if grep -qF -- "$password" "$output"; then
+  echo 'ci-e2e: the generated password appears in the e2e output' >&2
+  exit 1
+fi
+if [ -e reports/e2e ]; then
+  echo 'ci-e2e: the run left a report in reports/e2e, which would be published' >&2
   exit 1
 fi
 exit "$status"
