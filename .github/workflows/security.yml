@@ -82,7 +82,10 @@ jobs:
           echo "      - ./testflow-app/.env" >> docker-compose.ci.yml
           echo "    ports:" >> docker-compose.ci.yml
           echo "      - \"3000:3000\"" >> docker-compose.ci.yml
-          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+          docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build || {
+            docker compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color mongodb-service
+            exit 1
+          }
 
       - name: Wait for Application to be Ready
         run: |

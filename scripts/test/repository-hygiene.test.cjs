@@ -20,6 +20,26 @@ function workflowScript(content, name) {
     return step.split(/\n(?=      - name:)/)[0].replace(/^          /gm, '');
 }
 
+test('DAST reports MongoDB startup diagnostics and still fails when Compose cannot start', (t) => {
+    const directory = temporaryDirectory(t);
+    const argumentsFile = path.join(directory, 'docker-calls');
+    const bin = path.join(directory, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(path.join(bin, 'docker'), `#!/bin/sh
+printf '%s\\n' "$*" >> "$TESTFLOW_DOCKER_ARGUMENTS"
+case "$*" in *' up '*) exit 1 ;; esac
+`, { mode: 0o700 });
+    const content = fs.readFileSync(path.join(root, '.github/workflows/security.yml'), 'utf8');
+    assert.throws(() => execFileSync('bash', ['-e', '-c', workflowScript(content, 'Build and Start Application')], {
+        cwd: directory,
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TESTFLOW_DOCKER_ARGUMENTS: argumentsFile },
+    }), (error) => error.status === 1);
+    assert.deepEqual(fs.readFileSync(argumentsFile, 'utf8').trim().split('\n'), [
+        'compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build',
+        'compose -f docker-compose.yml -f docker-compose.ci.yml logs --no-color mongodb-service',
+    ]);
+});
+
 test('Git ignores secrets and local artifacts while allowing public configuration and source', (t) => {
     const directory = temporaryDirectory(t);
     execFileSync('git', ['init', '--quiet', directory]);
