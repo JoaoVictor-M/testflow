@@ -7,7 +7,7 @@ COPY package.json package-lock.json ./
 
 FROM base AS dev
 RUN npm ci && chown -R node:node /app
-USER node
+USER 1000:1000
 EXPOSE 3000
 # shortcut: a plain TCP check, until the health route of BASE-07 exists
 HEALTHCHECK --interval=10s --timeout=3s --start-period=20s --retries=5 \
