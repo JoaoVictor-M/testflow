@@ -1,16 +1,17 @@
 #!/bin/sh
 # Every local check, each in a container pinned by tag and digest, so nothing is installed on the host.
 # Usage: scripts/check.sh <target>... | all
-#   quality  lint, test, test-scripts, build  secrets   Gitleaks over the whole history
+#   quality  build-inputs, lint, test, test-scripts, build  secrets   Gitleaks over the whole history
 #   sast     Semgrep                           sca       Trivy fs + npm audit
 #   iac      Hadolint + Trivy config           all       every target above
+#   build-inputs  compare isolated npm ci trees and record versions/digests; audit  npm audit (all severities)
 #   test     unit and integration tests with coverage (back against a throwaway MongoDB, front in jsdom)
 # Targets for the stack (integration, e2e, DAST, load, release) arrive with the tasks that need them.
 set -eu
 cd "$(dirname "$0")/.."
 
 # Pin every image by tag and digest; refresh them on each release.
-NODE_IMAGE=node:20@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5
+NODE_IMAGE=node:20.20.2@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5
 SEMGREP_IMAGE=semgrep/semgrep:1.185.0@sha256:67518c174185a2043fdbed16c70631b79209499b3671178e7194379b48295a0d
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
 HADOLINT_IMAGE=hadolint/hadolint:v2.15.1@sha256:32dac94127fd60b7b7e3fbfc65e1383b9b5e25c9bfd7b8536de7a539fe68a12d
@@ -40,12 +41,14 @@ node() { run -w "/work/$1" "$NODE_IMAGE" sh -c "$2"; }
 check() {
   case $1 in
     all) for target in quality secrets sast sca iac; do check "$target"; done ;;
-    quality) for target in lint test test-scripts build; do check "$target"; done ;;
+    quality) for target in build-inputs lint test test-scripts build; do check "$target"; done ;;
+    build-inputs) run -e "TESTFLOW_NODE_IMAGE=$NODE_IMAGE" "$NODE_IMAGE" sh scripts/build-inputs.sh ;;
+    audit) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm audit'; done ;;
     # The project's own shell tests: git hooks, dev.sh and this script.
     test-scripts) for test in scripts/git-hooks/*.test.sh scripts/*.test.sh; do sh "$test"; done ;;
 
-    lint) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm ci && npm run lint'; done ;;
-    build) node "$FRONT" 'npm ci && npm run build' ;;
+    lint) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm ci --engine-strict && npm run lint'; done ;;
+    build) node "$FRONT" 'npm ci --engine-strict && npm run build' ;;
 
     # Tests with coverage; the minimums live in testflow-app/.c8rc.json and the front vite.config.js.
     test) check test-back; check test-front ;;
@@ -59,11 +62,11 @@ check() {
       trap 'exit 130' INT
       trap 'exit 143' TERM
       $compose up -d --wait
-      run --network "${project}_default" -w "/work/$BACK" "$NODE_IMAGE" sh -c 'npm ci && npm test'
+      run --network "${project}_default" -w "/work/$BACK" "$NODE_IMAGE" sh -c 'npm ci --engine-strict && npm test'
       $compose down
       trap - EXIT INT TERM
       ;;
-    test-front) node "$FRONT" 'npm ci && npm test' ;;
+    test-front) node "$FRONT" 'npm ci --engine-strict && npm test' ;;
 
     # Gitleaks over the full git history.
     secrets)

@@ -5,9 +5,8 @@ version: '3.8'
 services:
   # O nome do nosso serviço de banco de dados.
   mongo:
-    # A imagem que o Docker deve usar. 'mongo:latest' significa:
-    # "baixe a versão oficial mais recente do MongoDB".
-    image: mongo:latest
+    # Mesma versão e digest dos Compose principal e de testes.
+    image: mongo:9.0.2@sha256:bac22ea7710d774103dcad3ec8ac13cba1eb378f488e3ce8a6b3a1adf2ba9dcc
     # O nome que queremos dar ao nosso contêiner depois de criado.
     container_name: mongodb_testflow
     # Mapeamento de portas. Diz ao Docker: "A porta 27017 de dentro

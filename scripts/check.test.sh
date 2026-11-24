@@ -51,13 +51,18 @@ printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
 
-runs lint 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
+runs lint 'npm ci --engine-strict' 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
+runs build-inputs 'TESTFLOW_NODE_IMAGE=node:' 'sh scripts/build-inputs.sh'
+fails_when build-inputs 'sh scripts/build-inputs.sh'
+runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend'
+fails_when audit '-w /work/testflow-app'
+fails_when audit '-w /work/testflow-frontend'
 fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
-runs build 'npm run build' '-w /work/testflow-frontend'
+runs build 'npm ci --engine-strict' 'npm run build' '-w /work/testflow-frontend'
 fails_when build 'npm run build'
 runs test 'compose -p testflow-teste-' 'up -d --wait' '--network testflow-teste-' '_default' \
-  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm test' ' down'
+  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm ci --engine-strict' 'npm test' ' down'
 fails_when test 'up -d --wait'
 fails_when test '-w /work/testflow-app'
 fails_when test '-w /work/testflow-frontend'
@@ -123,6 +128,7 @@ printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 runs test-scripts 'test-scripts-ran'
 runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'npm run build'
 fails_when quality 'npm run lint'
+fails_when quality 'sh scripts/build-inputs.sh'
 fails_when quality 'npm test'
 fails_when quality 'npm run build'
 runs all 'npm run lint' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'

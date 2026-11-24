@@ -102,6 +102,9 @@ Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou
 O comando `sh scripts/dev.sh up` também prepara o ambiente local e habilita os git hooks. A
 preparação automática de evidências e a configuração TLS são as mesmas da seção de produção.
 
+Antes de enviar alterações, rode `scripts/check.sh quality` e, para infraestrutura, `scripts/check.sh all`.
+Consulte a [política de versões e entradas de build](docs/build-inputs.md) para atualizar dependências e imagens.
+
 O smoke isolado das imagens roda com `sh scripts/test/images-smoke.sh`. Ele verifica HTTPS,
 redirecionamento, fallback HTTP, login, upload e preservação de evidências existentes.
 
