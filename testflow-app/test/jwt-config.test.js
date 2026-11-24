@@ -147,21 +147,29 @@ describe('Configuração de JWT no startup', () => {
         }
     });
 
-    test('index.js (cluster primary) falha imediatamente sem abrir loop de workers nem vazar o segredo', { timeout: 15000 }, async (t) => {
+    test('index.js (cluster primary) falha imediatamente com chave ausente, vazia ou curta sem loop de workers nem vazar o segredo', { timeout: 15000 }, async (t) => {
         const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-jwt-cluster-'));
         t.after(() => fs.rmSync(tempDir, { recursive: true, force: true }));
 
         const shortSecret = `cluster-${randomBytes(6).toString('hex')}`;
-        const result = await runEntrypoint('index.js', {
-            cwd: tempDir,
-            env: { JWT_SECRET: shortSecret },
-        });
+        const cases = [
+            { label: 'ausente', env: {} },
+            { label: 'vazia', env: { JWT_SECRET: '' } },
+            { label: 'espacos', env: { JWT_SECRET: '   ' } },
+            { label: 'curta', env: { JWT_SECRET: shortSecret } },
+        ];
 
-        assert.notEqual(result.code, 0, 'index.js deve falhar antes de criar workers');
-        assert.equal(`${result.stdout}\n${result.stderr}`.includes(shortSecret), false);
-        const entries = result.stdout.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
-        assert.ok(entries.some((entry) => entry.level === 'error' && entry.code === 'JWT_CONFIG_INVALID'));
-        assert.equal(entries.some((entry) => entry.msg === 'Processo mestre rodando'), false);
+        for (const { label, env } of cases) {
+            const result = await runEntrypoint('index.js', { cwd: tempDir, env });
+
+            assert.notEqual(result.code, 0, `index.js deve falhar com chave ${label}`);
+            assert.equal(result.signal, null, `index.js deve encerrar sem timeout (${label})`);
+            assert.equal(result.timedOut, false, `index.js não deve travar (${label})`);
+            assert.equal(`${result.stdout}\n${result.stderr}`.includes(shortSecret), false);
+            const entries = result.stdout.trim().split('\n').filter(Boolean).map((line) => JSON.parse(line));
+            assert.ok(entries.some((entry) => entry.level === 'error' && entry.code === 'JWT_CONFIG_INVALID'));
+            assert.equal(entries.some((entry) => entry.msg === 'Processo mestre rodando'), false);
+        }
     });
 
     test('importar server.js sem JWT_SECRET válido lança erro sem expor valor; authMiddleware não mascara como 403', { timeout: 15000 }, async (t) => {
