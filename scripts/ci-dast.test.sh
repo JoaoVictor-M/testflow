@@ -43,7 +43,7 @@ for failure in 'up -d' zap-full-scan.py 'logs backend-service' 'down --remove-or
   grep -q 'down --remove-orphans' "$tmp/docker.log"
   [ -z "$(ls -A "$tmp/repo/.cache")" ]
   if [ "$failure" = 'up -d' ]; then
-    grep -q 'compose .* -f docker-compose.ci.yml logs backend-service' "$tmp/docker.log"
+    grep -q 'compose .* -f docker-compose.ci.yml logs backend-service mongodb-service' "$tmp/docker.log"
     ! grep -q 'zap-full-scan.py' "$tmp/docker.log"
   fi
   echo "ok - DAST propagates $failure failure and removes temporary secrets"

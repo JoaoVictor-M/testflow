@@ -17,7 +17,7 @@ ci_compose() {
 
 start_ci_stack() {
   if ! ci_compose up -d --build --wait --wait-timeout 180; then
-    ci_compose logs backend-service
+    ci_compose logs backend-service mongodb-service
     return 1
   fi
 }
