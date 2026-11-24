@@ -34,16 +34,43 @@ services:
       - $tmp:/fixture:ro
       - ./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
 EOF
-if ! compose up -d --wait --wait-timeout 90 mongodb-service; then
-  compose logs --no-color mongodb-service
+start_mongo() {
+  if ! compose up -d --wait --wait-timeout 90 mongodb-service; then
+    compose logs --no-color mongodb-service
+    exit 1
+  fi
+}
+mongo_eval() { compose exec -T mongodb-service mongosh --quiet --eval "$1"; }
+stop_mongo() { compose down --remove-orphans >/dev/null 2>&1; }
+no_users='if (db.getSiblingDB("testflow-db").users.countDocuments({}) !== 0) quit(1)'
+
+# Without the hash variable the seed creates no account and says how to create one.
+unset TESTFLOW_ADMIN_PASSWORD_HASH
+start_mongo
+mongo_eval "$no_users"
+if ! compose logs --no-color mongodb-service | grep -q 'TESTFLOW_ADMIN_PASSWORD_HASH'; then
+  echo 'mongo-startup: the seed did not explain how to create the admin' >&2
   exit 1
 fi
+stop_mongo
+
+# A value that is not a bcrypt hash is refused, so a plain password never becomes the stored one.
+export TESTFLOW_ADMIN_PASSWORD_HASH=plaintext-password
+start_mongo
+mongo_eval "$no_users"
+stop_mongo
+
+# With a bcrypt hash the admin is created with exactly that hash.
+bcrypt_hash="\$2b\$10\$$(printf 'x%.0s' $(seq 53))"
+export TESTFLOW_ADMIN_PASSWORD_HASH="$bcrypt_hash"
+start_mongo
 # Prove that initialization and ordinary database operations work, beyond the healthcheck ping.
-compose exec -T mongodb-service mongosh --quiet --eval '
+mongo_eval '
   const database = db.getSiblingDB("testflow-db");
-  if (!database.users.findOne({ username: "admin" })) quit(1);
+  const admin = database.users.findOne({ username: "admin" });
+  if (!admin || admin.role !== "admin" || admin.password !== "'"$bcrypt_hash"'") quit(1);
   database.startup_probe.insertOne({ _id: "probe", value: 42 });
   if (database.startup_probe.findOne({ _id: "probe" }).value !== 42) quit(1);
   database.startup_probe.drop();
 '
-echo 'mongo-startup: Ubuntu kernel compatibility, initialization and read/write passed'
+echo 'mongo-startup: Ubuntu kernel compatibility, seed with and without the admin hash, read/write passed'

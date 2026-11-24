@@ -48,6 +48,10 @@ sem caminho ou barra final. Sem ambas as configurações, o padrão local é `ht
 O redirecionamento preserva o caminho e usa essa origem confiável; o proxy envia o host do upstream.
 As portas públicas continuam 80/443 (internas 8080/8443). Sem certificados, há fallback HTTP.
 
+O usuário `admin` só é criado na primeira subida, e só se `TESTFLOW_ADMIN_PASSWORD_HASH` (hash bcrypt
+da senha escolhida por você) estiver no `.env`; o `.env.example` mostra como gerar o hash. Sem a
+variável, nenhum usuário é criado e o log do MongoDB avisa. Instalações com dados não mudam.
+
 ---
 
 ## 🔄 Como Atualizar o Sistema
