@@ -1,7 +1,7 @@
 import { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 
 const UserForm = ({ userToEdit, onSaveSuccess, onClose, isModalOpen }) => {
     const { user } = useContext(AuthContext);

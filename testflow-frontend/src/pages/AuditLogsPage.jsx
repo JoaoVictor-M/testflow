@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Fragment } from 'react';
 import { Popover, Transition } from '@headlessui/react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 
 // --- ÍCONES ---
 const FilterIcon = () => (

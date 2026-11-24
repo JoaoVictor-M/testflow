@@ -1,0 +1,33 @@
+# ZAP baseline plan: crawl the production stack (nginx with TLS in front) and apply the passive rules only; nothing attacks it.
+# The run fails on any alert of Medium risk or higher; the threshold never moves. Only a false positive
+# is filtered, by an alertFilter for that one rule (its alertRef) with the reason beside it.
+env:
+  contexts:
+    - name: testflow
+      urls:
+        - https://nginx-service:8443/testflow/
+      includePaths:
+        - https://nginx-service:8443/.*
+  parameters:
+    failOnError: true
+    progressToStdout: true
+jobs:
+  - type: passiveScan-config
+    parameters:
+      scanOnlyInScope: true
+  - type: spider
+    parameters:
+      context: testflow
+      maxDuration: 2
+  - type: passiveScan-wait
+    parameters:
+      maxDuration: 5
+  - type: report
+    parameters:
+      template: traditional-html
+      reportDir: /zap/wrk
+      reportFile: baseline
+  - type: exitStatus
+    parameters:
+      errorLevel: Medium
+      warnLevel: Medium

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 import Select from 'react-select';
 
 // --- ESTILOS ---
@@ -104,45 +104,24 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
     }
   }, [isModalOpen]);
 
+  // Fields that come from the demand itself. The platform list arriving later must not reset them.
   useEffect(() => {
     if (isEditing) {
       if (isClone) {
         setDemandaId(`COPY-${demandaToEdit.demandaId}`);
         setNome(`${demandaToEdit.nome} (Cópia)`);
-        setTempoEstimado(demandaToEdit.tempoEstimado || 0);
-        setStatus(demandaToEdit.status);
       } else {
         setDemandaId(demandaToEdit.demandaId);
         setNome(demandaToEdit.nome);
-        setTempoEstimado(demandaToEdit.tempoEstimado || 0);
-        setStatus(demandaToEdit.status);
       }
-      
+      setTempoEstimado(demandaToEdit.tempoEstimado || 0);
+      setStatus(demandaToEdit.status);
+
       const safeResponsaveis = Array.isArray(demandaToEdit.responsaveis) ? demandaToEdit.responsaveis : [];
       setResponsaveis(safeResponsaveis.map(r => ({
         value: r.name,
         label: r.name
       })));
-
-      if (demandaToEdit.linkDemanda && Object.keys(allowlist).length > 0) {
-        let found = false;
-        for (const [key, baseUrl] of Object.entries(allowlist)) {
-          if (demandaToEdit.linkDemanda.startsWith(baseUrl)) {
-            setLinkPlataforma(key);
-            setTicketId(demandaToEdit.linkDemanda.substring(baseUrl.length));
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-            setLinkPlataforma('');
-            setTicketId('');
-        }
-      } else if (!demandaToEdit.linkDemanda) {
-          setLinkPlataforma('');
-          setTicketId('');
-      }
-
     } else {
       setDemandaId('');
       setNome('');
@@ -152,7 +131,20 @@ function DemandaForm({ projectId, demandaToEdit, onSaveSuccess, onClose, isModal
       setStatus('Pendente');
       setResponsaveis([]);
     }
-  }, [demandaToEdit, isEditing, isClone, allowlist]);
+  }, [demandaToEdit, isEditing, isClone]);
+
+  // The platform and ticket of the link depend on the allowlist, which loads after the form opens.
+  useEffect(() => {
+    if (!isEditing) return;
+    if (demandaToEdit.linkDemanda && Object.keys(allowlist).length > 0) {
+      const match = Object.entries(allowlist).find(([, baseUrl]) => demandaToEdit.linkDemanda.startsWith(baseUrl));
+      setLinkPlataforma(match ? match[0] : '');
+      setTicketId(match ? demandaToEdit.linkDemanda.substring(match[1].length) : '');
+    } else if (!demandaToEdit.linkDemanda) {
+      setLinkPlataforma('');
+      setTicketId('');
+    }
+  }, [demandaToEdit, isEditing, allowlist]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

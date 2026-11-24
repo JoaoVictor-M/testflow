@@ -1,7 +1,7 @@
 import { useState, Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 
 const ImportUsersModal = ({ isOpen, closeModal, onImportSuccess }) => {
     const [file, setFile] = useState(null);

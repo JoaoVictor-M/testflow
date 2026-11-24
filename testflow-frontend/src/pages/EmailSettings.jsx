@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
-import toast from 'react-hot-toast';
+import toast from 'react-hot-toast/headless';
 
 function EmailSettings() {
     const [loading, setLoading] = useState(true);

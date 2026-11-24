@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast/headless';
 import api from '../api';
 import { AuthContext } from './AuthContext';
 
