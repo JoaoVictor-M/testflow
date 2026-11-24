@@ -1,0 +1,11 @@
+{
+  "name": "testflow-e2e",
+  "private": true,
+  "description": "Browser tests that run against the production-like stack; see scripts/ci-e2e.sh",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.0"
+  }
+}
