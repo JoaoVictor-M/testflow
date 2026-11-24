@@ -47,6 +47,8 @@ cp "$here/check.sh" "$repo/scripts/check.sh"
 for stub in scripts/git-hooks/guards.test.sh scripts/dev.test.sh; do
   printf '#!/bin/sh\necho test-scripts-ran >>"$FAKE_DOCKER_LOG"\n' >"$repo/$stub"
 done
+# The integration test needs the Docker daemon; the stub records that it ran and can fail.
+printf '#!/bin/sh\necho backup-ran >>"$FAKE_DOCKER_LOG"\n[ -z "${FAIL_BACKUP:-}" ]\n' >"$repo/scripts/backup.test.sh"
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
@@ -142,13 +144,18 @@ if FAIL_ON= run_check iac; then miss; else pass; fi
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 
 runs test-scripts 'test-scripts-ran'
+label="test-scripts leaves out backup.test.sh, which needs the Docker daemon (integration runs it)"
+FAIL_ON= run_check test-scripts && ! grep -qF backup-ran "$log" && pass || miss
+runs integration 'backup-ran'
+label="integration fails when the backup test fails"
+if FAIL_BACKUP=1 FAIL_ON= run_check integration; then miss; else pass; fi
 runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'node --test' 'npm run build'
 fails_when quality 'npm run lint'
 fails_when quality 'sh scripts/build-inputs.sh'
 fails_when quality 'npm test'
 fails_when quality 'npm run build'
 fails_when quality 'node --test'
-runs all 'npm run lint' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'
+runs all 'npm run lint' 'backup-ran' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'
 
 label="typecheck does not exist (the project is JavaScript)"
 if FAIL_ON= run_check typecheck; then miss; else pass; fi

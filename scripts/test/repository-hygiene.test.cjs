@@ -41,7 +41,7 @@ test('Git ignores secrets and local artifacts while allowing public configuratio
         'coverage/index.html', 'playwright-report/index.html', 'test-results/result.json',
         'scan.sarif', 'dist/index.js', 'build/index.js', 'node_modules/package/index.js',
         'cache.tsbuildinfo', '.data/database', 'uploads/file', 'evidencias_testes/file',
-        'certificados/file',
+        'certificados/file', 'age-identity.txt', 'testflow-20260101T000000Z.tar.age',
     ];
     const ignored = [
         ...['', 'testflow-app/', 'testflow-frontend/'].flatMap((prefix) =>
