@@ -1,0 +1,15 @@
+#!/bin/sh
+# Conventional Commits; merge and revert messages that git writes are accepted as they are.
+# guard-commit runs again because git skips pre-commit for some commits (e.g. --allow-empty with nothing staged).
+set -eu
+root=$(git rev-parse --show-toplevel)
+sh "$root/scripts/git-hooks/guard-commit.sh"
+
+subject=$(sed -n '/^[^#]/{p;q;}' "$1")
+pattern='^(feat|fix|chore|docs|ci|refactor|test|perf|build|style|revert|release)(\([a-z0-9._-]+\))?!?: .+'
+case "$subject" in Merge\ * | Revert\ *) exit 0 ;; esac
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  echo "Commit message must follow Conventional Commits, e.g. 'feat(api): add invoice export'." >&2
+  echo "Got: $subject" >&2
+  exit 1
+fi
