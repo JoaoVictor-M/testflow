@@ -1,8 +1,16 @@
+# Production stack: the images' `prod` targets, HTTPS in front, nothing published but 80 and 443.
+# The development stack adds docker-compose.dev.yml (scripts/dev.sh). Compose names every resource
+# after its project (`testflow` by default), so the volumes keep their existing names.
 services:
   mongodb-service:
     image: mongo:9.0.2@sha256:bac22ea7710d774103dcad3ec8ac13cba1eb378f488e3ce8a6b3a1adf2ba9dcc
-    container_name: mongodb_testflow
     restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
     volumes:
       - mongo-data:/data/db
@@ -25,7 +33,6 @@ services:
 
   backend-service:
     build: ./testflow-app
-    container_name: backend_testflow
     restart: always
     environment:
       - FRONTEND_URL=${FRONTEND_URL:-https://localhost/testflow}
@@ -33,20 +40,19 @@ services:
       - ./evidencias_testes:/evidencias_testes
     depends_on:
       mongodb-service:
-        condition: service_started
+        condition: service_healthy
       evidence-init:
         condition: service_completed_successfully
 
   frontend-service:
     build: ./testflow-frontend
-    container_name: frontend_testflow
     restart: always
     depends_on:
-      - backend-service
+      backend-service:
+        condition: service_healthy
 
   nginx-service:
     build: ./nginx
-    container_name: nginx_testflow
     restart: always
     environment:
       - NGINX_PUBLIC_ORIGIN=${NGINX_PUBLIC_ORIGIN:-}
@@ -55,8 +61,10 @@ services:
       - "80:8080"
       - "443:8443"
     depends_on:
-      - frontend-service
-      - backend-service
+      frontend-service:
+        condition: service_healthy
+      backend-service:
+        condition: service_healthy
     volumes:
       - ./certificados:/etc/nginx/ssl:ro
 

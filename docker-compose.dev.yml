@@ -1,0 +1,36 @@
+# Development stack, on top of docker-compose.yml (scripts/dev.sh sets COMPOSE_FILE). The source is
+# mounted, so the back restarts and the front reloads on every save. The API and the front are
+# published on this machine only; MongoDB never is. nginx is left out: Vite serves the front.
+services:
+  evidence-init:
+    build:
+      context: ./testflow-app
+      target: dev
+
+  backend-service:
+    build:
+      context: ./testflow-app
+      target: dev
+    restart: "no"
+    environment:
+      - FRONTEND_URL=http://localhost:5173
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes: !override
+      - ./testflow-app:/app
+      - /app/node_modules
+      - ./evidencias_testes:/evidencias_testes
+
+  frontend-service:
+    build:
+      context: ./testflow-frontend
+      target: dev
+    restart: "no"
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./testflow-frontend:/app
+      - /app/node_modules
+
+  nginx-service:
+    profiles: [proxy]

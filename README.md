@@ -94,13 +94,18 @@ Se você tem acesso a este código-fonte (origin/develop) e deseja contribuir ou
     ```bash
     git clone git@github.com:JoaoVictor-M/testflow.git
     ```
-2.  Inicie forçando a compilação local das camadas lógicas NodeJS e Vite:
+2.  Suba o ambiente de desenvolvimento (recarga automática; API em `http://localhost:3000`, front em
+    `http://localhost:5173/testflow/`, nada publicado além disso):
     ```bash
-    docker compose up -d --build
+    sh scripts/dev.sh up
     ```
 
-O comando `sh scripts/dev.sh up` também prepara o ambiente local e habilita os git hooks. A
-preparação automática de evidências e a configuração TLS são as mesmas da seção de produção.
+O `scripts/dev.sh` usa `docker-compose.yml` mais `docker-compose.dev.yml`, num projeto próprio
+(`testflow-dev`) que não toca nos contêineres nem nos dados da produção; também prepara o `.env`
+e habilita os git hooks. Para compilar localmente a pilha de produção (HTTPS, as imagens `prod`),
+use `docker compose up -d --build`. `docker-compose.teste.yml` traz os serviços descartáveis dos
+testes (MongoDB e Mailpit), usados pelo `scripts/check.sh test`. A preparação automática de
+evidências e a configuração TLS são as mesmas da seção de produção.
 
 Antes de enviar alterações, rode `scripts/check.sh quality` e, para infraestrutura, `scripts/check.sh all`.
 Consulte a [política de versões e entradas de build](docs/build-inputs.md) para atualizar dependências e imagens.

@@ -15,7 +15,7 @@ miss() { echo "FAIL - $label"; fails=$((fails + 1)); }
 # when its arguments contain that text.
 run_check() {
   : >"$log"
-  (cd "$repo" && PATH="$tmp/bin:$PATH" FAKE_DOCKER_LOG="$log" FAKE_DOCKER_FAIL="${FAIL_ON:-@never@}" \
+  (cd "${CHECK_DIR:-$repo}" && PATH="$tmp/bin:$PATH" FAKE_DOCKER_LOG="$log" FAKE_DOCKER_FAIL="${FAIL_ON:-@never@}" \
     FAKE_DOCKER_SIGNAL_ON="${SIGNAL_ON:-@never@}" FAKE_DOCKER_SIGNAL="${SIGNAL:-TERM}" \
     sh scripts/check.sh "$@") >/dev/null 2>&1
 }
@@ -61,7 +61,7 @@ fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
 runs build 'npm ci --engine-strict' 'npm run build' '-w /work/testflow-frontend'
 fails_when build 'npm run build'
-runs test 'compose -p testflow-teste-' 'up -d --wait' '--network testflow-teste-' '_default' \
+runs test 'compose -p testflow-teste-repo' 'up -d --wait' '--network testflow-teste-repo_default' \
   '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm ci --engine-strict' 'npm test' ' down'
 fails_when test 'up -d --wait'
 fails_when test '-w /work/testflow-app'
@@ -70,7 +70,7 @@ fails_when test '-w /work/testflow-frontend'
 tears_down() {
   label="test removes the database when $1"
   if FAIL_ON=$2 run_check test; then miss
-  elif grep -qE -- 'compose -p testflow-teste-[0-9]+ -f docker-compose.teste.yml down' "$log"; then pass
+  elif grep -qE -- 'compose -p testflow-teste-repo -f docker-compose.teste.yml down' "$log"; then pass
   else miss; fi
 }
 tears_down 'the back tests fail' '-w /work/testflow-app'
@@ -79,16 +79,27 @@ tears_down 'the database does not start' 'up -d --wait'
 interrupted() {
   label="test removes the database when $1 interrupts it"
   if SIGNAL=$1 SIGNAL_ON='-w /work/testflow-app' run_check test; then miss
-  elif grep -qE -- 'compose -p testflow-teste-[0-9]+ -f docker-compose.teste.yml down' "$log" \
+  elif grep -qE -- 'compose -p testflow-teste-repo -f docker-compose.teste.yml down' "$log" \
     && ! grep -qF -- '-w /work/testflow-frontend' "$log"; then pass
   else miss; fi
 }
 interrupted INT
 interrupted TERM
-label="parallel test runs use different Compose projects and networks"
-FAIL_ON= run_check test; first=$(grep -oE 'testflow-teste-[0-9]+' "$log" | sort -u)
-FAIL_ON= run_check test; second=$(grep -oE 'testflow-teste-[0-9]+' "$log" | sort -u)
-if [ -n "$first" ] && [ "$(printf '%s\n' "$first" | wc -l)" -eq 1 ] && [ "$first" != "$second" ]; then pass; else miss; fi
+label="the test project is testflow-teste-<worktree folder>, so two worktrees never share one"
+FAIL_ON= run_check test; first=$(grep -oE 'compose -p [a-z0-9_-]+' "$log" | sort -u)
+cp -R "$repo" "$tmp/Other Tree"
+CHECK_DIR="$tmp/Other Tree" FAIL_ON= run_check test; second=$(grep -oE 'compose -p [a-z0-9_-]+' "$log" | sort -u)
+if [ "$first" = 'compose -p testflow-teste-repo' ] && [ "$second" = 'compose -p testflow-teste-other-tree' ]; then pass; else miss; fi
+label="test never uses the project of dev.sh, even in a worktree folder named dev"
+mkdir "$tmp/dev" && cp -R "$repo/." "$tmp/dev/"
+CHECK_DIR="$tmp/dev" FAIL_ON= run_check test
+if grep -qE 'compose -p testflow-teste-dev ' "$log" && ! grep -qE 'compose -p testflow-dev( |$)' "$log"; then pass; else miss; fi
+label="test starts from a clean state: the first Compose call removes leftovers of an earlier run"
+FAIL_ON= run_check test
+if grep -m1 'compose -p' "$log" | grep -q ' down --remove-orphans'; then pass; else miss; fi
+runs test-repository 'build' 'tools.Dockerfile' 'NODE_IMAGE=node:20.20.2@sha256:' 'testflow-check-tools' 'node --test scripts/test/*.test.cjs'
+fails_when test-repository 'tools.Dockerfile'
+fails_when test-repository 'node --test'
 runs secrets 'gitleaks' 'git .'
 fails_when secrets gitleaks
 runs secrets-staged 'gitleaks' '--staged'
@@ -126,11 +137,12 @@ if FAIL_ON= run_check iac; then miss; else pass; fi
 printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 
 runs test-scripts 'test-scripts-ran'
-runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'npm run build'
+runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'node --test' 'npm run build'
 fails_when quality 'npm run lint'
 fails_when quality 'sh scripts/build-inputs.sh'
 fails_when quality 'npm test'
 fails_when quality 'npm run build'
+fails_when quality 'node --test'
 runs all 'npm run lint' 'gitleaks' 'semgrep scan' 'npm audit' 'hadolint'
 
 label="typecheck does not exist (the project is JavaScript)"
