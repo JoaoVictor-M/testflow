@@ -83,12 +83,16 @@ test('Compose files share a MongoDB tag and digest; workflows use the container 
     assert.match(images[0], /^mongo:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/);
     assert.equal(new Set(images).size, 1);
     assert.match(read('scripts/check.sh'), /^NODE_IMAGE=node:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/m);
-    for (const workflow of ['security.yml', 'deploy-prod.yml']) {
+    for (const workflow of ['deploy-prod.yml']) {
         const content = read(`.github/workflows/${workflow}`);
         assert.match(content, /run: scripts\/check.sh build-inputs audit/);
         assert.match(content, /run: scripts\/check.sh lint/);
         assert.doesNotMatch(content, /actions\/setup-node|run: npm install/);
     }
+    const develop = read('.github/workflows/develop.yml');
+    assert.match(develop, /target: \[quality, sast, sca, iac, audit\]/);
+    assert.match(develop, /run: scripts\/check.sh "\$CHECK_TARGET"/);
+    assert.doesNotMatch(develop, /actions\/setup-node|run: npm install/);
 });
 
 test('Docker runtime and build pin the CI Node version and install the locks with engine checks', () => {
