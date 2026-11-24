@@ -1,21 +1,24 @@
 import { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ReleaseNotes from '../components/ReleaseNotes';
 import DeveloperCreditsModal from '../components/DeveloperCreditsModal';
 import { APP_VERSION } from '../version';
 
 const Login = () => {
+    const location = useLocation();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [showReleaseNotes, setShowReleaseNotes] = useState(false);
     const [showCreditsModal, setShowCreditsModal] = useState(false);
+    const [statusMessage, setStatusMessage] = useState(() => location.state?.resetSuccessMessage || '');
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setStatusMessage('');
         const success = await login(username, password);
         if (success) {
             navigate('/');
@@ -39,6 +42,15 @@ const Login = () => {
                     <h1 className="text-3xl font-bold text-blue-600 dark:text-blue-500">TestFlow</h1>
                     <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Quality Management</p>
                 </div>
+
+                {statusMessage && (
+                    <div
+                        role="status"
+                        className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm text-green-800 dark:border-green-800 dark:bg-green-900/20 dark:text-green-300"
+                    >
+                        {statusMessage}
+                    </div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>

@@ -216,45 +216,60 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
-app.post('/api/auth/forgot-password', async (req, res) => {
-    try {
-        const { username, email } = req.body;
-        const user = await User.findOne({ username, email });
+const bcrypt = require('bcryptjs');
+const {
+    forgotPasswordLimiter,
+    validateResetTokenLimiter,
+    resetPasswordLimiter
+} = require('./middleware/recoveryRateLimit');
 
-        // Verificação explícita solicitada pelo usuário
-        if (!user) {
-            return res.status(400).json({ message: 'Usuário ou email incorretos.' });
+const GENERIC_RECOVERY_MESSAGE = 'Se os dados estiverem corretos, um email de recuperação será enviado.';
+
+app.post('/api/auth/forgot-password', forgotPasswordLimiter, async (req, res) => {
+    try {
+        const rawUsername = req.body?.username;
+        const rawEmail = req.body?.email;
+        if (typeof rawUsername !== 'string' || typeof rawEmail !== 'string') {
+            return res.status(400).json({ message: 'Usuário e email são obrigatórios.' });
         }
 
-        // Generate token
-        const token = crypto.randomBytes(20).toString('hex');
+        const username = rawUsername.trim();
+        const email = rawEmail.trim().toLowerCase();
+        if (!username || !email) {
+            return res.status(400).json({ message: 'Usuário e email são obrigatórios.' });
+        }
 
-        // Hash token to save in DB
-        user.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
-        user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        const user = await User.findOne({ username, email });
 
-        await user.save();
+        if (user) {
+            const token = crypto.randomBytes(32).toString('hex');
+            user.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+            user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
 
-        // Send email with unhashed token
-        // In production, this should be the frontend URL
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost/testflow';
-        const resetLink = `${frontendUrl}/reset-password/${token}`;
+            await user.save();
 
-        sendResetPasswordEmail(email, user.name, resetLink)
-            .catch(err => logger.error('Erro ao enviar email de reset', { err }));
+            const frontendUrl = process.env.FRONTEND_URL || 'http://localhost/testflow';
+            const resetLink = `${frontendUrl}/reset-password/${token}`;
 
-        res.status(200).json({ message: 'Se os dados estiverem corretos, um email de recuperação será enviado.' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+            sendResetPasswordEmail(user.email, user.name, resetLink)
+                .catch(err => logger.error('Erro ao enviar email de reset', { err }));
+        }
+
+        res.status(200).json({ message: GENERIC_RECOVERY_MESSAGE });
+    } catch {
+        res.status(500).json({ message: 'Erro ao processar solicitação.' });
     }
 });
 
-app.get('/api/auth/validate-reset-token/:token', async (req, res) => {
+app.get('/api/auth/validate-reset-token/:token', validateResetTokenLimiter, async (req, res) => {
     try {
         const { token } = req.params;
+        if (typeof token !== 'string' || !token.trim()) {
+            return res.status(400).json({ message: 'Token inválido ou expirado' });
+        }
 
         // Hash token to compare with DB
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
 
         const user = await User.findOne({
             resetPasswordToken: hashedToken,
@@ -271,36 +286,45 @@ app.get('/api/auth/validate-reset-token/:token', async (req, res) => {
             name: user.name,
             username: user.username
         });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    } catch {
+        res.status(500).json({ message: 'Erro ao validar token.' });
     }
 });
 
-app.post('/api/auth/reset-password', async (req, res) => {
+app.post('/api/auth/reset-password', resetPasswordLimiter, async (req, res) => {
     try {
-        const { token, newPassword } = req.body;
+        const { token, newPassword } = req.body || {};
+        if (typeof token !== 'string' || !token.trim() || typeof newPassword !== 'string' || !newPassword) {
+            return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+        }
 
         // Hash token to compare with DB
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+        const hashedToken = crypto.createHash('sha256').update(token.trim()).digest('hex');
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        const user = await User.findOne({
-            resetPasswordToken: hashedToken,
-            resetPasswordExpires: { $gt: Date.now() }
-        });
+        const user = await User.findOneAndUpdate(
+            {
+                resetPasswordToken: hashedToken,
+                resetPasswordExpires: { $gt: Date.now() }
+            },
+            {
+                $set: {
+                    password: hashedPassword,
+                    resetPasswordToken: null,
+                    resetPasswordExpires: null
+                }
+            },
+            { new: true }
+        );
 
         if (!user) {
             return res.status(400).json({ message: 'Token inválido ou expirado' });
         }
 
-        user.password = newPassword; // Will be hashed by pre-save hook
-        user.resetPasswordToken = null;
-        user.resetPasswordExpires = null;
-
-        await user.save();
-
         res.status(200).json({ message: 'Senha alterada com sucesso' });
-    } catch (error) {
-        res.status(500).json({ message: error.message });
+    } catch {
+        res.status(500).json({ message: 'Erro ao redefinir senha.' });
     }
 });
 
