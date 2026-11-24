@@ -1,10 +1,10 @@
 # Targets: `dev` (Vite with hot reload) and `prod` (the default, last stage: static files behind nginx).
-FROM node:20@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5 AS base
+FROM node:20.20.2@sha256:8f693eaa7e0a8e71560c9a82b55fd54c2ae920a2ba5d2cde28bac7d1c01c9ba5 AS base
 WORKDIR /app
 RUN chown node:node /app
 USER 1000:1000
 COPY --chown=node:node package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --engine-strict
 
 FROM base AS dev
 EXPOSE 5173

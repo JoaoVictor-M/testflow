@@ -148,3 +148,10 @@ test('test Compose is disposable: no published port, named volume, container nam
 test('the old standalone MongoDB Compose, which published port 27017, is gone', () => {
     assert.equal(fs.existsSync(path.join(root, 'testflow-app/docker-compose.yml')), false);
 });
+
+test('production, development and disposable tests resolve the same pinned MongoDB image', () => {
+    const image = compose('docker-compose.yml').services['mongodb-service'].image;
+    assert.match(image, /^mongo:9\.0\.2@sha256:[a-f0-9]{64}$/);
+    assert.equal(compose('docker-compose.yml', 'docker-compose.dev.yml').services['mongodb-service'].image, image);
+    assert.equal(compose('docker-compose.teste.yml').services['mongodb-service'].image, image);
+});

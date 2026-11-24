@@ -53,13 +53,18 @@ printf 'FROM scratch\n' >"$repo/testflow-app/Dockerfile"
 git init -q -b main "$repo"
 git -C "$repo" add .
 
-runs lint 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
+runs lint 'npm ci --engine-strict' 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
+runs build-inputs 'TESTFLOW_NODE_IMAGE=node:' 'sh scripts/build-inputs.sh'
+fails_when build-inputs 'sh scripts/build-inputs.sh'
+runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend'
+fails_when audit '-w /work/testflow-app'
+fails_when audit '-w /work/testflow-frontend'
 fails_when lint '-w /work/testflow-app'
 fails_when lint '-w /work/testflow-frontend'
-runs build 'npm run build' '-w /work/testflow-frontend'
+runs build 'npm ci --engine-strict' 'npm run build' '-w /work/testflow-frontend'
 fails_when build 'npm run build'
 runs test 'compose -p testflow-teste-repo' 'up -d --wait' '--network testflow-teste-repo_default' \
-  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm test' ' down'
+  '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm ci --engine-strict' 'npm test' ' down'
 fails_when test 'up -d --wait'
 fails_when test '-w /work/testflow-app'
 fails_when test '-w /work/testflow-frontend'
@@ -94,7 +99,7 @@ if grep -qE 'compose -p testflow-teste-dev ' "$log" && ! grep -qE 'compose -p te
 label="test starts from a clean state: the first Compose call removes leftovers of an earlier run"
 FAIL_ON= run_check test
 if grep -m1 'compose -p' "$log" | grep -q ' down --remove-orphans'; then pass; else miss; fi
-runs test-repository 'build' 'tools.Dockerfile' 'NODE_IMAGE=node:20@sha256:' 'testflow-check-tools' 'node --test scripts/test/*.test.cjs'
+runs test-repository 'build' 'tools.Dockerfile' 'NODE_IMAGE=node:20.20.2@sha256:' 'testflow-check-tools' 'node --test scripts/test/*.test.cjs'
 fails_when test-repository 'tools.Dockerfile'
 fails_when test-repository 'node --test'
 runs secrets 'gitleaks' 'git .'
@@ -141,6 +146,7 @@ label="integration fails when the backup test fails"
 if FAIL_BACKUP=1 FAIL_ON= run_check integration; then miss; else pass; fi
 runs quality 'npm run lint' 'npm test' 'test-scripts-ran' 'node --test' 'npm run build'
 fails_when quality 'npm run lint'
+fails_when quality 'sh scripts/build-inputs.sh'
 fails_when quality 'npm test'
 fails_when quality 'npm run build'
 fails_when quality 'node --test'
