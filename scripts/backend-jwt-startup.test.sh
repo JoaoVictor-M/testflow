@@ -40,40 +40,41 @@ assert_fails_without_healthy_or_leak() {
     exit 1
   fi
 
-  failed=0
+  observed=0
   for _ in $(seq 1 15); do
-    health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")
+    snapshot=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}|{{.State.Status}}|{{.State.ExitCode}}|{{.RestartCount}}' "$container_id")
+    IFS='|' read -r health status exit_code restarts <<EOF
+$snapshot
+EOF
     if [ "$health" = "healthy" ]; then
       echo "backend-jwt-startup ($label): container unexpectedly became healthy" >&2
       exit 1
     fi
-    exit_code=$(docker inspect --format '{{.State.ExitCode}}' "$container_id")
-    restarts=$(docker inspect --format '{{.RestartCount}}' "$container_id")
-    status=$(docker inspect --format '{{.State.Status}}' "$container_id")
-    if [ "$exit_code" = "1" ] && { [ "$restarts" -ge 1 ] || [ "$status" = "restarting" ] || [ "$status" = "exited" ]; }; then
-      failed=1
+    if [ "$status" != "running" ] && [ "$status" != "created" ] && [ "$exit_code" != "1" ]; then
+      echo "backend-jwt-startup ($label): expected exit code 1, got $exit_code (status=$status restarts=$restarts)" >&2
+      compose logs --no-color backend-service >&2 || true
+      exit 1
+    fi
+    if [ "$restarts" -ge 2 ] && [ "$exit_code" = "1" ] && [ "$status" != "running" ]; then
+      observed=1
       break
     fi
     sleep 1
   done
 
-  if [ "$failed" -ne 1 ]; then
-    echo "backend-jwt-startup ($label): expected exit code 1 failure; status=$status exit=$exit_code restarts=$restarts health=$health" >&2
+  if [ "$observed" -ne 1 ]; then
+    echo "backend-jwt-startup ($label): expected at least 2 restarts with exit code 1; status=$status exit=$exit_code restarts=$restarts health=$health" >&2
     compose logs --no-color backend-service >&2 || true
     exit 1
   fi
 
-  health_after=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id")
-  if [ "$health_after" = "healthy" ]; then
-    echo "backend-jwt-startup ($label): container became healthy after failing" >&2
+  logs=$(compose logs --no-color backend-service 2>&1)
+  invalid_count=$(printf '%s\n' "$logs" | grep -c '"code":"JWT_CONFIG_INVALID"' || true)
+  if [ "$invalid_count" -lt 2 ]; then
+    echo "backend-jwt-startup ($label): expected at least 2 structured JWT_CONFIG_INVALID log entries, got $invalid_count" >&2
+    printf '%s\n' "$logs" >&2
     exit 1
   fi
-
-  logs=$(compose logs --no-color backend-service 2>&1)
-  printf '%s\n' "$logs" | grep -q '"code":"JWT_CONFIG_INVALID"' || {
-    echo "backend-jwt-startup ($label): missing structured JWT_CONFIG_INVALID log" >&2
-    exit 1
-  }
   if [ -n "$forbidden" ] && printf '%s\n' "$logs" | grep -qF "$forbidden"; then
     echo "backend-jwt-startup ($label): invalid JWT_SECRET leaked into logs" >&2
     exit 1
