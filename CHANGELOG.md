@@ -18,6 +18,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e es
 - Documentação de entradas reproduzíveis de build em `docs/build-inputs.md`.
 
 ### Alterado
+- Configuração única e validada de `JWT_SECRET` no startup do backend (mínimo de 32 bytes via ambiente ou `.env`), sem valor padrão em código, com documentação de provisionamento e rotação.
 - Imagens Docker de backend, frontend e Nginx refatoradas com estágios `dev`/`prod`, execução sem root e digests fixados.
 - Inicialização de administrador via hash bcrypt fornecido por ambiente (`TESTFLOW_ADMIN_PASSWORD_HASH`), sem credenciais padrão no repositório.
 - Configuração de origem pública do Nginx (`NGINX_PUBLIC_ORIGIN` / `FRONTEND_URL`) e preparação automática de permissões de evidências no Compose.

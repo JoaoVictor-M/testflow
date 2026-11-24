@@ -30,7 +30,7 @@ sh scripts/dev.sh logs    # acompanha os logs dos serviços de desenvolvimento
 sh scripts/dev.sh down    # derruba os contêineres de desenvolvimento
 ```
 
-O `scripts/dev.sh` usa o projeto Compose `testflow-dev` (`docker-compose.yml` + `docker-compose.dev.yml`), isolado dos contêineres e volumes da produção. Ele expõe apenas a API em `http://localhost:3000` e o frontend em `http://localhost:5173/testflow/`.
+O `scripts/dev.sh` usa o projeto Compose `testflow-dev` (`docker-compose.yml` + `docker-compose.dev.yml`), isolado dos contêineres e volumes da produção. Ele expõe apenas a API em `http://localhost:3000` e o frontend em `http://localhost:5173/testflow/`. Defina `JWT_SECRET` (mínimo de 32 bytes, ex.: `openssl rand -hex 32`) no `.env` para o backend iniciar.
 
 ### Pilha de produção local e smoke das imagens
 

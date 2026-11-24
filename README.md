@@ -69,11 +69,25 @@ e só a partir de um hash bcrypt (custo 10 ou mais) que você fornece. Antes do 
 
 Instalações que já têm dados não mudam: o seed não roda de novo.
 
+### Chave JWT, migração e rotação
+
+O backend exige `JWT_SECRET` no `.env` (ou no ambiente do container) com pelo menos 32 bytes. Sem uma chave válida, o serviço não inicia e registra o erro de configuração sem expor valores. Gere uma chave forte antes de subir:
+
+```bash
+openssl rand -hex 32
+```
+
+Grave o resultado no `.env` como `JWT_SECRET=<chave-gerada>`.
+
+- **Migração de instalações existentes:** se o `.env` anterior não definia `JWT_SECRET`, defina uma chave nova antes de subir a versão atualizada.
+- **Rotação da chave:** para rotacionar `JWT_SECRET`, atualize o valor no `.env` e reinicie a aplicação (`docker compose up -d`).
+- **Efeito em sessões existentes:** ao migrar ou rotacionar `JWT_SECRET`, todos os tokens emitidos com a chave anterior deixam de ser aceitos imediatamente; usuários conectados precisarão fazer login novamente. Nenhum dado do banco ou de evidências é afetado.
+
 ---
 
 ## 🔄 Como Atualizar o Sistema
 
-Quando uma nova versão estiver disponível, execute os comandos abaixo dentro da pasta do projeto:
+Quando uma nova versão estiver disponível, verifique se `JWT_SECRET` já está definido no `.env` (veja **Chave JWT, migração e rotação** acima) e execute os comandos abaixo dentro da pasta do projeto:
 ```bash
 docker compose down
 docker rmi ghcr.io/joaovictor-m/testflow-backend:latest ghcr.io/joaovictor-m/testflow-frontend:latest ghcr.io/joaovictor-m/testflow-nginx:latest 2>/dev/null
