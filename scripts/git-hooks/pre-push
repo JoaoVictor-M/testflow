@@ -1,0 +1,7 @@
+#!/bin/sh
+# git passes the refs being pushed on stdin; guard-push refuses the forbidden ones.
+set -eu
+root=$(git rev-parse --show-toplevel)
+pushed=$(sh "$root/scripts/git-hooks/guard-push.sh")
+# develop only receives code that passes the quality checks.
+case "$pushed" in *develop*) "$root/scripts/check.sh" quality ;; esac
