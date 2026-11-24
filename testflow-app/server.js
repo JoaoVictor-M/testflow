@@ -116,7 +116,7 @@ app.use(cors({
     optionsSuccessStatus: 204
 }));
 
-const MONGO_URI = 'mongodb://mongodb-service:27017/testflow-db';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://mongodb-service:27017/testflow-db';
 mongoose.connect(MONGO_URI)
     .then(() => console.log('Conexão com o MongoDB (via Docker) estabelecida!')) // eslint-disable-line no-console
     .catch((error) => console.error('!!!!!! ERRO AO CONECTAR NO MONGO !!!!!!:', error)); // eslint-disable-line no-console
