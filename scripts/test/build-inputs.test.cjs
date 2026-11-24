@@ -75,12 +75,13 @@ test('manifest divergence is rejected and optional platform packages may be abse
     assert.throws(() => snapshot(root), /manifest and lock/);
 });
 
-test('Compose files share a MongoDB tag and digest; workflows use the container checks', () => {
+test('Compose files (dev, test and CI) share a MongoDB tag and digest; workflows use the container checks', () => {
     const root = path.resolve(__dirname, '../..');
     const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
-    const images = ['docker-compose.yml', 'docker-compose.teste.yml']
+    const images = ['docker-compose.yml', 'docker-compose.teste.yml', 'docker-compose.ci.yml']
         .map((name) => read(name).match(/image: (mongo:[^\s]+)/)[1]);
     assert.match(images[0], /^mongo:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/);
+    assert.equal(images.length, 3);
     assert.equal(new Set(images).size, 1);
     assert.match(read('scripts/check.sh'), /^NODE_IMAGE=node:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/m);
     for (const workflow of ['deploy-prod.yml']) {

@@ -25,11 +25,18 @@ updates:
     cooldown:
       default-days: 7
     directories:
-      - /
+      - /backup
       - /testflow-app
       - /testflow-frontend
       - /nginx
       - /scripts/test
+    target-branch: develop
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker-compose
+    directory: /
+    cooldown:
+      default-days: 7
     target-branch: develop
     schedule:
       interval: weekly

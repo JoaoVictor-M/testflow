@@ -45,7 +45,7 @@ test('all develop checks use check.sh and preserve the mandatory integration and
 });
 
 test('actions have full SHA pins and no workflow interpolates expressions into shell scripts', () => {
-    for (const name of fs.readdirSync(path.join(root, '.github/workflows'))) {
+    for (const name of fs.readdirSync(path.join(root, '.github/workflows')).filter((file) => /\.ya?ml$/.test(file))) {
         const content = read(`.github/workflows/${name}`);
         for (const action of content.matchAll(/^\s+(?:- )?uses: (.+)$/gm)) {
             assert.match(action[1], /^[\w./-]+@[a-f0-9]{40} # [\w.]+$/, `${name}: ${action[1]}`);
@@ -78,10 +78,21 @@ test('matrix values are passed as a single literal shell argument', (t) => {
     assert.equal(fs.existsSync(path.join(directory, 'injected')), false);
 });
 
-test('Dependabot updates both lockfiles, actions and Dockerfiles against develop', () => {
+// Directories (relative to the root, with a leading slash) that hold a file named Dockerfile.
+function dockerfileDirectories(directory, found = []) {
+    const skipped = new Set(['.git', 'node_modules', '.cache', 'reports']);
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (entry.isDirectory() && !skipped.has(entry.name)) dockerfileDirectories(path.join(directory, entry.name), found);
+        const relative = `/${path.relative(root, directory)}`;
+        if (entry.isFile() && /dockerfile/i.test(entry.name) && !found.includes(relative)) found.push(relative);
+    }
+    return found;
+}
+
+test('Dependabot updates both lockfiles, actions, Dockerfiles and Compose images against develop', () => {
     const config = read('.github/dependabot.yml');
     const updates = config.split('  - package-ecosystem: ').slice(1);
-    assert.equal(updates.length, 4);
+    assert.equal(updates.length, 5);
     for (const update of updates) {
         assert.match(update, /target-branch: develop/);
         assert.match(update, /interval: weekly/);
@@ -91,7 +102,10 @@ test('Dependabot updates both lockfiles, actions and Dockerfiles against develop
         assert.ok(updates.some((update) => update.startsWith('npm\n') && update.includes(`directory: ${directory}\n`)));
     }
     assert.ok(updates.some((update) => update.startsWith('github-actions\n')));
-    assert.ok(updates.some((update) => update.startsWith('docker\n') && update.includes('/nginx')));
+    const docker = updates.find((update) => update.startsWith('docker\n'));
+    const dockerDirectories = docker.match(/directories:\n((?: {6}- .+\n)+)/)[1].match(/\/\S*/g);
+    assert.deepEqual([...dockerDirectories].sort(), dockerfileDirectories(root).sort());
+    assert.ok(updates.some((update) => update.startsWith('docker-compose\n') && update.includes('directory: /\n')));
 });
 
 test('DAST uses an isolated stack with no persistent volumes, published ports or local secrets', (t) => {
