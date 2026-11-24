@@ -50,7 +50,10 @@ describe('rotas de evidência com nome de arquivo malicioso', () => {
         return connectTo('testflow-test-evidence-path');
     });
     after(async () => {
-        if (!baseDirJaExistia) fs.rmSync(baseDir, { recursive: true, force: true });
+        // Só uma pasta vazia: outros arquivos de teste, em paralelo, podem estar gravando nela.
+        if (!baseDirJaExistia) {
+            try { fs.rmdirSync(baseDir); } catch (erro) { if (!['ENOENT', 'ENOTEMPTY'].includes(erro.code)) throw erro; }
+        }
         await dropAndDisconnect();
     });
     afterEach(() => {
