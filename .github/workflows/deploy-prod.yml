@@ -203,6 +203,10 @@ jobs:
           cp source/README.md prod/README.md || echo "O README.md não foi encontrado"
           cp source/LICENSE prod/LICENSE || echo "A LICENSE não foi encontrada"
           cp source/SECURITY.md prod/SECURITY.md || echo "O SECURITY.md não foi encontrado"
+          # Backup: o serviço `backup` do Compose é construído de ./backup e a restauração usa scripts/restore.sh
+          mkdir -p prod/scripts
+          cp -R source/backup prod/backup
+          cp source/scripts/restore.sh prod/scripts/restore.sh
           
           # 2.1 Remove a seção de 'Desenvolvimento' inteira do README.md de produção usando sed delimitado
           sed -i '/## 🛠️ Desenvolvimento (Para Code Maintainers)/,/^---$/d' prod/README.md

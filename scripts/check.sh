@@ -7,7 +7,8 @@
 #   iac      Hadolint + Trivy config           all       every target above
 #   build-inputs  compare isolated npm ci trees and record versions/digests; audit  npm audit (all severities)
 #   test     unit and integration tests with coverage (back against a throwaway MongoDB, front in jsdom)
-# Targets for the stack (integration, e2e, DAST, load, release) arrive with the tasks that need them.
+#   integration  backup, restore into a new database and comparison, on a throwaway MongoDB
+# Targets for the stack (e2e, DAST, load, release) arrive with the tasks that need them.
 set -eu
 cd "$(dirname "$0")/.."
 
@@ -41,12 +42,18 @@ node() { run -w "/work/$1" "$NODE_IMAGE" sh -c "$2"; }
 
 check() {
   case $1 in
-    all) for target in quality secrets sast sca iac; do check "$target"; done ;;
+    all) for target in quality integration secrets sast sca iac; do check "$target"; done ;;
     quality) for target in build-inputs lint test test-scripts test-repository build; do check "$target"; done ;;
     build-inputs) run -e "TESTFLOW_NODE_IMAGE=$NODE_IMAGE" "$NODE_IMAGE" sh scripts/build-inputs.sh ;;
     audit) for dir in "$BACK" "$FRONT"; do node "$dir" 'npm audit'; done ;;
     # The project's own shell tests: git hooks, dev.sh and this script.
-    test-scripts) for test in scripts/git-hooks/*.test.sh scripts/*.test.sh; do sh "$test"; done ;;
+    # backup.test.sh needs the Docker daemon, so it runs in integration instead.
+    test-scripts)
+      for test in scripts/git-hooks/*.test.sh scripts/*.test.sh; do
+        [ "$test" = scripts/backup.test.sh ] || sh "$test"
+      done
+      ;;
+    integration) sh scripts/backup.test.sh ;;
     # Repository tests (ignore rules, workflows, Dockerfiles and Compose files) in Node with the Docker
     # CLI, which only renders configuration.
     test-repository)
