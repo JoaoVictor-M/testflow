@@ -45,7 +45,8 @@ async function renderContext(name) {
     return value;
 }
 
-test('a fresh auth provider requires login even when a previous token is stored', async (t) => {
+// SSR cobre apenas a inicialização síncrona, sem executar efeitos de mount.
+test('auth initializes synchronously with no user and loading false despite a stored token', async (t) => {
     browserPreferences(t, null);
     const value = await renderContext('Auth');
     assert.equal(value.user, null);

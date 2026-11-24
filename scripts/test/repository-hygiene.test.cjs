@@ -1,3 +1,4 @@
+// Run in Node 20 with Git, OpenSSL and the Docker Compose CLI; no Docker socket is needed.
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -11,6 +12,12 @@ function temporaryDirectory(t) {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-hygiene-'));
     t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
     return directory;
+}
+
+function workflowScript(content, name) {
+    const step = content.split(`      - name: ${name}\n        run: |\n`)[1];
+    assert.ok(step, `workflow must include ${name}`);
+    return step.split(/\n(?=      - name:)/)[0].replace(/^          /gm, '');
 }
 
 test('Git ignores secrets and local artifacts while allowing public configuration and source', (t) => {
@@ -45,8 +52,9 @@ test('Git ignores secrets and local artifacts while allowing public configuratio
         'testflow-frontend/src/App.jsx', '.github/workflows/security.yml',
         'scripts/test/repository-hygiene.test.cjs',
     ];
-    const matches = execFileSync('git', ['check-ignore', '--no-index', '-z', '--stdin'], {
+    const matches = execFileSync('git', ['-c', 'core.excludesFile=/dev/null', 'check-ignore', '--no-index', '-z', '--stdin'], {
         cwd: directory, input: [...ignored, ...allowed].join('\0') + '\0', encoding: 'utf8',
+        env: { ...process.env, GIT_CONFIG_NOSYSTEM: '1' },
     }).split('\0').filter(Boolean);
     assert.deepEqual(matches, ignored);
 
@@ -57,9 +65,7 @@ test('Git ignores secrets and local artifacts while allowing public configuratio
 for (const workflow of ['security.yml', 'deploy-prod.yml']) {
     test(`${workflow} creates a fresh, masked JWT secret in a private environment file`, (t) => {
         const content = fs.readFileSync(path.join(root, '.github/workflows', workflow), 'utf8');
-        const step = content.match(/      - name: Create \.env for testing\r?\n        run: \|\r?\n((?:          [^\n]*\r?\n|\r?\n)+)/);
-        assert.ok(step, 'workflow must prepare the test environment');
-        const script = step[1].replace(/^          /gm, '');
+        const script = workflowScript(content, 'Create .env for testing');
         const directory = temporaryDirectory(t);
         fs.mkdirSync(path.join(directory, 'testflow-app'));
         const secrets = [];
@@ -79,5 +85,39 @@ for (const workflow of ['security.yml', 'deploy-prod.yml']) {
             secrets.push(secret);
         }
         assert.notEqual(secrets[0], secrets[1]);
+    });
+
+    test(`${workflow} passes the generated JWT and database URI to the Compose backend`, (t) => {
+        const content = fs.readFileSync(path.join(root, '.github/workflows', workflow), 'utf8');
+        const directory = temporaryDirectory(t);
+        fs.mkdirSync(path.join(directory, 'testflow-app'));
+        fs.copyFileSync(path.join(root, 'docker-compose.yml'), path.join(directory, 'docker-compose.yml'));
+        execFileSync('bash', ['-e', '-c', workflowScript(content, 'Create .env for testing')], {
+            cwd: directory, stdio: 'pipe',
+        });
+        const secret = fs.readFileSync(path.join(directory, 'testflow-app/.env'), 'utf8')
+            .match(/^JWT_SECRET=(.+)$/m)[1];
+
+        // Execute the real workflow script, recording its Docker command without starting services.
+        const bin = path.join(directory, 'bin');
+        fs.mkdirSync(bin);
+        const argumentsFile = path.join(directory, 'compose-arguments');
+        fs.writeFileSync(path.join(bin, 'docker'), '#!/bin/sh\nprintf \'%s\\0\' "$@" > "$TESTFLOW_DOCKER_ARGUMENTS"\n', { mode: 0o700 });
+        execFileSync('bash', ['-e', '-c', workflowScript(content, 'Build and Start Application')], {
+            cwd: directory,
+            env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, TESTFLOW_DOCKER_ARGUMENTS: argumentsFile },
+        });
+        const args = fs.readFileSync(argumentsFile, 'utf8').split('\0').filter(Boolean);
+        assert.equal(args[0], 'compose');
+        assert.deepEqual(args.slice(-3), ['up', '-d', '--build']);
+        const configuration = JSON.parse(execFileSync('docker', [...args.slice(0, -3), 'config', '--format', 'json'], {
+            cwd: directory, encoding: 'utf8',
+            env: { ...process.env, FRONTEND_URL: 'https://frontend.example.test/testflow' },
+        }));
+        const environment = configuration.services['backend-service'].environment;
+        assert.equal(environment.JWT_SECRET, secret);
+        assert.equal(environment.MONGO_URI, 'mongodb://mongodb-service:27017/testflow');
+        assert.equal(environment.PORT, '3000');
+        assert.equal(environment.FRONTEND_URL, 'https://frontend.example.test/testflow');
     });
 }
