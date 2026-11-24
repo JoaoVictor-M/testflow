@@ -113,7 +113,7 @@ runs secrets 'gitleaks' 'git .'
 fails_when secrets gitleaks
 runs secrets-staged 'gitleaks' '--staged'
 fails_when secrets-staged gitleaks
-runs sast 'semgrep scan' '--error' '--config p/owasp-top-ten' '--config p/nodejs' '--config p/javascript' \
+runs sast 'semgrep scan' '--error' '--jobs 1' '--config p/owasp-top-ten' '--config p/nodejs' '--config p/javascript' \
   '--config p/react' '--config p/secrets'
 fails_when sast 'semgrep scan'
 runs sca 'trivy' 'fs' '-w /work/testflow-app' '-w /work/testflow-frontend' 'npm audit --audit-level=high'
