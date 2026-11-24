@@ -4,7 +4,7 @@
   "description": "TestFlow é uma ferramenta interna de gestão de cenários de teste, desenvolvida para substituir o uso de planilhas do Excel na área de Análise de Qualidade. O objetivo é centralizar, organizar e facilitar a colaboração na criação e manutenção de casos de teste, fornecendo uma base sólida para a evolução dos processos na empresa.",
   "main": "index.js",
   "scripts": {
-    "test": "node --test test/dependencies.test.js",
+    "test": "c8 node --test test/*.test.js",
     "test:smoke": "node --test test/smoke.test.js",
     "lint": "eslint ."
   },
@@ -24,8 +24,10 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",
+    "c8": "^9.1.0",
     "eslint": "^9.39.2",
     "eslint-plugin-security": "^3.0.1",
-    "globals": "^17.2.0"
+    "globals": "^17.2.0",
+    "supertest": "^7.3.2"
   }
 }

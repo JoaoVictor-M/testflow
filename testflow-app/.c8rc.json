@@ -1,0 +1,9 @@
+{
+  "all": true,
+  "src": ["."],
+  "include": ["**/*.js"],
+  "exclude": ["test/**", "eslint.config.js", "coverage/**", "node_modules/**"],
+  "reporter": ["text-summary", "json-summary"],
+  "check-coverage": true,
+  "lines": 39
+}
