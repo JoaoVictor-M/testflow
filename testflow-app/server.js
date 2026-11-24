@@ -21,6 +21,7 @@ const path = require('path');
 const { logAudit } = require('./services/auditService');
 const AuditLog = require('./models/AuditLog');
 const { logger } = require('./utils/logger');
+const { resolveEvidenceFile } = require('./utils/evidencePath');
 const requestLogger = require('./middleware/requestLogger');
 const { isDatabaseReady } = require('./services/healthService');
 require('dotenv').config({ quiet: true }); // o aviso do dotenv não é JSON
@@ -1442,17 +1443,9 @@ app.delete('/api/demandas/:id/evidence/:evidenceId', authMiddleware, roleMiddlew
         if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
         const dirPath = await getSecureEvidenceDir(id, demanda);
-        if (dirPath) {
-            // Validate filename before accessing
-            const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
-            const filePath = path.resolve(path.join(dirPath, safeFilename));
-
-            // Ensure the resolved path is inside the specific evidence directory for this particular ID
-            if (filePath.startsWith(dirPath)) {
-                if (fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
-                    fs.unlinkSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
-                }
-            }
+        const filePath = dirPath && resolveEvidenceFile(dirPath, evidence.filename);
+        if (filePath && fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
+            fs.unlinkSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
         }
 
         // Remove from DB
@@ -1486,24 +1479,12 @@ app.get('/api/demandas/:id/evidence/:evidenceId/file', async (req, res) => {
         if (!evidence) return res.status(404).json({ message: 'Evidência não encontrada.' });
 
         const dirPath = await getSecureEvidenceDir(id, demanda);
-        if (dirPath) {
-            const safeFilename = evidence.filename.replace(/[^a-zA-Z0-9.\-_]/g, '');
-            const filePath = path.resolve(path.join(dirPath, safeFilename));
+        const filePath = dirPath && resolveEvidenceFile(dirPath, evidence.filename);
+        if (!filePath) return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
 
-            // Ensure the resolved path is inside the specific evidence directory for this particular ID
-            if (filePath.startsWith(dirPath)) {
-                return res.sendFile(filePath, (err) => {
-                    if (err) {
-                        if (!res.headersSent) res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
-                    }
-                });
-            }
-        }
-
-        // Se não entrou no return acima:
-        if (!res.headersSent) {
-            return res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
-        }
+        return res.sendFile(filePath, (err) => {
+            if (err && !res.headersSent) res.status(404).json({ message: 'Arquivo não encontrado no servidor.' });
+        });
     } catch (error) {
         logger.error('Erro ao processar a requisição', { err: error });
         if (!res.headersSent) res.status(500).json({ message: error.message });
