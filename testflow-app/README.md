@@ -30,25 +30,15 @@ O uso de planilhas para gerenciamento de testes apresenta várias limitações:
 
 ## Como Rodar o Projeto Localmente
 
-1.  **Iniciar o Banco de Dados:**
-    * É necessário ter o Docker Desktop em execução.
-    * No terminal, na raiz do projeto, execute:
-    ```bash
-    docker-compose up -d
-    ```
-    * Este comando só precisa ser executado uma vez para criar o contêiner do banco de dados. Para pará-lo, use `docker-compose down`.
+Tudo roda em Docker; não há Node nem MongoDB para instalar na máquina. Na raiz do repositório:
 
-2.  **Instalar Dependências do Node.js:**
-    * Se for a primeira vez ou se novas dependências foram adicionadas:
-    ```bash
-    npm install
-    ```
+```bash
+sh scripts/dev.sh up
+```
 
-3.  **Executar o Servidor:**
-    ```bash
-    node index.js
-    ```
-    O servidor estará disponível em `http://localhost:3000`.
+O comando sobe MongoDB, API e front com recarga automática ao salvar. A API fica em
+`http://localhost:3000` e o front em `http://localhost:5173/testflow/`; o MongoDB não é publicado.
+Para parar, `sh scripts/dev.sh down`; para ver os logs, `sh scripts/dev.sh logs`.
 
 ## Endpoints da API (v0.4)
 
