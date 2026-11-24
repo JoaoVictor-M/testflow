@@ -1,14 +1,13 @@
 const mongoose = require('mongoose');
 
-const retainedAttachmentSchema = new mongoose.Schema({
+const cascadeAttachmentSchema = new mongoose.Schema({
     demandaId: { type: mongoose.Schema.Types.ObjectId, default: null },
     demandaCode: { type: String, default: '' },
     demandaName: { type: String, default: '' },
     relativeDir: { type: String, default: '' },
     filename: { type: String, required: true },
     originalName: { type: String, default: '' },
-    size: { type: Number, default: 0 },
-    sha256: { type: String, default: '' }
+    size: { type: Number, default: 0 }
 }, { _id: false });
 
 const cascadeDeletionJobSchema = new mongoose.Schema({
@@ -39,7 +38,7 @@ const cascadeDeletionJobSchema = new mongoose.Schema({
     },
     phase: {
         type: String,
-        enum: ['snapshot', 'deleting_scenarios', 'deleting_demandas', 'deleting_project', 'completed'],
+        enum: ['snapshot', 'deleting_scenarios', 'deleting_demandas', 'deleting_project', 'deleting_files', 'completed'],
         default: 'snapshot'
     },
     failedPhase: {
@@ -60,15 +59,14 @@ const cascadeDeletionJobSchema = new mongoose.Schema({
         demandaCount: { type: Number, default: 0 },
         scenarioCount: { type: Number, default: 0 }
     },
-    retentionState: {
-        type: String,
-        enum: ['retained', 'approved_for_purge', 'purged'],
-        default: 'retained',
-        index: true
-    },
-    retainedAttachments: {
-        type: [retainedAttachmentSchema],
+    attachments: {
+        type: [cascadeAttachmentSchema],
         default: []
+    },
+    fileCleanupSummary: {
+        removedFiles: { type: Number, default: 0 },
+        skippedSharedFiles: { type: Number, default: 0 },
+        missingFiles: { type: Number, default: 0 }
     },
     auditSnapshot: {
         type: mongoose.Schema.Types.Mixed,
@@ -81,15 +79,6 @@ const cascadeDeletionJobSchema = new mongoose.Schema({
     recoveredAt: {
         type: Date,
         default: null
-    },
-    purgedAt: {
-        type: Date,
-        default: null
-    },
-    purgeSummary: {
-        removedFiles: { type: Number, default: 0 },
-        skippedSharedFiles: { type: Number, default: 0 },
-        missingFiles: { type: Number, default: 0 }
     }
 }, { timestamps: true });
 

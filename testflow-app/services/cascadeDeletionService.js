@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const AuditLog = require('../models/AuditLog');
@@ -15,11 +14,58 @@ const {
 const { logger } = require('../utils/logger');
 
 const DEFAULT_EVIDENCE_BASE_DIR = path.resolve(__dirname, '..', '..', 'evidencias_testes');
-const MAX_RECONCILE_PASSES = 5;
+const MAX_RECONCILE_ROUNDS = 5;
+
+const cleanAuditSnapshot = (doc) => {
+    if (!doc) return doc;
+    const clone = { ...doc };
+    delete clone.password;
+    delete clone.__v;
+    delete clone.resetPasswordToken;
+    delete clone.resetPasswordExpires;
+    delete clone.evidences;
+    return clone;
+};
+
+const resolveDemandaEvidenceEntry = (demanda, evidence, evidenceBaseDir) => {
+    const candidates = candidateEvidenceDirsForDemanda(demanda);
+    let chosenDir = candidates[0] || '';
+
+    for (const relativeDir of candidates) {
+        const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
+        const filePath = subdir && resolveEvidenceFile(subdir, evidence.filename);
+        if (filePath && fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
+            chosenDir = relativeDir;
+            break;
+        }
+    }
+
+    return {
+        demandaId: demanda._id,
+        demandaCode: demanda.demandaId || '',
+        demandaName: demanda.nome || '',
+        relativeDir: chosenDir,
+        filename: evidence.filename,
+        originalName: evidence.originalName || '',
+        size: typeof evidence.size === 'number' ? evidence.size : 0
+    };
+};
+
+const snapshotDemandaAttachments = (demandas, evidenceBaseDir) => {
+    const items = [];
+    for (const demanda of demandas) {
+        const evidences = Array.isArray(demanda.evidences) ? demanda.evidences : [];
+        for (const evidence of evidences) {
+            if (!evidence || typeof evidence.filename !== 'string' || !evidence.filename) continue;
+            items.push(resolveDemandaEvidenceEntry(demanda, evidence, evidenceBaseDir));
+        }
+    }
+    return items;
+};
 
 const attachmentKey = (item) => `${String(item.demandaId || '')}::${item.relativeDir || ''}::${item.filename}`;
 
-const mergeRetainedAttachments = (existing, discovered) => {
+const mergeAttachments = (existing, discovered) => {
     const merged = [];
     const indexByKey = new Map();
 
@@ -42,7 +88,6 @@ const mergeRetainedAttachments = (existing, discovered) => {
             merged.push(item);
         } else {
             const current = merged[existingIndex];
-            if (!current.sha256 && item.sha256) current.sha256 = item.sha256;
             if (!current.size && item.size) current.size = item.size;
             if (!current.originalName && item.originalName) current.originalName = item.originalName;
         }
@@ -71,7 +116,7 @@ const reconcileCascadeScope = async (job, evidenceBaseDir, previousFailedPhase) 
     for (const demanda of currentDemandas) addDemandaId(demanda._id);
 
     const discoveredAttachments = snapshotDemandaAttachments(currentDemandas, evidenceBaseDir);
-    job.retainedAttachments = mergeRetainedAttachments(job.retainedAttachments, discoveredAttachments);
+    job.attachments = mergeAttachments(job.attachments, discoveredAttachments);
 
     const remainingScenarios = mergedDemandaIds.length > 0
         ? await Scenario.countDocuments({ demanda: { $in: mergedDemandaIds } })
@@ -91,61 +136,104 @@ const reconcileCascadeScope = async (job, evidenceBaseDir, previousFailedPhase) 
     return { demandaIds: mergedDemandaIds };
 };
 
-const cleanAuditSnapshot = (doc) => {
-    if (!doc) return doc;
-    const clone = { ...doc };
-    delete clone.password;
-    delete clone.__v;
-    delete clone.resetPasswordToken;
-    delete clone.resetPasswordExpires;
-    delete clone.evidences;
-    return clone;
-};
-
-const sha256IfRegularFile = (filePath) => {
-    if (!filePath || !fs.existsSync(filePath)) return ''; // eslint-disable-line security/detect-non-literal-fs-filename
-    const stat = fs.lstatSync(filePath); // eslint-disable-line security/detect-non-literal-fs-filename
-    if (!stat.isFile()) return '';
-    return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex'); // eslint-disable-line security/detect-non-literal-fs-filename
-};
-
-const resolveDemandaEvidenceEntry = (demanda, evidence, evidenceBaseDir) => {
-    const candidates = candidateEvidenceDirsForDemanda(demanda);
-    let chosenDir = candidates[0] || '';
-    let sha256 = '';
-
-    for (const relativeDir of candidates) {
-        const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
-        const filePath = subdir && resolveEvidenceFile(subdir, evidence.filename);
-        if (filePath && fs.existsSync(filePath)) { // eslint-disable-line security/detect-non-literal-fs-filename
-            chosenDir = relativeDir;
-            sha256 = sha256IfRegularFile(filePath);
-            break;
-        }
-    }
-
-    return {
-        demandaId: demanda._id,
-        demandaCode: demanda.demandaId || '',
-        demandaName: demanda.nome || '',
-        relativeDir: chosenDir,
-        filename: evidence.filename,
-        originalName: evidence.originalName || '',
-        size: typeof evidence.size === 'number' ? evidence.size : 0,
-        sha256
-    };
-};
-
-const snapshotDemandaAttachments = (demandas, evidenceBaseDir) => {
-    const items = [];
-    for (const demanda of demandas) {
+const collectActiveReferencedPaths = async (evidenceBaseDir) => {
+    const activePaths = new Set();
+    const activeDemandas = await Demanda.find({}, 'demandaId nome evidences').lean();
+    for (const demanda of activeDemandas) {
+        const candidates = candidateEvidenceDirsForDemanda(demanda);
         const evidences = Array.isArray(demanda.evidences) ? demanda.evidences : [];
         for (const evidence of evidences) {
-            if (!evidence || typeof evidence.filename !== 'string' || !evidence.filename) continue;
-            items.push(resolveDemandaEvidenceEntry(demanda, evidence, evidenceBaseDir));
+            if (!evidence || typeof evidence.filename !== 'string') continue;
+            for (const relativeDir of candidates) {
+                const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
+                const filePath = subdir && resolveEvidenceFile(subdir, evidence.filename);
+                if (filePath) activePaths.add(path.resolve(filePath));
+            }
         }
     }
-    return items;
+    return activePaths;
+};
+
+const collectIncompleteJobPaths = async (evidenceBaseDir, excludeJobId) => {
+    const protectedPaths = new Set();
+    const otherJobs = await CascadeDeletionJob.find(
+        { _id: { $ne: excludeJobId }, status: { $ne: 'completed' } },
+        'attachments'
+    ).lean();
+
+    for (const otherJob of otherJobs) {
+        const attachments = Array.isArray(otherJob.attachments) ? otherJob.attachments : [];
+        for (const item of attachments) {
+            if (!item || typeof item.filename !== 'string' || !item.filename) continue;
+            const dirs = new Set();
+            if (typeof item.relativeDir === 'string' && item.relativeDir) {
+                dirs.add(item.relativeDir);
+            }
+            if (item.demandaCode || item.demandaName) {
+                for (const candidate of candidateEvidenceDirsForDemanda({
+                    demandaId: item.demandaCode,
+                    nome: item.demandaName
+                })) {
+                    dirs.add(candidate);
+                }
+            }
+            for (const relativeDir of dirs) {
+                const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
+                const filePath = subdir && resolveEvidenceFile(subdir, item.filename);
+                if (filePath) protectedPaths.add(path.resolve(filePath));
+            }
+        }
+    }
+    return protectedPaths;
+};
+
+const collectProtectedEvidencePaths = async (evidenceBaseDir, excludeJobId) => {
+    const [activePaths, incompleteJobPaths] = await Promise.all([
+        collectActiveReferencedPaths(evidenceBaseDir),
+        collectIncompleteJobPaths(evidenceBaseDir, excludeJobId)
+    ]);
+    for (const filePath of incompleteJobPaths) activePaths.add(filePath);
+    return activePaths;
+};
+
+const deleteCascadeAttachments = async (job, evidenceBaseDir) => {
+    const protectedPaths = await collectProtectedEvidencePaths(evidenceBaseDir, job._id);
+    const touchedDirs = new Set();
+    const processedFiles = new Set();
+    const summary = { removedFiles: 0, skippedSharedFiles: 0, missingFiles: 0 };
+
+    for (const item of job.attachments) {
+        const subdir = resolveEvidenceSubdir(evidenceBaseDir, item.relativeDir);
+        const filePath = subdir && resolveEvidenceFile(subdir, item.filename);
+        if (!filePath) continue;
+
+        const resolvedFile = path.resolve(filePath);
+        if (processedFiles.has(resolvedFile)) continue;
+        processedFiles.add(resolvedFile);
+
+        if (protectedPaths.has(resolvedFile)) {
+            summary.skippedSharedFiles += 1;
+            continue;
+        }
+        if (!fs.existsSync(resolvedFile)) { // eslint-disable-line security/detect-non-literal-fs-filename
+            summary.missingFiles += 1;
+            continue;
+        }
+        const stat = fs.lstatSync(resolvedFile); // eslint-disable-line security/detect-non-literal-fs-filename
+        if (!stat.isFile()) continue;
+
+        fs.unlinkSync(resolvedFile); // eslint-disable-line security/detect-non-literal-fs-filename
+        summary.removedFiles += 1;
+        touchedDirs.add(path.resolve(subdir));
+    }
+
+    for (const dir of touchedDirs) {
+        if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) { // eslint-disable-line security/detect-non-literal-fs-filename
+            fs.rmdirSync(dir); // eslint-disable-line security/detect-non-literal-fs-filename
+        }
+    }
+
+    return summary;
 };
 
 const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseDir = DEFAULT_EVIDENCE_BASE_DIR }) => {
@@ -159,8 +247,8 @@ const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseD
         job.failedPhase = null;
         job.errorMessage = '';
 
-        for (let pass = 0; pass < MAX_RECONCILE_PASSES; pass += 1) {
-            const phaseHint = pass === 0 ? previousFailedPhase : 'deleting_demandas';
+        for (let round = 0; round < MAX_RECONCILE_ROUNDS; round += 1) {
+            const phaseHint = round === 0 ? previousFailedPhase : 'deleting_demandas';
             const { demandaIds } = await reconcileCascadeScope(job, evidenceBaseDir, phaseHint);
 
             currentPhase = 'deleting_scenarios';
@@ -183,7 +271,7 @@ const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseD
 
             const hasNewDemandas = await Demanda.exists({ project: job.targetId });
             if (!hasNewDemandas) break;
-            if (pass === MAX_RECONCILE_PASSES - 1) {
+            if (round === MAX_RECONCILE_ROUNDS - 1) {
                 throw new Error('Exclusão em cascata do projeto interrompida por novas demandas concorrentes.');
             }
         }
@@ -195,6 +283,11 @@ const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseD
             await Project.findByIdAndDelete(job.targetId);
         }
 
+        currentPhase = 'deleting_files';
+        job.phase = currentPhase;
+        await job.save();
+        job.fileCleanupSummary = await deleteCascadeAttachments(job, evidenceBaseDir);
+
         const alreadyAudited = await AuditLog.exists({
             action: 'DELETE',
             entity: job.targetType,
@@ -205,8 +298,7 @@ const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseD
             await logAudit('DELETE', job.targetType, job.targetId, actorId, {
                 old: job.auditSnapshot,
                 cascadeJobId: job._id,
-                retentionState: job.retentionState,
-                retainedAttachmentsCount: job.retainedAttachments.length,
+                fileCleanupSummary: job.fileCleanupSummary,
                 ...(isRecovery ? { recovered: true } : {})
             });
         }
@@ -228,7 +320,7 @@ const runCascadePhases = async (job, { userId, isRecovery = false, evidenceBaseD
         } catch (saveError) {
             logger.error('Falha ao persistir estado de erro da cascata', { err: saveError, cascadeJobId: job._id });
         }
-        logger.error('Falha na exclusão em cascata; anexos físicos preservados para recuperação', {
+        logger.error('Falha na exclusão em cascata; operação registrada para recuperação', {
             err: error,
             cascadeJobId: job._id,
             targetType: job.targetType,
@@ -248,7 +340,7 @@ const executeProjectCascadeDeletion = async ({ projectId, userId, evidenceBaseDi
     const scenarioCount = demandaIds.length > 0
         ? await Scenario.countDocuments({ demanda: { $in: demandaIds } })
         : 0;
-    const retainedAttachments = snapshotDemandaAttachments(demandas, evidenceBaseDir);
+    const attachments = snapshotDemandaAttachments(demandas, evidenceBaseDir);
 
     const job = await CascadeDeletionJob.create({
         targetType: 'Project',
@@ -263,8 +355,7 @@ const executeProjectCascadeDeletion = async ({ projectId, userId, evidenceBaseDi
             demandaCount: demandas.length,
             scenarioCount
         },
-        retentionState: 'retained',
-        retainedAttachments,
+        attachments,
         auditSnapshot: cleanAuditSnapshot(project)
     });
 
@@ -277,7 +368,7 @@ const executeDemandaCascadeDeletion = async ({ demandaId, userId, evidenceBaseDi
     if (!demanda) return { notFound: true };
 
     const scenarioCount = await Scenario.countDocuments({ demanda: demanda._id });
-    const retainedAttachments = snapshotDemandaAttachments([demanda], evidenceBaseDir);
+    const attachments = snapshotDemandaAttachments([demanda], evidenceBaseDir);
 
     const job = await CascadeDeletionJob.create({
         targetType: 'Demanda',
@@ -292,8 +383,7 @@ const executeDemandaCascadeDeletion = async ({ demandaId, userId, evidenceBaseDi
             demandaCount: 1,
             scenarioCount
         },
-        retentionState: 'retained',
-        retainedAttachments,
+        attachments,
         auditSnapshot: cleanAuditSnapshot(demanda)
     });
 
@@ -333,150 +423,9 @@ const recoverPendingCascades = async ({ userId, evidenceBaseDir = DEFAULT_EVIDEN
     return { recovered, failed };
 };
 
-const approvePhysicalPurge = async (jobId) => {
-    const job = await CascadeDeletionJob.findById(jobId);
-    if (!job) throw new Error('Registro de exclusão em cascata não encontrado.');
-    if (job.status !== 'completed') {
-        throw new Error('A exclusão em cascata ainda não foi concluída; eliminação física bloqueada.');
-    }
-    if (job.retentionState === 'purged') return job;
-    job.retentionState = 'approved_for_purge';
-    await job.save();
-    return job;
-};
-
-const collectActiveReferencedPaths = async (evidenceBaseDir) => {
-    const activePaths = new Set();
-    const activeDemandas = await Demanda.find({}, 'demandaId nome evidences').lean();
-    for (const demanda of activeDemandas) {
-        const candidates = candidateEvidenceDirsForDemanda(demanda);
-        const evidences = Array.isArray(demanda.evidences) ? demanda.evidences : [];
-        for (const evidence of evidences) {
-            if (!evidence || typeof evidence.filename !== 'string') continue;
-            for (const relativeDir of candidates) {
-                const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
-                const filePath = subdir && resolveEvidenceFile(subdir, evidence.filename);
-                if (filePath) activePaths.add(path.resolve(filePath));
-            }
-        }
-    }
-    return activePaths;
-};
-
-const collectProtectedJobPaths = async (evidenceBaseDir, excludeJobId) => {
-    const protectedPaths = new Set();
-    const otherJobs = await CascadeDeletionJob.find(
-        {
-            _id: { $ne: excludeJobId },
-            $or: [
-                { retentionState: 'retained' },
-                { status: { $ne: 'completed' } }
-            ]
-        },
-        'retainedAttachments'
-    ).lean();
-
-    for (const otherJob of otherJobs) {
-        const attachments = Array.isArray(otherJob.retainedAttachments) ? otherJob.retainedAttachments : [];
-        for (const item of attachments) {
-            if (!item || typeof item.filename !== 'string' || !item.filename) continue;
-            const dirs = new Set();
-            if (typeof item.relativeDir === 'string' && item.relativeDir) {
-                dirs.add(item.relativeDir);
-            }
-            if (item.demandaCode || item.demandaName) {
-                for (const candidate of candidateEvidenceDirsForDemanda({
-                    demandaId: item.demandaCode,
-                    nome: item.demandaName
-                })) {
-                    dirs.add(candidate);
-                }
-            }
-            for (const relativeDir of dirs) {
-                const subdir = resolveEvidenceSubdir(evidenceBaseDir, relativeDir);
-                const filePath = subdir && resolveEvidenceFile(subdir, item.filename);
-                if (filePath) protectedPaths.add(path.resolve(filePath));
-            }
-        }
-    }
-    return protectedPaths;
-};
-
-const collectProtectedEvidencePaths = async (evidenceBaseDir, excludeJobId) => {
-    const [activePaths, jobPaths] = await Promise.all([
-        collectActiveReferencedPaths(evidenceBaseDir),
-        collectProtectedJobPaths(evidenceBaseDir, excludeJobId)
-    ]);
-    for (const filePath of jobPaths) activePaths.add(filePath);
-    return activePaths;
-};
-
-const purgeRetainedAttachments = async (jobId, { evidenceBaseDir = DEFAULT_EVIDENCE_BASE_DIR, userId } = {}) => {
-    const job = await CascadeDeletionJob.findById(jobId);
-    if (!job) throw new Error('Registro de exclusão em cascata não encontrado.');
-    if (job.status !== 'completed') {
-        throw new Error('A exclusão em cascata ainda não foi concluída; eliminação física bloqueada.');
-    }
-    if (job.retentionState !== 'approved_for_purge') {
-        throw new Error('O registro não está aprovado para eliminação física.');
-    }
-
-    const protectedPaths = await collectProtectedEvidencePaths(evidenceBaseDir, job._id);
-    const touchedDirs = new Set();
-    const processedFiles = new Set();
-    const summary = { removedFiles: 0, skippedSharedFiles: 0, missingFiles: 0 };
-
-    for (const item of job.retainedAttachments) {
-        const subdir = resolveEvidenceSubdir(evidenceBaseDir, item.relativeDir);
-        const filePath = subdir && resolveEvidenceFile(subdir, item.filename);
-        if (!filePath) continue;
-
-        const resolvedFile = path.resolve(filePath);
-        if (processedFiles.has(resolvedFile)) continue;
-        processedFiles.add(resolvedFile);
-
-        if (protectedPaths.has(resolvedFile)) {
-            summary.skippedSharedFiles += 1;
-            continue;
-        }
-        if (!fs.existsSync(resolvedFile)) { // eslint-disable-line security/detect-non-literal-fs-filename
-            summary.missingFiles += 1;
-            continue;
-        }
-        const stat = fs.lstatSync(resolvedFile); // eslint-disable-line security/detect-non-literal-fs-filename
-        if (!stat.isFile()) continue;
-
-        fs.unlinkSync(resolvedFile); // eslint-disable-line security/detect-non-literal-fs-filename
-        summary.removedFiles += 1;
-        touchedDirs.add(path.resolve(subdir));
-    }
-
-    for (const dir of touchedDirs) {
-        if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) { // eslint-disable-line security/detect-non-literal-fs-filename
-            fs.rmdirSync(dir); // eslint-disable-line security/detect-non-literal-fs-filename
-        }
-    }
-
-    job.retentionState = 'purged';
-    job.purgedAt = new Date();
-    job.purgeSummary = summary;
-    await job.save();
-
-    await logAudit('DELETE', 'CascadeDeletionJob', job._id, userId || job.requestedBy, {
-        summary: 'Eliminação física de anexos retidos concluída',
-        targetType: job.targetType,
-        targetId: job.targetId,
-        purgeSummary: summary
-    });
-
-    return job;
-};
-
 module.exports = {
-    approvePhysicalPurge,
     executeDemandaCascadeDeletion,
     executeProjectCascadeDeletion,
-    purgeRetainedAttachments,
     recoverCascadeDeletion,
     recoverPendingCascades
 };
