@@ -124,3 +124,24 @@ case "$*" in *"\${FAIL_ON:-@never@}"*) exit 1 ;; esac`);
         assert.deepEqual(fs.readdirSync(path.join(f.directory, '.cache')), ['trivy']);
     }
 });
+
+test('publishing signs immutable digests before latest; push/sign/inspect failures prevent promotion', (t) => {
+    const f = fixture(t);
+    f.install('docker', `
+echo "docker $*" >> calls
+case "$*" in *"\${FAIL_ON:-@never@}"*) exit 1 ;; esac
+case "$*" in 'image inspect '*) [ -n "\${EMPTY_DIGEST:-}" ] || echo ghcr.io/example/testflow@sha256:abc123 ;; esac`);
+    f.install('cosign', 'echo "cosign $*" >> calls\n[ -z "${SIGN_FAILURE:-}" ]');
+    const envBase = { REGISTRY: 'ghcr.io', GITHUB_REPOSITORY_OWNER: 'Example', RELEASE_TAG: 'v2.3.4', GITHUB_SHA: 'commit-sha' };
+    const result = f.run('sh scripts/ci/publish-prod.sh', envBase);
+    assert.equal(result.status, 0, result.stderr);
+    const callsPath = path.join(f.directory, 'calls');
+    const calls = fs.readFileSync(callsPath, 'utf8');
+    assert.equal((calls.match(/cosign sign --yes ghcr\.io\/example\/testflow@sha256:abc123/g) ?? []).length, 3);
+    assert.ok(calls.lastIndexOf('cosign sign') < calls.indexOf(':latest'));
+    for (const extra of [{ SIGN_FAILURE: 'yes' }, { FAIL_ON: 'push' }, { FAIL_ON: 'load' }, { FAIL_ON: 'inspect' }, { EMPTY_DIGEST: 'yes' }]) {
+        fs.writeFileSync(callsPath, '');
+        assert.equal(f.run('sh scripts/ci/publish-prod.sh', { ...envBase, ...extra }).status, 1);
+        assert.doesNotMatch(fs.readFileSync(callsPath, 'utf8'), /:latest/);
+    }
+});

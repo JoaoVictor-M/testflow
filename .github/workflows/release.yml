@@ -126,23 +126,7 @@ jobs:
           password: ${{ secrets.GHCR_PAT }}
       - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
       - name: Push and sign the scanned images, then promote latest
-        run: |
-          docker load -i prod-images.tar
-          image_registry="$REGISTRY/${GITHUB_REPOSITORY_OWNER,,}"
-          for component in backend frontend nginx; do
-            name="testflow-$component"
-            for tag in "$RELEASE_TAG" "$GITHUB_SHA"; do
-              docker tag "$name:prod" "$image_registry/$name:$tag"
-              docker push "$image_registry/$name:$tag"
-            done
-            digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$image_registry/$name:$RELEASE_TAG")
-            cosign sign --yes "$digest"
-          done
-          for component in backend frontend nginx; do
-            name="testflow-$component"
-            docker tag "$name:prod" "$image_registry/$name:latest"
-            docker push "$image_registry/$name:latest"
-          done
+        run: sh scripts/ci/publish-prod.sh
 
   release:
     needs: [validate, publish]
