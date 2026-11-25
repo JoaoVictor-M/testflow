@@ -755,17 +755,15 @@ app.put('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analyst']
 
 app.delete('/api/projects/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
-        const projectId = req.params.id;
-        const project = await Project.findById(projectId);
-        if (!project) {
+        const { executeProjectCascadeDeletion } = require('./services/cascadeDeletionService');
+        const result = await executeProjectCascadeDeletion({
+            projectId: req.params.id,
+            userId: req.user.userId,
+            evidenceBaseDir: getBaseEvidenceDir()
+        });
+        if (result.notFound) {
             return res.status(404).json({ message: 'Projeto não encontrado' });
         }
-        const demandas = await Demanda.find({ project: projectId }).lean();
-        const demandaIds = demandas.map(d => d._id);
-        await Scenario.deleteMany({ demanda: { $in: demandaIds } });
-        await Demanda.deleteMany({ project: projectId });
-        const deletedProject = await Project.findByIdAndDelete(projectId).lean();
-        await logAudit('DELETE', 'Project', projectId, req.user.userId, { old: cleanAuditData(deletedProject) });
         res.status(200).json({ message: 'Projeto e todos os seus dados (demandas e cenários) deletados.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -934,14 +932,15 @@ app.put('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'analyst']
 });
 app.delete('/api/demandas/:id', authMiddleware, roleMiddleware(['admin', 'analyst']), async (req, res) => {
     try {
-        const demandaId = req.params.id;
-        const demanda = await Demanda.findById(demandaId);
-        if (!demanda) {
+        const { executeDemandaCascadeDeletion } = require('./services/cascadeDeletionService');
+        const result = await executeDemandaCascadeDeletion({
+            demandaId: req.params.id,
+            userId: req.user.userId,
+            evidenceBaseDir: getBaseEvidenceDir()
+        });
+        if (result.notFound) {
             return res.status(404).json({ message: 'Demanda não encontrada' });
         }
-        await Scenario.deleteMany({ demanda: demandaId });
-        const deletedDemanda = await Demanda.findByIdAndDelete(demandaId).lean();
-        await logAudit('DELETE', 'Demanda', demandaId, req.user.userId, { old: cleanAuditData(deletedDemanda) });
         res.status(200).json({ message: 'Demanda e todos os seus cenários deletados.' });
     } catch (error) {
         res.status(500).json({ message: error.message });
