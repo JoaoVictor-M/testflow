@@ -47,6 +47,21 @@ check() {
     all) for target in quality integration e2e secrets sast sca iac dast; do check "$target"; done ;;
     quality) for target in build-inputs lint test test-scripts test-repository build; do check "$target"; done ;;
     build-inputs)
+      ci_node=$(run "$NODE_IMAGE" node -p process.versions.node)
+      ci_npm=$(run "$NODE_IMAGE" npm --version)
+      for target_spec in "base:$BACK" "prod:$BACK" "base:$FRONT"; do
+        stage=${target_spec%%:*}
+        dir=${target_spec#*:}
+        image_id=$(docker build --quiet --target "$stage" "$dir")
+        actual_node=$(docker run --rm "$image_id" node -p process.versions.node)
+        [ -n "$ci_node" ] && [ "$actual_node" = "$ci_node" ] \
+          || { echo "build-inputs: $dir ($stage) Node '$actual_node' != CI '$ci_node'" >&2; exit 1; }
+        if [ "$stage" = base ]; then
+          actual_npm=$(docker run --rm "$image_id" npm --version)
+          [ -n "$ci_npm" ] && [ "$actual_npm" = "$ci_npm" ] \
+            || { echo "build-inputs: $dir ($stage) npm '$actual_npm' != CI '$ci_npm'" >&2; exit 1; }
+        fi
+      done
       mkdir -p "$REPORTS/build-inputs"
       run -e "TESTFLOW_NODE_IMAGE=$NODE_IMAGE" "$NODE_IMAGE" sh -eu -c '
         tmp=$(mktemp -d /tmp/testflow-build-inputs-XXXXXX)

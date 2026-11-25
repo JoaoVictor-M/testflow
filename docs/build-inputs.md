@@ -33,7 +33,8 @@ relatórios e rode `quality` e `all`, incluindo os smokes de login, ODM e mensag
 As bases de runtime e build dos Dockerfiles usam Node **20.20.2** e npm **10.8.2**, como o CI,
 com os mesmos manifests/locks e `npm ci --engine-strict` (backend de produção com `--omit=dev`).
 O backend preserva a variante Alpine e o frontend a base Debian; ambas têm tag exata e digest.
-Os testes de repositório verificam esse alinhamento e a remoção do antigo Compose auxiliar.
+`scripts/check.sh build-inputs` verifica esse alinhamento comparando as versões efetivas de Node e
+npm nas imagens construídas com a imagem do CI.
 
 Node 20 está [fora de suporte](https://nodejs.org/en/about/previous-releases). Sua manutenção
 aqui preserva a compatibilidade enquanto a migração coordenada para uma LTS suportada é

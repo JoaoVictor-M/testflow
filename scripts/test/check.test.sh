@@ -35,6 +35,13 @@ echo "$*" >>"$FAKE_DOCKER_LOG"
 printf 'argument=%s\n' "$@" >>"$FAKE_DOCKER_LOG"
 case "$*" in *"$FAKE_DOCKER_FAIL"*) exit 1 ;; esac
 case "$*" in *"$FAKE_DOCKER_SIGNAL_ON"*) kill -"$FAKE_DOCKER_SIGNAL" "$PPID"; sleep 1 ;; esac
+case "$*" in
+  'build --quiet --target '*) printf 'img-%s-%s\n' "$4" "$5" ;;
+  *'node -p process.versions.node'*)
+    if [ -n "${FAKE_NODE_MISMATCH:-}" ] && [ "$3" = "$FAKE_NODE_MISMATCH" ]; then echo '22.23.5'; else echo '20.20.2'; fi ;;
+  *'npm --version'*)
+    if [ -n "${FAKE_NPM_MISMATCH:-}" ] && [ "$3" = "$FAKE_NPM_MISMATCH" ]; then echo '11.0.0'; else echo '10.8.2'; fi ;;
+esac
 EOF
 chmod +x "$tmp/bin/docker"
 cp "$here/check.sh" "$repo/scripts/check.sh"
@@ -50,8 +57,13 @@ git init -q -b main "$repo"
 git -C "$repo" add .
 
 runs lint 'npm ci --engine-strict' 'npm run lint' '-w /work/testflow-app' '-w /work/testflow-frontend'
-runs build-inputs 'TESTFLOW_NODE_IMAGE=node:' 'scripts/ci/build-inputs.cjs'
+runs build-inputs 'TESTFLOW_NODE_IMAGE=node:' 'scripts/ci/build-inputs.cjs' \
+  'build --quiet --target base testflow-app' 'build --quiet --target prod testflow-app' 'build --quiet --target base testflow-frontend'
 fails_when build-inputs 'scripts/ci/build-inputs.cjs'
+label="build-inputs fails when a Dockerfile Node version diverges from the CI image"
+if FAKE_NODE_MISMATCH=img-prod-testflow-app FAIL_ON= run_check build-inputs; then miss; else pass; fi
+label="build-inputs fails when a Dockerfile npm version diverges from the CI image"
+if FAKE_NPM_MISMATCH=img-base-testflow-frontend FAIL_ON= run_check build-inputs; then miss; else pass; fi
 runs audit 'npm audit' '-w /work/testflow-app' '-w /work/testflow-frontend' '-w /work/tests/e2e'
 fails_when audit '-w /work/testflow-app'
 fails_when audit '-w /work/testflow-frontend'
