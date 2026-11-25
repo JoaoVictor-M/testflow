@@ -1,7 +1,7 @@
 #!/bin/sh
 # Tests guard-commit.sh, guard-push.sh and commit-msg in a throwaway repository with a bare remote.
 set -eu
-hooks=$(cd "$(dirname "$0")" && pwd)
+hooks=$(cd "$(dirname "$0")/../git-hooks" && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 fails=0

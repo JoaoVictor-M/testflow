@@ -2,7 +2,7 @@
 # Verifies in Compose that backend-service keeps restart: always, exits with code 1 when
 # JWT_SECRET is missing or too short, never becomes healthy and never prints the secret in logs.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 mkdir -p .cache
 tmp=$(mktemp -d "$PWD/.cache/testflow-backend-jwt-startup-XXXXXX")
 project="testflow-jwt-startup-$(basename "$tmp" | tr 'A-Z' 'a-z')"

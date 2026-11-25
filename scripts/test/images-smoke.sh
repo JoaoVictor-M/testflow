@@ -94,7 +94,10 @@ docker compose exec -T backend-service node images-smoke.cjs fresh
 
 # Re-run the actual published Compose against existing root-owned storage.
 docker compose down --remove-orphans
-IMAGE_OWNER="$COMPOSE_PROJECT_NAME" sh scripts/test/format-production.sh "$tmp/deploy"
+mkdir -p "$tmp/deploy/prod"
+git init -q "$tmp/deploy/prod"
+REGISTRY=registry.example.test IMAGE_OWNER="$COMPOSE_PROJECT_NAME" RELEASE_TAG=latest \
+  sh scripts/ci/format-prod.sh "$root" "$tmp/deploy/prod"
 for component in backend frontend nginx; do
   docker image tag "${COMPOSE_PROJECT_NAME}-${component}-service" \
     "registry.example.test/${COMPOSE_PROJECT_NAME}/testflow-${component}:latest"

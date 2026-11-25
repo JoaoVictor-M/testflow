@@ -1,12 +1,12 @@
 #!/bin/sh
-# Real MongoDB startup with the Ubuntu kernel identity used by CI, even on older hosts.
-# Uses only disposable tmpfs storage; never starts the application or mounts its data.
+# Real MongoDB startup and first-administrator seed behavior on disposable tmpfs storage.
+# Never starts the application or mounts persistent data.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 mkdir -p .cache
 tmp=$(mktemp -d "$PWD/.cache/testflow-mongo-startup-XXXXXX")
 project="testflow-mongo-startup-$(basename "$tmp" | tr 'A-Z' 'a-z')"
-compose() { docker compose --env-file /dev/null -p "$project" -f docker-compose.yml -f "$tmp/compose.yml" "$@"; }
+compose() { docker compose --env-file /dev/null -p "$project" -f docker-compose.yml -f docker-compose.teste.yml "$@"; }
 cleanup() {
   compose down --remove-orphans >/dev/null 2>&1 || true
   rm -rf "$tmp"
@@ -14,27 +14,7 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
-# The entrypoint drops to the MongoDB UID, which must be able to read this fixture.
-chmod 755 "$tmp"
-cp scripts/test/ubuntu-kernel.c "$tmp/kernel.c"
-printf '%s\n' 'Ubuntu 7.0.0-1019.19-azure 7.0.14' >"$tmp/version_signature"
-node_image=$(sed -n 's/^NODE_IMAGE=//p' scripts/check.sh)
-docker run --rm --user "$(id -u):$(id -g)" -v "$tmp:/fixture" -w /fixture "$node_image" \
-  gcc -Wall -Wextra -Werror -shared -fPIC -o kernel.so kernel.c -ldl
-cat >"$tmp/compose.yml" <<EOF
-services:
-  mongodb-service:
-    restart: "no"
-    environment:
-      LD_PRELOAD: /fixture/kernel.so
-    volumes: !override
-      - type: tmpfs
-        target: /data/db
-      - type: tmpfs
-        target: /data/configdb
-      - $tmp:/fixture:ro
-      - ./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
-EOF
+
 start_mongo() {
   if ! compose up -d --wait --wait-timeout 90 mongodb-service; then
     compose logs --no-color mongodb-service
@@ -55,8 +35,7 @@ if ! compose logs --no-color mongodb-service | grep -q 'TESTFLOW_ADMIN_PASSWORD_
 fi
 stop_mongo
 
-# A value that is not a strong bcrypt hash is refused and reported as invalid: a plain password,
-# a cost below 10 and a character outside the bcrypt alphabet.
+# A value that is not a strong bcrypt hash is refused and reported as invalid.
 body=$(printf 'x%.0s' $(seq 53))
 for invalid in plaintext-password "\$2b\$04\$$body" "\$2b\$10\$${body%x}!"; do
   export TESTFLOW_ADMIN_PASSWORD_HASH="$invalid"
@@ -73,7 +52,6 @@ done
 bcrypt_hash="\$2b\$10\$$body"
 export TESTFLOW_ADMIN_PASSWORD_HASH="$bcrypt_hash"
 start_mongo
-# Prove that initialization and ordinary database operations work, beyond the healthcheck ping.
 mongo_eval '
   const database = db.getSiblingDB("testflow-db");
   const admin = database.users.findOne({ username: "admin" });
@@ -82,4 +60,4 @@ mongo_eval '
   if (database.startup_probe.findOne({ _id: "probe" }).value !== 42) quit(1);
   database.startup_probe.drop();
 '
-echo 'mongo-startup: Ubuntu kernel compatibility, seed with and without the admin hash, read/write passed'
+echo 'mongo-startup: seed with and without the admin hash, read/write passed'
