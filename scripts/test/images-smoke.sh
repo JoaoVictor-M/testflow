@@ -4,7 +4,8 @@ set -eu
 cd "$(dirname "$0")/../.."
 root=$PWD
 node_image=$(sed -n 's/^NODE_IMAGE=//p' scripts/check.sh)
-tmp=$(mktemp -d /tmp/testflow-images-XXXXXX)
+mkdir -p "$root/.cache"
+tmp=$(mktemp -d "$root/.cache/testflow-images-XXXXXX")
 chmod 755 "$tmp"
 export BUILDX_CONFIG="$tmp/buildx"
 export COMPOSE_PROJECT_NAME="testflow-images-$(basename "$tmp" | tr '[:upper:]' '[:lower:]')"
@@ -74,8 +75,11 @@ cat >"$tmp/secret.yml" <<EOF
 services:
   backend-service:
     env_file: $tmp/backend.env
-    environment:
-      JWT_SECRET: !reset null
+    environment: !override
+      MONGO_URI: mongodb://mongodb-service:27017/testflow-images-smoke
+      NODE_EXTRA_CA_CERTS: /fixtures/certificates/testflow.crt
+      FRONTEND_URL: https://localhost/testflow
+      TRUST_PROXY_HOPS: "1"
 EOF
 export COMPOSE_FILE="$COMPOSE_FILE:$tmp/secret.yml"
 docker compose build
