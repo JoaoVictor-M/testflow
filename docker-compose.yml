@@ -56,9 +56,6 @@ services:
   frontend-service:
     build: ./testflow-frontend
     restart: always
-    depends_on:
-      backend-service:
-        condition: service_healthy
 
   nginx-service:
     build: ./nginx
