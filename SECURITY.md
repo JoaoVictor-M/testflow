@@ -1,13 +1,13 @@
 # Relatório de Segurança do TestFlow
 
-Este documento detalha as configurações, middlewares e práticas de segurança atualmente implementadas no projeto TestFlow, separadas por camada de aplicação, evidenciando o alinhamento com diretrizes e métodos de segurança internacionais consolidados, principalmente a **OWASP Top 10**.
+Este documento detalha as configurações, middlewares e práticas de segurança atualmente implementadas no projeto TestFlow, separadas por camada de aplicação, indicando a categoria da **OWASP Top 10** que cada prática atende.
 
 ---
 
 ## 1. Segurança de Infraestrutura e Redes (Nginx e Docker)
 
 A borda da aplicação é protegida utilizando Nginx configurado com rigorosas políticas de criptografia:
-- **Redirecionamento Obrigatório HTTPS:** Todo o tráfego HTTP na porta 80 é forçado via código 301 para a porta 443 (HTTPS). (Mitigação para interceptação de dados pasivos).
+- **Redirecionamento para HTTPS:** quando há certificado TLS, o tráfego HTTP na porta 80 é redirecionado com código 301 para a porta 443 (HTTPS). Sem certificado, o Nginx serve apenas HTTP. (Mitigação para interceptação de dados passivos).
 - **HSTS (HTTP Strict Transport Security):** Adicionado `Strict-Transport-Security "max-age=31536000; includeSubDomains" always;`. Impede ataques de *downgrade* de protocolo e força o navegador a lembrar de exigir HTTPS.
 - **Desativação de Protocolos Inseguros:** Somente `TLSv1.2` e `TLSv1.3` são aceitos. Protocolos antigos e vulneráveis (SSLv3, TLSv1.0, TLSv1.1) estão desativados (Proteção contra vulnerabilidades como *POODLE* e *BEAST*).
 - **Hardening de Ciphers:** Adotado `HIGH:!aNULL:!MD5` com preferência para ciphers do lado do servidor (`ssl_prefer_server_ciphers on`).
@@ -18,18 +18,18 @@ O servidor Backend atua primariamente mitigando os riscos listados no **OWASP To
 
 ### 2.1. Proteção contra Injeção e Cross-Site Scripting (XSS)
 - **Helmet.js (CSP e Headers HTTP):** A aplicação usa a biblioteca de segurança mais renomada em Node (`helmet`). 
-  - Foi implementada uma política estrita de **Content Security Policy (CSP)**. O diretório padrāo bloqueia qualquer requisição (*defaultSrc: "'none'"*), aceitando conectividade de APIs preestabelecidas, evitando execução de scripts maliciosos injetados na tela. 
+  - Há uma **Content Security Policy (CSP)** com `default-src 'none'` e liberação explícita das origens de script, estilo, imagem, fonte e conexão que o front usa.
   - Cabeçalhos de rastreamento do backend (`x-powered-by`) são ocultados para dificultar reconhecimento da tecnologia ("fingerprinting").
 - **Proteção Cross-Origin (CORS Restrito):** O CORS valida explicitamente as origens confiáveis (`FRONTEND_URL`), rejeitando solicitações de domínios maliciosos. (Mitigação do **OWASP A01:2021-Broken Access Control** e **A05:2021-Security Misconfiguration**).
 
 ### 2.2. Autenticação e Gestão de Sessão
 - **Hashes Seguros com Bcrypt:** As senhas **nunca** são salvas em texto puro. É utilizado o algoritmo *Bcrypt* com "salt" automático gerado na própria base (`bcrypt.hash(this.password, salt)`), tornando os ataques por "Rainbow Tables" ineficazes (Atende ao **OWASP A02:2021-Cryptographic Failures** e **OWASP A07:2021-Identification and Authentication Failures**).
 - **JSON Web Tokens (JWT):** A sessão utiliza JWT de viajem sem estado (stateless), com tokens assinados com segredos no nível do sistema operacional (variáveis `.env`).
-- **Senhas Seguras:** A API força, inclusive com regex no frontend e backend, requisitos fortes: mínimo de 8 caracteres, números, caracteres especiais (@$!%*?&), maiúsculas e minúsculas. 
+- **Senhas:** a tela de redefinição de senha exige no mínimo 8 caracteres, com maiúscula, minúscula, número e caractere especial (@$!%*?&).
 
 ### 2.3. Controle de Acesso e Auditoria
-- **Role-Based Access Control (RBAC):** Uso do `roleMiddleware(['admin', 'analyst'])` garantindo autorização horizontal e vertical. Usuários comuns não conseguem acessar rotas confidenciais (Atende ao **OWASP A01:2021-Broken Access Control**).
-- **Logs de Auditoria (AuditLog):** Todas e quaisquer transações críticas (CREATE, UPDATE, DELETE em Projetos, Demandas e Usuários) são registradas no banco rastreando o `userId` de origem responsável, o dado "*novo*" gerado e o dado "*velho*". Isso é o alicerce para o **OWASP A09:2021-Security Logging and Monitoring Failures**. Se os dados são sensíveis, campos como senhas são deletados ativamente da cópia (`cleanAuditData`).
+- **Role-Based Access Control (RBAC):** Uso do `roleMiddleware(['admin', 'analyst'])` para as rotas que alteram dados; o perfil `viewer` é só leitura (Atende ao **OWASP A01:2021-Broken Access Control**).
+- **Logs de Auditoria (AuditLog):** As criações, edições e exclusões de Projetos, Demandas, Cenários e Usuários são registradas no banco rastreando o `userId` de origem responsável, o dado "*novo*" gerado e o dado "*velho*". Isso é o alicerce para o **OWASP A09:2021-Security Logging and Monitoring Failures**. Se os dados são sensíveis, campos como senhas são deletados ativamente da cópia (`cleanAuditData`).
 
 ---
 
@@ -44,7 +44,7 @@ A esteira de segurança (workflow `develop`) aborda quatro pilares essenciais:
 - **Objetivo:** O script varre o *package-lock.json* e o *node_modules* em busca de dependências ou bibliotecas de terceiros que possuam falhas conhecidas registradas em bancos de dados CVEs (Atende ao **OWASP A06:2021-Vulnerable and Outdated Components**).
 
 ### 3.2. SAST (Static Application Security Testing)
-- **Inspeção de Código Estático:** Utilizando validação de análise de código puramente estática através de linter focado em segurança (`npm run lint` / ESLint Security Check).
+- **Inspeção de Código Estático:** Semgrep CE com regras OWASP Top 10, Node.js, JavaScript, React e segredos (`scripts/check.sh sast`), além do ESLint (`scripts/check.sh lint`).
 - **Objetivo:** Encontrar vulnerabilidades (como variáveis inseguras ou funções de parse perigosas) diretamente no código-fonte construído pelos desenvolvedores *antes* mesmo de executar a aplicação.
 
 ### 3.3. Container Security Scan 
@@ -61,9 +61,10 @@ A esteira de segurança (workflow `develop`) aborda quatro pilares essenciais:
 
 Todas essas abordagens consolidam-se fortemente com as seguintes diretrizes de segurança modernas da indústria de engenharia de software:
 
-1. **Defense in Depth (Defesa em Profundidade):** Nenhuma camada confia cegamente na outra. O Frontend faz bloqueios, o Nginx bloqueia HTTP puro, o Middleware recusa acessos e o Banco de Dados oculta senhas mesmo se hackeado.
-2. **Principle of Least Privilege (Princípio do Menor Privilégio):** Usuários de menor nível (ex: Visualizadores/"viewers") não possuem privilégios no sistema e sequer conseguem chamar as rotas de criação do Express graças aos middlewares.
-3. **OWASP (Open Worldwide Application Security Project):** A implementação endereça ativamente XSS (via CSP), CORS/CSRF configurations, Criptografia Falha (com Bcrypt de salt embutido), Segurança nas Configurações do Nginx (HSTS/TLSv1.3) e Logger/Auditoria de rastreamento rigoroso.
+1. **Defense in Depth (Defesa em Profundidade):** O Frontend valida entradas, o Nginx redireciona HTTP para HTTPS quando há certificado, o middleware recusa acessos sem token ou sem o perfil exigido e as senhas ficam guardadas só como hash bcrypt.
+2. **Principle of Least Privilege (Princípio do Menor Privilégio):** O perfil Visualizador (`viewer`) não consegue chamar as rotas de escrita, porque o middleware exige `admin` ou `analyst`.
+3. **OWASP (Open Worldwide Application Security Project):** A implementação trata XSS (via CSP), configuração de CORS, armazenamento de senhas (bcrypt), configuração do Nginx (HSTS e TLS 1.2/1.3) e registro de auditoria de projetos, demandas, cenários e usuários.
 
-## 5. Resumo Final
-Os métodos aplicados (Helmet, TLS, RBAC, JWT, Bcrypt e AuditLogs estruturados), aliados a uma esteira vigorosa de testes automatizados **(SCA, SAST, DAST via ZAP e Trivy)**, representam o estado da arte e padrão ouro da indústria na arquitetura MERN (MongoDB, Express, React, Node.js) combinada com Docker. Tais práticas fecham as brechas sistêmicas contra a vasta maioria dos ataques modernos massivos, tanto em ambiente produtivo ao vivo quanto antes do deploy (shift-left security).
+## 5. Resumo
+
+Esta é a lista das práticas implementadas na versão atual (Helmet, TLS, perfis de acesso, JWT, bcrypt, registro de auditoria e a esteira com SCA, SAST, Trivy e ZAP). Ela descreve o que existe, não garante a ausência de falhas; o documento é revisado a cada versão.
