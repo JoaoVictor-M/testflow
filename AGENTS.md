@@ -34,8 +34,8 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
   ou ferramenta no host: comandos de Node rodam em container.
 - Segurança por padrão: OWASP ASVS nível 2 e OWASP Top 10.
 - Toda mudança vem com testes, escritos por quem escreve o código. Regra de negócio usa TDD. Não há
-  agente de QA: antes do merge, `check.sh quality`; `check.sh all` quando a mudança mexe em
-  segurança, dados ou infraestrutura.
+  agente de QA: antes de entregar, `check.sh quality` mais os alvos que a mudança toca (seção
+  Comandos). O pipeline da `develop` roda todos os gates a cada push.
 - Cada Dev trabalha só na própria worktree (sandbox `workspace-write`). Merge na `develop` e push
   são do Orquestrador.
 - Código limpo: funções pequenas, nomes claros, sem código morto, sem abstração prematura.
@@ -44,9 +44,14 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
 
 ## Comandos
 
-- Verificação: `scripts/check.sh quality` (obrigatório antes de juntar) e `scripts/check.sh all`
-  (recomendado). Enquanto a tarefa BASE-04 não existir, rode `npm ci && npm run lint` em
-  `testflow-app/` e `testflow-frontend/`, e `npm run build` no front, num container `node:20`.
+- Verificação por alvo: enquanto trabalha, o menor alvo que cobre a mudança (`test-back`,
+  `test-front`, `build`). Antes de entregar, `scripts/check.sh quality` e só os alvos que a mudança
+  toca: `integration` (backup ou arquivos), `e2e` (fluxo de tela), `iac` (Docker, compose, workflow),
+  `sast` e `secrets` (autenticação, upload, configuração).
+- `scripts/check.sh all` local só na release (`release-local`) ou para reproduzir pipeline vermelho.
+- Revisão lê o código; roda no máximo um arquivo de teste para confirmar um achado, sem subir pilha.
+- Merge: até 3 ou 4 tarefas revisadas por push; o pipeline da `develop` é a verificação completa.
+  `check.sh quality` local só quando o merge tem conflito.
 - Logs: `docker compose logs <serviço>`.
 
 ## Git
@@ -54,7 +59,7 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
 - Branches: `main` (só versões oficiais), `develop` (funcionalidades prontas) e uma branch por
   tarefa a partir da `develop`:
   `feat/`, `fix/`, `chore/`, `docs/`, `ci/`, `refactor/`, `test/` + `<id>-<tema>`.
-- Tarefa: branch → commits pequenos em Conventional Commits → `check.sh quality` verde →
+- Tarefa: branch → commits pequenos em Conventional Commits → `check.sh quality` e alvos verdes →
   revisão → `git merge --no-ff` na `develop` → push → apagar a branch local e remota → pipeline da
   `develop` verde. Pipeline vermelho: `fix/` antes de qualquer outra tarefa.
 - Release: `check.sh release-local` → `chore/release-X.Y.Z` (`VERSION`, `CHANGELOG.md`) →
