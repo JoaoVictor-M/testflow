@@ -2,10 +2,11 @@
 # ZAP baseline (spider and passive rules, no attack) against the production frontend and nginx of a
 # disposable stack. The plan in .zap/baseline.yaml fails the run on any Medium or higher alert.
 set -eu
-cd "$(dirname "$0")/.."
-. scripts/lib/ci-stack.sh
+cd "$(dirname "$0")/../.."
+. scripts/ci/stack.sh
 ZAP_IMAGE=ghcr.io/zaproxy/zaproxy:stable@sha256:9624669db72f54d86c4b46a7064518bd9bf79d8c61a4c31befa9923489f328af
-export TESTFLOW_CI_OVERLAY=docker-compose.e2e.yml
+TESTFLOW_CI_WEB=1
+TESTFLOW_CI_SERVICES='mongodb-service backend-service frontend-service nginx-service'
 rm -rf reports/zap-baseline
 mkdir -p reports/zap-baseline
 open_ci_stack

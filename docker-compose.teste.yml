@@ -1,16 +1,49 @@
-# Disposable services for the automated tests (scripts/check.sh test). No published port, no named
-# volume, no container name and no project name: check.sh passes one project per worktree, so two
-# Devs test at the same time, and everything vanishes with `down`.
+# Disposable overlay on top of docker-compose.yml for automated tests, e2e and DAST.
+# No published ports, no named volumes and no container names: callers pick the services they need
+# and pass one Compose project per worktree or run.
 services:
   mongodb-service:
-    image: mongo:9.0.4@sha256:452bdaf2127b8ff851e31410a267809b9829eded219979f2210e7c7efb85a058
+    restart: "no"
+    volumes: !override
+      - ./mongo/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     tmpfs:
       - /data/db
+      - /data/configdb
     healthcheck:
       test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 2s
       timeout: 5s
       retries: 30
+      start_period: 5s
+
+  evidence-init:
+    profiles: [prod-only]
+
+  backend-service:
+    restart: "no"
+    env_file:
+      - path: ${TESTFLOW_CI_ENV:-/dev/null}
+        required: false
+    environment: !override
+      FRONTEND_URL: ${FRONTEND_URL:-https://nginx-service:8443}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+    volumes: !reset []
+    tmpfs:
+      - /evidencias_testes:uid=1000,gid=1000,mode=0700
+    depends_on: !override
+      mongodb-service:
+        condition: service_healthy
+
+  frontend-service:
+    restart: "no"
+
+  nginx-service:
+    restart: "no"
+    ports: !reset []
+    environment:
+      FRONTEND_URL: ${FRONTEND_URL:-https://nginx-service:8443}
+    volumes: !override
+      - ${TESTFLOW_CI_TLS:-/dev/null}:/etc/nginx/ssl:ro
 
   # Catches every e-mail the back sends: SMTP on mailpit:1025, inbox API on mailpit:8025.
   mailpit:

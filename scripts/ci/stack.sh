@@ -1,8 +1,7 @@
 #!/bin/sh
-# Functions shared by the targets that run against a disposable stack (full DAST, e2e, DAST baseline)
-# and by their repository tests. The browser-facing targets set TESTFLOW_CI_OVERLAY to the Compose file
-# that adds the frontend and nginx.
-# GitHub Actions hides a value from its logs when told so; elsewhere the line would only be noise.
+# Shared helpers for disposable stacks layered over docker-compose.yml + docker-compose.teste.yml.
+# Callers set TESTFLOW_CI_SERVICES to the space-separated service list and TESTFLOW_CI_WEB=1 when
+# the stack needs a throwaway HTTPS certificate and a seeded administrator.
 mask_secret() { [ -z "${GITHUB_ACTIONS:-}" ] || echo "::add-mask::$1"; }
 
 prepare_ci_stack() {
@@ -10,24 +9,19 @@ prepare_ci_stack() {
   jwt_secret="$(openssl rand -hex 32)"
   mask_secret "$jwt_secret"
   printf '%s\n' \
-    "MONGO_URI=mongodb://mongodb-service:27017/testflow" \
+    "MONGO_URI=mongodb://mongodb-service:27017/testflow-db" \
     "JWT_SECRET=$jwt_secret" \
     "PORT=3000" > "$TESTFLOW_CI_ENV"
   unset jwt_secret
 }
 
 ci_compose() {
-  if [ -n "${TESTFLOW_CI_OVERLAY:-}" ]; then
-    docker compose -p "$TESTFLOW_CI_PROJECT" -f docker-compose.ci.yml -f "$TESTFLOW_CI_OVERLAY" "$@"
-  else
-    docker compose -p "$TESTFLOW_CI_PROJECT" -f docker-compose.ci.yml "$@"
-  fi
+  docker compose --env-file /dev/null -p "$TESTFLOW_CI_PROJECT" \
+    -f docker-compose.yml -f docker-compose.teste.yml "$@"
 }
 
-# The browser-facing stack: a throwaway self-signed certificate for nginx (HTTPS mode, as in production)
-# and a random password for the seeded administrator, hashed by the backend image so that no hash or
-# password lives in the repository. The container that drives the stack reads the plain password and the
-# address from a private file inside the temporary directory.
+# Browser-facing stack: a throwaway self-signed certificate for nginx (HTTPS mode, as in production)
+# and a random password for the seeded administrator hashed by the backend image.
 prepare_ci_web() {
   mkdir "$ci_directory/tls"
   openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj /CN=nginx-service -addext subjectAltName=DNS:nginx-service \
@@ -48,8 +42,10 @@ prepare_ci_web() {
 }
 
 start_ci_stack() {
-  if ! ci_compose up -d --build --wait --wait-timeout 180; then
-    ci_compose logs backend-service mongodb-service
+  # shellcheck disable=SC2086 # TESTFLOW_CI_SERVICES is a list of Compose service names
+  if ! ci_compose up -d --build --wait --wait-timeout 180 ${TESTFLOW_CI_SERVICES:-mongodb-service backend-service}; then
+    # shellcheck disable=SC2086
+    ci_compose logs ${TESTFLOW_CI_SERVICES:-mongodb-service backend-service}
     return 1
   fi
 }
@@ -62,16 +58,18 @@ close_ci_stack() {
   exit "$result"
 }
 
-# Starts an isolated Compose project with a fresh secret and removes it, with its secrets, on every exit.
+# Starts an isolated Compose project per worktree/run and removes it, with its secrets, on every exit.
 open_ci_stack() {
   mkdir -p .cache reports
   ci_directory=$(mktemp -d "$PWD/.cache/testflow-ci.XXXXXX")
+  worktree=$(basename "$PWD" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')
+  suffix=$(basename "$ci_directory" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')
   export TESTFLOW_CI_ENV="$ci_directory/backend.env"
-  export TESTFLOW_CI_PROJECT="testflow-ci-$(basename "$ci_directory" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')"
+  export TESTFLOW_CI_PROJECT="testflow-ci-${worktree}-${suffix}"
   trap close_ci_stack EXIT
   trap 'exit 130' INT
   trap 'exit 143' TERM
   prepare_ci_stack
-  [ -z "${TESTFLOW_CI_OVERLAY:-}" ] || prepare_ci_web
+  [ -z "${TESTFLOW_CI_WEB:-}" ] || prepare_ci_web
   start_ci_stack
 }

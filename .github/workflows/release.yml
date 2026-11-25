@@ -196,45 +196,7 @@ jobs:
           path: prod
 
       - name: Format Prod Files
-        run: |
-          # 1. Limpeza Profunda: Remove absolutamente todos os arquivos da árvore do git na branch destino
-          cd prod
-          git rm -rf --ignore-unmatch .
-          cd ..
-
-          # 2. Recria os diretórios e copia cirurgicamente APENAS o necessário
-          cp source/install/mongo-init.js prod/mongo-init.js
-          cp source/.env.example prod/.env.example
-          cp source/README.md prod/README.md
-          cp source/LICENSE prod/LICENSE
-          cp source/SECURITY.md prod/SECURITY.md
-          # Backup: o serviço `backup` do Compose é construído de ./backup e a restauração usa scripts/restore.sh
-          mkdir -p prod/scripts
-          cp -R source/backup prod/backup
-          cp source/scripts/restore.sh prod/scripts/restore.sh
-
-          # 2.1 Remove a seção de 'Desenvolvimento' inteira do README.md de produção usando sed delimitado
-          sed -i '/## 🛠️ Desenvolvimento (Para Code Maintainers)/,/^---$/d' prod/README.md
-
-          printf '{"version": "%s"}\n' "$RELEASE_TAG" > prod/version.json
-
-          # O arquivo Compose é copiado do seu código local e depois lapidado dinamicamente
-          cp source/docker-compose.yml prod/docker-compose.yml
-
-          # 3. Lapidação do docker-compose para Produção
-          # Troca os builds pelas imagens na nuvem
-          sed -i "s|build: ./testflow-app|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-backend:${RELEASE_TAG}|g" prod/docker-compose.yml
-          sed -i "s|build: ./testflow-frontend|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-frontend:${RELEASE_TAG}|g" prod/docker-compose.yml
-          sed -i "s|build: ./nginx|image: ${REGISTRY}/${IMAGE_OWNER}/testflow-nginx:${RELEASE_TAG}|g" prod/docker-compose.yml
-
-          # Atualiza a rota de volume do mongo-init.js de "./install/..." para root "./mongo-init.js"
-          sed -i "s|./install/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro|g" prod/docker-compose.yml
-
-          # Remove completamente a seção ports e comentários dev-only do mongodb usando sed regex baseada em contexto
-          sed -i '/mongodb-service:/,/volumes:/ { /ports:/d; /# dev-only-mongo-port/d }' prod/docker-compose.yml
-
-          # Remove chaves de indentificadores engessados de containers de dev original
-          sed -i '/container_name:/d' prod/docker-compose.yml
+        run: sh source/scripts/ci/format-prod.sh source prod
 
 
 
