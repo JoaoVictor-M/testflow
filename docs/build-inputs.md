@@ -16,17 +16,16 @@ Os relatórios em `reports/build-inputs/` registram Node, npm, plataforma, image
 manifesto, lock, configuração npm e árvores. Os workflows os publicam como artefato. Comparações
 de árvores exigem a mesma plataforma/arquitetura (dependências opcionais variam por plataforma).
 
-Os Compose principal e de testes fixam MongoDB **9.0.4** pelo mesmo digest; o de desenvolvimento
-herda essa referência do principal, impedindo atualizações implícitas;
-o banco dos testes usa essa mesma versão em armazenamento descartável. Essa fixação não migra,
-recria nem abre volumes existentes. Antes de aplicar o Compose a outra instalação, confira a
-versão real do servidor e o `featureCompatibilityVersion`; interrompa se forem incompatíveis.
+O `docker-compose.yml` fixa MongoDB **9.0.4** por tag e digest como única definição do serviço;
+as camadas de desenvolvimento e de testes herdam essa referência, impedindo divergências ou
+atualizações implícitas. Essa fixação não migra, recria nem abre volumes existentes. Antes de
+aplicar o Compose a outra instalação, confira a versão real do servidor e o
+`featureCompatibilityVersion`; interrompa se forem incompatíveis.
 
 O patch 9.0.4 corrige a identificação de kernels Ubuntu 7.0 com a correção upstream 7.0.14
-([SERVER-131779](https://jira.mongodb.org/browse/SERVER-131779)). O healthcheck permanece igual.
-`scripts/mongo-startup.test.sh` reproduz essa identidade em uma biblioteca carregada somente no
-teste, compila em Docker e verifica inicialização, ping e leitura/escrita em tmpfs descartável.
-Ele integra `quality`; nenhum volume persistido é aberto pelo teste.
+([SERVER-131779](https://jira.mongodb.org/browse/SERVER-131779)). `scripts/test/mongo-startup.test.sh`
+verifica inicialização real, seed de primeiro administrador e leitura/escrita em `tmpfs` descartável
+como parte de `quality`; nenhum volume persistido é aberto pelo teste.
 
 Revise versões, digests, suporte oficial e avisos de segurança a cada release e mensalmente;
 correções urgentes entram assim que disponíveis. Atualize tag e digest juntos, compare os

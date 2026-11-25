@@ -8,16 +8,16 @@ Todo o fluxo de desenvolvimento, testes e verificação roda em Docker. Não é 
 |---|---|
 | `testflow-app/` | Backend (Node.js, Express, Mongoose; entrada em `index.js`, rotas em `server.js`). |
 | `testflow-frontend/` | Frontend (React, Vite, Tailwind; versão exibida em `src/version.js`). |
-| `nginx/` | Proxy reverso HTTPS/HTTP e configurações do Nginx. |
+| `nginx/` | Proxy reverso HTTPS/HTTP e roteamento de `/api` e `/testflow/`. |
 | `backup/` | Imagem do serviço pontual de backup criptografado com `age`. |
-| `install/` | Script de inicialização do MongoDB (`mongo-init.js`). |
-| `scripts/` | Automação local (`dev.sh`, `check.sh`, `restore.sh`, `build-inputs.sh`), git hooks (`scripts/git-hooks/`) e testes de repositório/infraestrutura (`scripts/test/`). |
+| `mongo/` | Script de inicialização do MongoDB (`mongo-init.js`). |
+| `tests/e2e/` | Testes ponta a ponta com Playwright contra as imagens de produção. |
+| `scripts/` | Automação local (`dev.sh`, `check.sh`, `restore.sh`), scripts de CI (`scripts/ci/`), git hooks (`scripts/git-hooks/`) e testes comportamentais de infraestrutura (`scripts/test/`). |
 | `docs/` | Documentação técnica do repositório (este guia e [build-inputs.md](build-inputs.md)). |
 | `.github/workflows/` | Pipelines de CI e publicação (`develop.yml` e `release.yml`). |
-| `docker-compose.yml` | Pilha base/produção (Nginx, frontend, backend, MongoDB e serviço de backup no perfil `tools`). |
-| `docker-compose.dev.yml` | Sobreposição de desenvolvimento (recarga automática, portas locais `3000` e `5173`). |
-| `docker-compose.teste.yml` | Serviços descartáveis para testes do backend (MongoDB e Mailpit sem portas no host). |
-| `docker-compose.ci.yml` | Sobreposição usada no DAST para subir a pilha isolada em CI. |
+| `docker-compose.yml` | Pilha de produção e definição única dos serviços (inclui `backup` no perfil `tools`). |
+| `docker-compose.dev.yml` | Camada de desenvolvimento sobre a produção (recarga automática, portas locais `3000` e `5173`). |
+| `docker-compose.teste.yml` | Camada descartável sobre a produção para testes do backend, e2e e DAST (sem portas no host, `tmpfs` e Mailpit). |
 | `VERSION` / `CHANGELOG.md` | Versão atual (SemVer) e histórico de mudanças por release. |
 
 ## Comandos do dia a dia
@@ -65,26 +65,28 @@ Todas as verificações rodam em imagens fixadas por tag e digest em `scripts/ch
 | Alvo | O que executa |
 |---|---|
 | `quality` | Agregador obrigatório antes de integrar: `build-inputs`, `lint`, `test`, `test-scripts`, `test-repository` e `build`. |
-| `all` | Agregador completo: `quality`, `integration`, `secrets`, `sast`, `sca` e `iac`. |
+| `all` | Agregador completo: `quality`, `integration`, `e2e`, `secrets`, `sast`, `sca`, `iac` e `dast`. |
 | `build-inputs` | Compara instalações limpas (`npm ci --engine-strict`, incluindo `--omit=dev` no backend) e grava hashes em `reports/build-inputs/`. Veja [build-inputs.md](build-inputs.md). |
 | `lint` | Executa `npm ci --engine-strict && npm run lint` no backend e no frontend. |
 | `test` | Executa `test-back` e `test-front` com limites mínimos de cobertura. |
-| `test-back` | Sobe `docker-compose.teste.yml` num projeto isolado por worktree e roda `npm test` no backend. |
+| `test-back` | Sobe `mongodb-service` e `mailpit` (`docker-compose.yml` + `docker-compose.teste.yml`) num projeto isolado por worktree e roda `npm test` no backend. |
 | `test-front` | Roda `npm test` no frontend (Vitest em `jsdom`). |
-| `test-scripts` | Executa os testes em shell de `scripts/git-hooks/*.test.sh` e `scripts/*.test.sh` (exceto `backup.test.sh`). |
-| `test-repository` | Executa `scripts/test/*.test.cjs` (higiene do repositório, contratos de versão/docs, Dockerfiles, Compose e workflows). |
+| `test-scripts` | Executa os testes comportamentais em shell de `scripts/test/*.test.sh` (exceto `backup.test.sh`). |
+| `test-repository` | Executa `scripts/test/*.test.cjs` (regras de `.gitignore`, `build-inputs`, versão e scripts de release). |
 | `build` | Executa `npm ci --engine-strict && npm run build` no frontend. |
-| `integration` | Executa `scripts/backup.test.sh`: cria backup criptografado, restaura em banco novo descartável e compara os dados. |
+| `integration` | Executa `scripts/test/backup.test.sh`: cria backup criptografado, restaura em banco novo descartável e compara os dados. |
+| `e2e` | Sobe a pilha de produção sobre `docker-compose.teste.yml` via `scripts/ci/e2e.sh` e executa Playwright em `tests/e2e/`. |
+| `dast` | Executa ZAP baseline (`.zap/baseline.yaml`) contra a mesma pilha via `scripts/ci/dast-baseline.sh`. |
 | `secrets` | Varre todo o histórico Git com Gitleaks (`reports/gitleaks.sarif`). |
 | `secrets-staged` | Varre apenas as alterações em stage com Gitleaks (usado pelo `pre-commit`). |
 | `sast` | Executa Semgrep CE (`p/owasp-top-ten`, `p/nodejs`, `p/javascript`, `p/react`, `p/secrets`) em job único (`reports/semgrep.sarif`). |
-| `sca` | Executa Trivy fs (`HIGH,CRITICAL`) nos lockfiles e `npm audit --audit-level=high` no backend e frontend. |
-| `audit` | Executa `npm audit` em todas as severidades no backend e no frontend. |
-| `iac` | Executa Hadolint em todos os Dockerfiles e Trivy config (`HIGH,CRITICAL`) nos arquivos de infraestrutura. |
+| `sca` | Executa Trivy fs (`HIGH,CRITICAL`) nos lockfiles e `npm audit --audit-level=high` no backend, frontend e `tests/e2e/`. |
+| `audit` | Executa `npm audit` em todas as severidades no backend, frontend e `tests/e2e/`. |
+| `iac` | Executa Hadolint em todos os Dockerfiles, Actionlint nos workflows, `docker compose config -q` nas três pilhas e Trivy config (`HIGH,CRITICAL`). |
 | `build-prod` | Constrói do zero e verifica o conteúdo das três imagens de produção. |
 | `scan-prod` | Lê `prod-images.tar`, aplica Trivy e gera os SBOMs em `reports/release-sbom/`. |
 | `image-scan` | Compila o alvo `prod` do backend e executa Trivy image em todas as severidades. |
-| `dast-full` | Sobe a pilha isolada via `scripts/ci-dast.sh` e executa varredura dinâmica OWASP ZAP. |
+| `dast-full` | Sobe `mongodb-service` e `backend-service` via `scripts/ci/dast-full.sh` e executa varredura dinâmica OWASP ZAP. |
 
 ## Pipelines (`.github/workflows/`)
 
@@ -93,8 +95,7 @@ Todas as verificações rodam em imagens fixadas por tag e digest em `scripts/ch
 - **Gatilhos:** `push` na branch `develop`, `workflow_dispatch` e `workflow_call` (com cancelamento de execuções obsoletas por ref).
 - **Job `static`:** matriz paralela rodando `scripts/check.sh` para `quality`, `sast`, `sca`, `iac` e `audit`, publicando `reports/` como artefato.
 - **Job `secrets`:** checkout completo (`fetch-depth: 0`) executando `scripts/check.sh secrets`.
-- **Job `integration`:** após `static` e `secrets`, executa `scripts/check.sh integration`.
-- **Job `dynamic`:** após `static` e `secrets`, executa `scripts/check.sh image-scan` e `scripts/check.sh dast-full`, publicando o relatório do ZAP.
+- **Jobs `integration`, `e2e`, `dast` e `dynamic`:** após `static` e `secrets`, executam `integration`, `e2e`, `dast`, `image-scan` e `dast-full`.
 
 ### `release.yml`
 
@@ -102,7 +103,7 @@ Todas as verificações rodam em imagens fixadas por tag e digest em `scripts/ch
 - **Gates:** reutiliza todos os jobs de `develop.yml`, executa DAST completo e constrói do zero (`scripts/check.sh build-prod`), rejeitando testes, fixtures, ferramentas de desenvolvimento, source maps e segredos nas imagens.
 - **Artefatos:** `scripts/check.sh scan-prod` aplica Trivy a backend, frontend e nginx em todas as severidades (inclusive sem correção) e gera um SBOM SPDX por imagem. As mesmas imagens aprovadas são publicadas, sem recompilar.
 - **Publicação:** valida `VERSION` e as notas do `CHANGELOG.md`; recusa tag ou release existente e falha se não conseguir consultar o GitHub. Publica tags `vX.Y.Z`, SHA e `latest` no GHCR com `GHCR_PAT`, assina os digests com Cosign/OIDC e cria a tag e a GitHub Release com os SBOMs.
-- **Produção:** após a Release, atualiza `testflow-prod` usando `PROD_REPO_TOKEN`, preservando configuração, documentação, backup e restauração. O Compose referencia a tag versionada aprovada.
+- **Produção:** após a Release, formata e atualiza `testflow-prod` via `scripts/ci/format-prod.sh` usando `PROD_REPO_TOKEN`, preservando configuração, documentação, backup e restauração.
 
 ## Versionamento
 
