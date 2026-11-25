@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const { test } = require('node:test');
-const { snapshot } = require('../lib/build-inputs.cjs');
+const { snapshot } = require('../ci/build-inputs.cjs');
 
 function fixture(t) {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'testflow-inputs-'));
@@ -73,37 +73,4 @@ test('manifest divergence is rejected and optional platform packages may be abse
     snapshot(root);
     write('package.json', { ...packages[''], dependencies: { runtime: '^2.0.0' } });
     assert.throws(() => snapshot(root), /manifest and lock/);
-});
-
-test('Compose files (dev, test and CI) share a MongoDB tag and digest; workflows use the container checks', () => {
-    const root = path.resolve(__dirname, '../..');
-    const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
-    const images = ['docker-compose.yml', 'docker-compose.teste.yml', 'docker-compose.ci.yml']
-        .map((name) => read(name).match(/image: (mongo:[^\s]+)/)[1]);
-    assert.match(images[0], /^mongo:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/);
-    assert.equal(images.length, 3);
-    assert.equal(new Set(images).size, 1);
-    assert.match(read('scripts/check.sh'), /^NODE_IMAGE=node:\d+\.\d+\.\d+@sha256:[a-f0-9]{64}$/m);
-    assert.match(read('.github/workflows/release.yml'), /uses: \.\/\.github\/workflows\/develop\.yml/);
-    const develop = read('.github/workflows/develop.yml');
-    assert.match(develop, /target: \[quality, sast, sca, iac, audit\]/);
-    assert.match(develop, /run: scripts\/check.sh "\$CHECK_TARGET"/);
-    assert.doesNotMatch(develop, /actions\/setup-node|run: npm install/);
-});
-
-test('Docker runtime and build pin the CI Node version and install the locks with engine checks', () => {
-    const root = path.resolve(__dirname, '../..');
-    const read = (name) => fs.readFileSync(path.join(root, name), 'utf8');
-    const ciImage = read('scripts/check.sh').match(/^NODE_IMAGE=(node:([^@]+)@sha256:[a-f0-9]{64})$/m);
-    assert.ok(ciImage);
-    for (const component of ['testflow-app', 'testflow-frontend']) {
-        const source = read(`${component}/Dockerfile`);
-        const image = source.match(/^FROM (node:[^\s]+)/m)[1];
-        assert.equal(image.split('@')[0].replace(/-alpine$/, ''), `node:${ciImage[2]}`);
-        assert.match(image, /@sha256:[a-f0-9]{64}$/);
-        if (component === 'testflow-frontend') assert.equal(image, ciImage[1]);
-        assert.match(source, /COPY[^\n]*package\.json package-lock\.json \.\//);
-        for (const install of source.matchAll(/npm ci[^\n]*/g)) assert.match(install[0], /--engine-strict/);
-        assert.doesNotMatch(source, /npm install/);
-    }
 });

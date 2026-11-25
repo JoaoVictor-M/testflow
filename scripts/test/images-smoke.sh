@@ -4,7 +4,8 @@ set -eu
 cd "$(dirname "$0")/../.."
 root=$PWD
 node_image=$(sed -n 's/^NODE_IMAGE=//p' scripts/check.sh)
-tmp=$(mktemp -d /tmp/testflow-images-XXXXXX)
+mkdir -p "$root/.cache"
+tmp=$(mktemp -d "$root/.cache/testflow-images-XXXXXX")
 chmod 755 "$tmp"
 export BUILDX_CONFIG="$tmp/buildx"
 export COMPOSE_PROJECT_NAME="testflow-images-$(basename "$tmp" | tr '[:upper:]' '[:lower:]')"
@@ -74,8 +75,11 @@ cat >"$tmp/secret.yml" <<EOF
 services:
   backend-service:
     env_file: $tmp/backend.env
-    environment:
-      JWT_SECRET: !reset null
+    environment: !override
+      MONGO_URI: mongodb://mongodb-service:27017/testflow-images-smoke
+      NODE_EXTRA_CA_CERTS: /fixtures/certificates/testflow.crt
+      FRONTEND_URL: https://localhost/testflow
+      TRUST_PROXY_HOPS: "1"
 EOF
 export COMPOSE_FILE="$COMPOSE_FILE:$tmp/secret.yml"
 docker compose build
@@ -94,7 +98,10 @@ docker compose exec -T backend-service node images-smoke.cjs fresh
 
 # Re-run the actual published Compose against existing root-owned storage.
 docker compose down --remove-orphans
-IMAGE_OWNER="$COMPOSE_PROJECT_NAME" sh scripts/test/format-production.sh "$tmp/deploy"
+mkdir -p "$tmp/deploy/prod"
+git init -q "$tmp/deploy/prod"
+REGISTRY=registry.example.test IMAGE_OWNER="$COMPOSE_PROJECT_NAME" RELEASE_TAG=latest \
+  sh scripts/ci/format-prod.sh "$root" "$tmp/deploy/prod"
 for component in backend frontend nginx; do
   docker image tag "${COMPOSE_PROJECT_NAME}-${component}-service" \
     "registry.example.test/${COMPOSE_PROJECT_NAME}/testflow-${component}:latest"

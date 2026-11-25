@@ -1,7 +1,7 @@
 #!/bin/sh
 # Test the same origin resolver used by the container entrypoint.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 for origin in \
   'http://example.test' \
   'https://example.test/path' \

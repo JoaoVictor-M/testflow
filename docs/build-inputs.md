@@ -16,17 +16,16 @@ Os relatórios em `reports/build-inputs/` registram Node, npm, plataforma, image
 manifesto, lock, configuração npm e árvores. Os workflows os publicam como artefato. Comparações
 de árvores exigem a mesma plataforma/arquitetura (dependências opcionais variam por plataforma).
 
-Os Compose principal e de testes fixam MongoDB **9.0.4** pelo mesmo digest; o de desenvolvimento
-herda essa referência do principal, impedindo atualizações implícitas;
-o banco dos testes usa essa mesma versão em armazenamento descartável. Essa fixação não migra,
-recria nem abre volumes existentes. Antes de aplicar o Compose a outra instalação, confira a
-versão real do servidor e o `featureCompatibilityVersion`; interrompa se forem incompatíveis.
+O `docker-compose.yml` fixa MongoDB **9.0.4** por tag e digest como única definição do serviço;
+as camadas de desenvolvimento e de testes herdam essa referência, impedindo divergências ou
+atualizações implícitas. Essa fixação não migra, recria nem abre volumes existentes. Antes de
+aplicar o Compose a outra instalação, confira a versão real do servidor e o
+`featureCompatibilityVersion`; interrompa se forem incompatíveis.
 
 O patch 9.0.4 corrige a identificação de kernels Ubuntu 7.0 com a correção upstream 7.0.14
-([SERVER-131779](https://jira.mongodb.org/browse/SERVER-131779)). O healthcheck permanece igual.
-`scripts/mongo-startup.test.sh` reproduz essa identidade em uma biblioteca carregada somente no
-teste, compila em Docker e verifica inicialização, ping e leitura/escrita em tmpfs descartável.
-Ele integra `quality`; nenhum volume persistido é aberto pelo teste.
+([SERVER-131779](https://jira.mongodb.org/browse/SERVER-131779)). `scripts/test/mongo-startup.test.sh`
+verifica inicialização real, seed de primeiro administrador e leitura/escrita em `tmpfs` descartável
+como parte de `quality`; nenhum volume persistido é aberto pelo teste.
 
 Revise versões, digests, suporte oficial e avisos de segurança a cada release e mensalmente;
 correções urgentes entram assim que disponíveis. Atualize tag e digest juntos, compare os
@@ -34,7 +33,8 @@ relatórios e rode `quality` e `all`, incluindo os smokes de login, ODM e mensag
 As bases de runtime e build dos Dockerfiles usam Node **20.20.2** e npm **10.8.2**, como o CI,
 com os mesmos manifests/locks e `npm ci --engine-strict` (backend de produção com `--omit=dev`).
 O backend preserva a variante Alpine e o frontend a base Debian; ambas têm tag exata e digest.
-Os testes de repositório verificam esse alinhamento e a remoção do antigo Compose auxiliar.
+`scripts/check.sh build-inputs` verifica esse alinhamento comparando as versões efetivas de Node e
+npm nas imagens construídas com a imagem do CI.
 
 Node 20 está [fora de suporte](https://nodejs.org/en/about/previous-releases). Sua manutenção
 aqui preserva a compatibilidade enquanto a migração coordenada para uma LTS suportada é

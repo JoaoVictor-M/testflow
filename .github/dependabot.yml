@@ -15,7 +15,7 @@ updates:
     schedule:
       interval: weekly
   - package-ecosystem: npm
-    directory: /e2e
+    directory: /tests/e2e
     cooldown:
       default-days: 7
     target-branch: develop
@@ -36,7 +36,6 @@ updates:
       - /testflow-app
       - /testflow-frontend
       - /nginx
-      - /scripts/test
     target-branch: develop
     schedule:
       interval: weekly

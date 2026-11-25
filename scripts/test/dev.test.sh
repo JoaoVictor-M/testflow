@@ -1,7 +1,7 @@
 #!/bin/sh
 # Tests that dev.sh only prepares the environment (.env, git hooks) when it brings the stack up.
 set -eu
-here=$(cd "$(dirname "$0")" && pwd)
+here=$(cd "$(dirname "$0")/.." && pwd)
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 fails=0

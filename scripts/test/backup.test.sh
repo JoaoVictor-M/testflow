@@ -5,12 +5,12 @@
 # evidence and backup folders under .cache, and age keys generated here. It never mounts the stack's
 # volumes (testflow_mongo-data, evidencias_testes) and never stops the stack.
 set -eu
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 project="testflow-backup-$(basename "$PWD" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9\n_-' '-')"
 database=testflow-db
 restored=testflow-db-restored
-test_mongo="docker compose -p $project -f docker-compose.teste.yml"
+test_mongo="docker compose --env-file /dev/null -p $project -f docker-compose.yml -f docker-compose.teste.yml"
 # The backup service of the production file, on the network of the throwaway MongoDB (service alias
 # mongodb-service): only the backup container starts, never the production services.
 # It runs as the caller (-u), so the test works for any UID, not only 1000.

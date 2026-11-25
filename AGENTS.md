@@ -54,6 +54,16 @@ código, commits, issues, PRs ou releases. Mensagem de commit descreve a mudanç
   `check.sh quality` local só quando o merge tem conflito.
 - Logs: `docker compose logs <serviço>`.
 
+## Estrutura
+
+- Nenhum arquivo Compose novo: só `docker-compose.yml` (produção, definição única dos serviços),
+  `docker-compose.dev.yml` e `docker-compose.teste.yml` como camadas sobre a produção.
+- Scripts de CI e release ficam em `scripts/ci/`.
+- Testes de infraestrutura ficam em `scripts/test/` e validam apenas comportamento (nunca regex
+  em texto de YAML, workflow ou Dockerfile; esses gates ficam em `check.sh`, Actionlint, Hadolint
+  e Trivy).
+- Arquivo novo na raiz do repositório só com ADR registrada no cofre.
+
 ## Git
 
 - Branches: `main` (só versões oficiais), `develop` (funcionalidades prontas) e uma branch por
